@@ -29,21 +29,21 @@ import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 const testimonials = [
   {
     name: "Adolfo Gutiérrez Álvarez",
-    role: "Building & Infrastructure - Holcim",
+    role: "Building & Infrastructure - Urrea",
     text: "Gracias a Construleads y BR Analytics entendimos mejor a nuestros clientes. Generamos propuestas más efectivas.",
-    image: "/assets/testimonials/testimonial-1.png",
+    image: `${import.meta.env.BASE_URL}logos/urrea.svg`,
   },
   {
     name: "Omar Armas",
-    role: "Gerente de Inteligencia de Mercados - Grupo Posadas",
+    role: "Gerente de Inteligencia de Mercados - Berel",
     text: "Construleads nos brinda información clave para recomendaciones y nuevas oportunidades de negocio.",
-    image: "/assets/testimonials/testimonial-2.png",
+    image: `${import.meta.env.BASE_URL}logos/berel.png`,
   },
   {
     name: "Ruben Reyes Torres",
-    role: "Gerente Línea Adhesivos - CEMIX",
+    role: "Gerente Línea Adhesivos - HomeDepot",
     text: "El acceso a Construleads nos acerca más a nuestros clientes y nos lleva a proyectos con mejores oportunidades.",
-    image: "/assets/testimonials/testimonial-3.png",
+    image: `${import.meta.env.BASE_URL}logos/TheHomeDepot.png`,
   },
 ];
 

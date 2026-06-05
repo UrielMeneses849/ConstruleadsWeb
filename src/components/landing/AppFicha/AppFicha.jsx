@@ -19,7 +19,7 @@ export default function AppFicha() {
 
         <Box {...row}>
           <Image
-            src='/assets/laptop-ficha.png'
+            src={`${import.meta.env.BASE_URL}ficha.png`}
             alt='Ficha técnica'
             {...image}
           />
@@ -76,13 +76,13 @@ export default function AppFicha() {
             </Text>
 
             <Box display='flex' gap='16px' flexWrap='wrap'>
-              <Image src='/assets/google-play.png' alt='Google Play' h='60px' />
-              <Image src='/assets/app-store.png' alt='App Store' h='60px' />
+              <Image src={`${import.meta.env.BASE_URL}gp.png`} alt='Google Play' h='50px' />
+              <Image src={`${import.meta.env.BASE_URL}as.png`} alt='App Store' h='50px' />
             </Box>
           </Box>
 
           <Image
-            src='/assets/mobile-app.png'
+            src={`${import.meta.env.BASE_URL}app.png`}
             alt='Aplicación móvil'
             {...image}
           />

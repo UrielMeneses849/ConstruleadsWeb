@@ -25,17 +25,17 @@ export default function Footer() {
         <Box {...footerGrid}>
           <Box>
             <Image
-              src="/logo-construleads.svg"
+              src={`${import.meta.env.BASE_URL}construleadsfooter.png`}
               alt="Construleads"
               maxW="320px"
               mb="24px"
             />
 
-            <Text color="white" fontSize="20px" mb="24px">
+            <Text color="white" fontSize="14px" mb="24px">
               Información estratégica para hacer crecer tu negocio.
             </Text>
 
-            <Text color="whiteAlpha.900" fontSize="18px" lineHeight="1.7">
+            <Text color="whiteAlpha.900" fontSize="12px" lineHeight="1.7">
               Encuentra proyectos, identifica clientes potenciales y toma
               decisiones estratégicas con información actualizada.
             </Text>
@@ -44,22 +44,22 @@ export default function Footer() {
           <Box>
             <Heading {...sectionTitle}>CONTACTO</Heading>
 
-            <Stack gap="20px" color="white">
-              <Text>📞 Tel. 55 5627908412</Text>
-              <Text>✉️ correo@bimsa.com.mx</Text>
-              <Text>🌐 bimsareports.com</Text>
-              <Text>🕒 Lunes a Viernes 9:00 - 18:00 hrs.</Text>
+            <Stack gap="20px" color="white" fontSize="12px">
+              <Text fontSize="12px">📞 Tel. 55 5627908412</Text>
+              <Text fontSize="12px">✉️ correo@bimsa.com.mx</Text>
+              <Text fontSize="12px">🌐 bimsareports.com</Text>
+              <Text fontSize="12px">🕒 Lunes a Viernes 9:00 - 18:00 hrs.</Text>
             </Stack>
           </Box>
 
           <Box>
             <Heading {...sectionTitle}>EMPRESA</Heading>
 
-            <Stack gap="20px">
-              <Text {...footerLink}>¿Qué es Bimsa Reports?</Text>
-              <Text {...footerLink}>Beneficios</Text>
-              <Text {...footerLink}>Quienes somos</Text>
-              <Text {...footerLink}>Preguntas frecuentes</Text>
+            <Stack gap="20px" fontSize="12px">
+              <Text {...footerLink} fontSize="12px">¿Qué es Bimsa Reports?</Text>
+              <Text {...footerLink} fontSize="12px">Beneficios</Text>
+              <Text {...footerLink} fontSize="12px">Quienes somos</Text>
+              <Text {...footerLink} fontSize="12px">Preguntas frecuentes</Text>
             </Stack>
           </Box>
 
@@ -67,17 +67,17 @@ export default function Footer() {
             <Heading {...sectionTitle}>LEGAL</Heading>
 
             <Stack gap="20px" mb="40px">
-              <Text {...footerLink}>Términos y condiciones</Text>
-              <Text {...footerLink}>Aviso de privacidad</Text>
-              <Text {...footerLink}>Políticas de uso</Text>
-              <Text {...footerLink}>Políticas de cookies</Text>
+              <Text {...footerLink} fontSize="12px">Términos y condiciones</Text>
+              <Text {...footerLink} fontSize="12px">Aviso de privacidad</Text>
+              <Text {...footerLink} fontSize="12px">Políticas de uso</Text>
+              <Text {...footerLink} fontSize="12px">Políticas de cookies</Text>
             </Stack>
 
             <Button
               bg="#F6C8AC"
               color="#091E5A"
               borderRadius="16px"
-              size="lg"
+              size="md"
               _hover={{ opacity: 0.9 }}
             >
               Hablar con un asesor
@@ -96,11 +96,11 @@ export default function Footer() {
           direction={{ base: 'column', lg: 'row' }}
           gap="16px"
         >
-          <Text color="white" fontSize="16px">
+          <Text color="white" fontSize="12px">
             © 2026 Bimsa Reports. Todos los derechos reservados
           </Text>
 
-          <Text color="white" fontSize="16px">
+          <Text color="white" fontSize="12px">
             Hecho en México, desde 1961 🧡
           </Text>
         </Flex>

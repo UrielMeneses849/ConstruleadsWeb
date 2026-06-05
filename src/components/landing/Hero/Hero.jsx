@@ -15,7 +15,7 @@ import { heroStyles } from "./styles";
 export default function Hero() {
   return (
     <Box {...heroStyles.wrapper}>
-      <Container maxW="93%">
+      <Container maxW="90%">
         <Flex {...heroStyles.container}>
 
           {/* LEFT CONTENT */}
@@ -42,7 +42,7 @@ export default function Hero() {
           {/* RIGHT IMAGE */}
           <Box {...heroStyles.imageWrapper}>
             <Image
-              src="/hero-city.png"
+              src={`${import.meta.env.BASE_URL}hero-city.png`}
               alt="Construleads Hero"
               {...heroStyles.image}
             />

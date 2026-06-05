@@ -2,7 +2,7 @@
 
 export const section = {
   width: "100%",
-  py: "120px",
+  py: "32px",
   px: {
     base: "24px",
     xl: "80px",
@@ -26,10 +26,10 @@ export const topContent = {
 };
 
 export const title = {
-  color: "secondary.500",
+  color: "#041A46",
   fontSize: {
-    base: "42px",
-    lg: "64px",
+    base: "38px",
+    lg: "40px",
   },
   lineHeight: "1.1",
   fontWeight: "700",
@@ -41,18 +41,18 @@ export const highlight = {
 };
 
 export const description = {
-  color: "secondary.400",
-  fontSize: "24px",
+  color: "#041A46",
+  fontSize: "16px",
   lineHeight: "1.7",
   maxW: "650px",
 };
 
 export const sectionSubtitle = {
   textAlign: "center",
-  color: "secondary.500",
+  color: "#041A46",
   fontSize: {
-    base: "32px",
-    lg: "48px",
+    base: "24px",
+    lg: "24px",
   },
   fontWeight: "600",
   mb: "56px",
@@ -64,34 +64,40 @@ export const cardsGrid = {
     base: "1fr",
     lg: "repeat(3, 1fr)",
   },
-  gap: "32px",
+  gap: "24px",
+  width: "90%",
+margin: "0 auto",
+
 };
 
 export const card = {
   bg: "white",
   borderRadius: "24px",
   p: "32px",
-  boxShadow: "0px 8px 24px rgba(15,23,42,0.08)",
-  borderBottom: "4px solid",
-  borderColor: "primary.500",
+  boxShadow: "0px 4px 14px rgba(0,0,0,0.12)",
+  borderBottom: "3px solid",
+  borderColor: "#FF6400"
 };
 
 export const cardTitle = {
-  color: "secondary.500",
+  color: "#041A46",
   fontWeight: "700",
-  fontSize: "32px",
-  lineHeight: "1.3",
+  fontSize: "18px",
+  lineHeight: "1.35",
 };
 
 export const cardDescription = {
-  color: "secondary.400",
-  fontSize: "22px",
-  mt: "12px",
-  mb: "24px",
+  color: "#041A46",
+  fontSize: "16px",
+  lineHeight: "1.5",
+  mt: "14px",
+  mb: "28px",
+  maxW: "250px",
 };
 
 export const listItem = {
-  color: "secondary.500",
-  fontSize: "20px",
-  mb: "14px",
+  color: "#041A46",
+  fontSize: "15px",
+  fontWeight: "500",
+  mb: "8px",
 };

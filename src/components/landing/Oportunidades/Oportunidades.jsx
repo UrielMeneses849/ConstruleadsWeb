@@ -1,4 +1,4 @@
-import { Box, Flex, Heading, Text } from '@chakra-ui/react';
+import { Box, Flex, Heading, Text, Image } from '@chakra-ui/react';
 import {
   section,
   container,
@@ -20,28 +20,28 @@ const oportunidades = [
     porcentaje: '72%',
     descripcion:
       'Concentración de proyectos residenciales de lujo, media y social.',
-    imagen: '/assets/oportunidades/casas.jpg',
+    icono: `${import.meta.env.BASE_URL}vivienda.png`,
   },
   {
     titulo: 'Edificaciones',
     porcentaje: '13%',
     descripcion:
       'Desarrollos corporativos, comerciales, institucionales, educativos y salud.',
-    imagen: '/assets/oportunidades/edificaciones.jpg',
+    icono: `${import.meta.env.BASE_URL}edificaciones.png`,
   },
   {
     titulo: 'Desarrollos industriales',
     porcentaje: '16%',
     descripcion:
       'Crecimiento estratégico de desarrollos industriales y corporativos con alta actividad constructiva.',
-    imagen: '/assets/oportunidades/industrial.jpg',
+    icono: `${import.meta.env.BASE_URL}industriales.png`,
   },
   {
     titulo: 'Obras de infraestructura',
     porcentaje: '10%',
     descripcion:
       'Desarrollo de infraestructura pública y privada para movilidad, conectividad y servicios urbanos.',
-    imagen: '/assets/oportunidades/infraestructura.jpg',
+    icono: `${import.meta.env.BASE_URL}infra.png`,
   },
 ];
 
@@ -51,18 +51,21 @@ const beneficios = [
     highlight: 'de alto impacto.',
     descripcion:
       'Accede a información confiable para decisiones más precisas.',
+      icono: `${import.meta.env.BASE_URL}datos.svg`,
   },
   {
     titulo: 'Anticipación',
     highlight: 'Estratégica.',
     descripcion:
       'Identifica proyectos antes que tu competencia y actúa a tiempo.',
+      icono: `${import.meta.env.BASE_URL}ico1.svg`,
   },
   {
     titulo: 'Contactos',
     highlight: 'Directos.',
     descripcion:
       'Llega a los tomadores de decisión sin intermediarios.',
+      icono: `${import.meta.env.BASE_URL}contacts.svg`,
   },
 ];
 
@@ -88,46 +91,67 @@ export default function Oportunidades() {
           {oportunidades.map((item) => (
             <Box
               key={item.titulo}
-              {...card}
-              backgroundImage={`url(${item.imagen})`}
+              bg='white'
+              borderRadius='18px'
+              p='24px'
+              textAlign='center'
+              boxShadow='0px 4px 10px rgba(0,0,0,0.12)'
+              borderBottom='3px solid'
+              borderColor='primary.500'
             >
-              <Box {...overlay}>
-                <Flex justify='space-between' align='center' mb='16px'>
-                  <Text
-                    fontSize='36px'
-                    fontWeight='700'
-                    color='secondary.500'
-                  >
-                    {item.titulo}
-                  </Text>
+              <Image
+                src={item.icono}
+                alt={item.titulo}
+                w='96px'
+                h='96px'
+                mx='auto'
+                mb='16px'
+              />
 
-                  <Box textAlign='right'>
-                    <Text
-                      color='primary.500'
-                      fontSize='40px'
-                      fontWeight='700'
-                    >
-                      {item.porcentaje}
-                    </Text>
-                    <Text color='secondary.400'>
-                      total de proyectos publicados
-                    </Text>
-                  </Box>
-                </Flex>
+              <Text
+                fontSize='24px'
+                fontWeight='600'
+                color='#041A46'
+                mb='16px'
+                minH='72px'
+              >
+                {item.titulo}
+              </Text>
 
-                <Box
-                  borderTop='1px solid'
-                  borderColor='gray.300'
-                  pt='16px'
+              <Box
+                w='64px'
+                h='2px'
+                bg='primary.500'
+                mx='auto'
+                mb='16px'
+              />
+
+              <Text
+                color='#FF6400'
+                fontSize='48px'
+                fontWeight='700'
+                lineHeight='1'
+              >
+                {item.porcentaje}
+              </Text>
+
+              <Text
+                color='#041A46'
+                fontSize='16px'
+                mb='16px'
+              >
+                de los proyectos destacados
+              </Text>
+
+              <Box borderTop='1px solid' borderColor='gray.300' pt='12px'>
+                <Text
+                  color='#041A46'
+                  fontSize='16px'
+                  fontWeight='600'
+                  lineHeight='1.5'
                 >
-                  <Text
-                    color='secondary.400'
-                    textAlign='center'
-                    fontSize='20px'
-                  >
-                    {item.descripcion}
-                  </Text>
-                </Box>
+                  {item.descripcion}
+                </Text>
               </Box>
             </Box>
           ))}
@@ -143,37 +167,48 @@ export default function Oportunidades() {
           <Box {...benefitsGrid}>
             {beneficios.map((item) => (
               <Box key={item.titulo} {...benefitCard}>
-                <Flex align='flex-start' gap='20px'>
-                  <Box
-                    w='88px'
-                    h='88px'
-                    bg='primary.500'
-                    borderRadius='20px'
-                    flexShrink={0}
-                  />
+                <Flex align='flex-start' gap='14px'>
+<Box
+  w='64px'
+  h='64px'
+  bg='primary.500'
+  borderRadius='16px'
+  display='flex'
+  alignItems='center'
+  justifyContent='center'
+  flexShrink={0}
+>
+  <Image
+    src={item.icono}
+    alt={item.titulo}
+    w='32px'
+    h='32px'
+    objectFit='contain'
+  />
+</Box>
 
                   <Box>
                     <Text
-                      fontSize='40px'
+                      fontSize='22px'
                       fontWeight='700'
-                      color='secondary.500'
+                      color='#041A46'
                       lineHeight='1.1'
                     >
                       {item.titulo}
                     </Text>
 
                     <Text
-                      fontSize='28px'
+                      fontSize='16px'
                       fontWeight='600'
                       color='primary.500'
-                      mb='16px'
+                      mb='8px'
                     >
                       {item.highlight}
                     </Text>
 
                     <Text
-                      color='secondary.400'
-                      fontSize='22px'
+                      color='#041A46'
+                      fontSize='15px'
                       lineHeight='1.6'
                     >
                       {item.descripcion}

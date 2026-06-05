@@ -19,15 +19,15 @@ import {
 
 const features = [
   {
-    icon: '/icons/analytics.svg',
+    icon: `${import.meta.env.BASE_URL}ico1.svg`,
     text: 'Análisis Predictivo de Licitaciones.',
   },
   {
-    icon: '/icons/money.svg',
+    icon: `${import.meta.env.BASE_URL}ico2.svg`,
     text: 'Identificación de Nichos de alta Rentabilidad.',
   },
   {
-    icon: '/icons/report.svg',
+      icon: `${import.meta.env.BASE_URL}ico3.svg`,
     text: 'Reportes Estratégicos Personalizados.',
   },
 ];
@@ -39,7 +39,7 @@ export default function Form() {
         <Box {...infoCard}>
           <Heading
             color="secondary.900"
-            fontSize={{ base: '36px', lg: '56px' }}
+            fontSize={{ base: '24px', lg: '32px' }}
             lineHeight="1.1"
             mb="32px"
           >
@@ -48,7 +48,7 @@ export default function Form() {
 
           <Text
             color="secondary.800"
-            fontSize="24px"
+            fontSize="16px"
             lineHeight="1.6"
             mb="32px"
           >
@@ -78,7 +78,7 @@ export default function Form() {
                 </Box>
 
                 <Text
-                  fontSize="28px"
+                  fontSize="16px"
                   fontWeight="600"
                   color="secondary.900"
                 >
@@ -91,7 +91,7 @@ export default function Form() {
 
         <Box {...formCard}>
           <Image
-            src="/logo-bimsa-reports.png"
+            src={`${import.meta.env.BASE_URL}bimsa-logo.png`}
             alt="Bimsa Reports"
             maxW="280px"
             mb="32px"

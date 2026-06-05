@@ -1,13 +1,13 @@
 export const testimonialSection = {
   width: "100%",
-  py: "120px",
+  py: "32px",
   px: {
     base: "24px",
     xl: "80px",
   },
   position: "relative",
 };
-
+  
 export const testimonialContainer = {
   maxW: "1400px",
   mx: "auto",
@@ -21,10 +21,10 @@ export const testimonialTitle = {
   textAlign: "center",
   fontWeight: "700",
   lineHeight: "1.1",
-  color: "secondary.500",
+  color: "#041A46",
   fontSize: {
     base: "36px",
-    md: "52px",
+    md: "40px",
   },
 };
 
@@ -60,7 +60,7 @@ export const testimonialCard = {
   pt: "24px",
   pb: "32px",
   boxShadow: "0px 8px 24px rgba(15, 23, 42, 0.08)",
-  minH: "420px",
+  minH: "340px",
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -79,29 +79,31 @@ export const testimonialAvatar = {
   borderRadius: "full",
   border: "3px solid",
   borderColor: "primary.500",
-  objectFit: "cover",
+  objectFit: "contain",
+  p: "12px",
+  bg: "white",
   mb: "20px",
 };
 
 export const testimonialName = {
-  color: "secondary.500",
+  color: "#041A46",
   fontWeight: "700",
-  fontSize: "30px",
-  lineHeight: "1.2",
+  fontSize: "18px",
+  lineHeight: "1.3",
   mb: "8px",
 };
 
 export const testimonialRole = {
   color: "primary.500",
   fontWeight: "500",
-  fontSize: "24px",
-  lineHeight: "1.3",
-  mb: "28px",
+  fontSize: "14px",
+  lineHeight: "1.4",
+  mb: "20px",
 };
 
 export const testimonialText = {
-  color: "secondary.400",
-  fontSize: "20px",
+  color: "#041A46",
+  fontSize: "14px",
   lineHeight: "1.7",
   fontWeight: "400",
 };

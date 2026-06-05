@@ -2,10 +2,9 @@ export const heroStyles = {
   wrapper: {
     width: "100%",
     pt: {
-      base: "120px",
-      lg: "64px",
+      base: "64px",
+      lg: "14px",
     },
-    pb: "80px",
     overflow: "hidden",
   },
 

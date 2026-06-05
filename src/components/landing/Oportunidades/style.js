@@ -1,6 +1,6 @@
 export const section = {
   width: '100%',
-  py: '120px',
+  py: '32px',
   px: {
     base: '24px',
     xl: '80px',
@@ -15,13 +15,13 @@ export const container = {
 export const title = {
   textAlign: 'center',
   fontSize: {
-    base: '42px',
-    lg: '64px',
+    base: '32px',
+    lg: '40px',
   },
   lineHeight: '1.15',
   fontWeight: '700',
-  color: 'secondary.500',
-  mb: '16px',
+  color: '#041A46',
+  mb: '8px',
 };
 
 export const highlight = {
@@ -30,27 +30,30 @@ export const highlight = {
 
 export const subtitle = {
   textAlign: 'center',
-  fontSize: '24px',
+  fontSize: '18px',
   color: 'secondary.400',
-  mb: '64px',
+  mb: '48px',
+  color: '#041A46',
 };
 
 export const grid = {
   display: 'grid',
   gridTemplateColumns: {
     base: '1fr',
-    lg: 'repeat(2, 1fr)',
+    md: 'repeat(2, 1fr)',
+    lg: 'repeat(4, 1fr)',
   },
-  gap: '32px',
+  gap: '24px',
 };
 
 export const card = {
   position: 'relative',
   overflow: 'hidden',
   borderRadius: '24px',
-  minH: '380px',
+  minH: '420px',
   bgSize: 'cover',
   bgPosition: 'center',
+  boxShadow: '0px 6px 18px rgba(0,0,0,0.12)',
   transition: 'all .3s ease',
   _hover: {
     transform: 'translateY(-4px)',
@@ -60,27 +63,27 @@ export const card = {
 export const overlay = {
   position: 'absolute',
   left: '50%',
-  bottom: '24px',
+  bottom: '22px',
   transform: 'translateX(-50%)',
   bg: 'white',
-  borderRadius: '20px',
-  width: '85%',
-  p: '24px',
-  boxShadow: 'lg',
+  borderRadius: '18px',
+  width: '80%',
+  p: '20px 24px',
+  boxShadow: '0px 4px 12px rgba(0,0,0,0.12)',
 };
 
 export const benefitsSection = {
-  mt: '140px',
+  mt: '100px',
 };
 
 export const benefitsTitle = {
   fontSize: {
-    base: '42px',
-    lg: '64px',
+    base: '40px',
+    lg: '40px',
   },
   lineHeight: '1.15',
   fontWeight: '700',
-  color: 'secondary.500',
+  color: '#041A46',
   mb: '56px',
   maxW: '900px',
 };
@@ -91,14 +94,16 @@ export const benefitsGrid = {
     base: '1fr',
     lg: 'repeat(3, 1fr)',
   },
-  gap: '32px',
+  gap: '24px',
+  width: '90%',
+  m: '0 auto',
 };
 
 export const benefitCard = {
   bg: 'white',
-  borderRadius: '24px',
-  p: '32px',
-  boxShadow: '0px 8px 24px rgba(15,23,42,0.08)',
-  borderBottom: '4px solid',
+  borderRadius: '18px',
+  p: '20px',
+  boxShadow: '0px 6px 18px rgba(15,23,42,0.08)',
+  borderBottom: '3px solid',
   borderColor: 'primary.500',
 };

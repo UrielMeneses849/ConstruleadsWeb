@@ -24,14 +24,10 @@ export const carruselContainer = {
 export const carruselTrack = {
   display: "flex",
   alignItems: "center",
-  gap: "96px",
+  gap: "72px",
   width: "max-content",
   animation: `${scrollInfinite} 40s linear infinite`,
   willChange: "transform",
-
-  _hover: {
-    animationPlayState: "paused",
-  },
 };
 
 export const carruselItem = {
@@ -39,5 +35,7 @@ export const carruselItem = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  minW: "180px",
+  minW: "220px",
+  width: "220px",
+  height: "120px",
 };

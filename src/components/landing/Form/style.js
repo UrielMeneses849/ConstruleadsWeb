@@ -2,7 +2,7 @@ export const sectionWrapper = {
   maxW: '1440px',
   mx: 'auto',
   px: { base: '24px', lg: '80px' },
-  py: '120px',
+  py: '64px',
 };
 
 export const contentGrid = {

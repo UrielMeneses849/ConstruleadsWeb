@@ -2,11 +2,12 @@
 
 export const section = {
   width: '100%',
-  py: '120px',
+  py: '64px',
   px: {
     base: '24px',
     xl: '80px',
   },
+  pb: '0px'
 };
 
 export const container = {
@@ -22,17 +23,17 @@ export const row = {
   },
   alignItems: 'center',
   gap: '80px',
-  mb: '120px',
+  mb: '64px',
 };
 
 export const title = {
   fontSize: {
-    base: '42px',
-    lg: '64px',
+    base: '32px',
+    lg: '40px',
   },
   lineHeight: '1.1',
   fontWeight: '700',
-  color: 'secondary.500',
+  color: '#041A46',
   mb: '24px',
 };
 
@@ -41,15 +42,15 @@ export const highlight = {
 };
 
 export const description = {
-  fontSize: '24px',
-  color: 'secondary.400',
+  fontSize: '16px',
+  color: '#041A46',
   lineHeight: '1.7',
   maxW: '620px',
   mb: '32px',
 };
 
 export const image = {
-  width: '100%',
+  width: '75%',
   maxW: '620px',
   mx: 'auto',
 };

@@ -69,12 +69,6 @@ export default function Ventajas() {
       <Box {...container}>
         <Box {...topContent}>
           <Box>
-            <Image
-              src="/assets/logo-bimsa-reports.png"
-              alt="Bimsa Reports"
-              mb="24px"
-              maxW="220px"
-            />
 
             <Heading {...title}>
               Tu ventaja competitiva
@@ -88,7 +82,7 @@ export default function Ventajas() {
           </Box>
 
           <Image
-            src="/assets/ventajas-ilustracion.png"
+            src={`${import.meta.env.BASE_URL}construccion.png`}
             alt="Construcción"
             w="100%"
           />
@@ -102,19 +96,34 @@ export default function Ventajas() {
         <Box {...cardsGrid}>
           {cards.map((item, index) => (
             <Box key={index} {...card}>
-              <Text color="primary.500" fontSize="28px" fontWeight="700">
-                {item.number}
-              </Text>
+              <Flex align="center" gap={3} mb="18px">
+                <Box
+                  w="55px"
+                  h="55px"
+                  borderRadius="full"
+                  bg="#FF6400"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  color="white"
+                  fontSize="40px"
+                  fontWeight="700"
+                >
+                  {item.number.replace('.', '')}
+                </Box>
 
-              <Text {...cardTitle}>{item.title}</Text>
+                <Box>
+                  <Text {...cardTitle}>{item.title}</Text>
+                </Box>
+              </Flex>
 
               <Text {...cardDescription}>{item.description}</Text>
 
-              <Box borderTop="1px solid" borderColor="gray.200" pt="20px">
-                <VStack align="start" spacing={3}>
+              <Box borderTop="1px solid" borderColor="#BDBDBD" pt="24px">
+                <VStack align="start" spacing={2}>
                   {item.items.map((feature, idx) => (
-                    <Flex key={idx} align="center" gap={3}>
-                      <Text color="primary.500">✓</Text>
+                    <Flex key={idx} align="center" gap={2}>
+                      <Text color="#FF6400" fontSize="16px" fontWeight="700">◉</Text>
                       <Text {...listItem}>{feature}</Text>
                     </Flex>
                   ))}

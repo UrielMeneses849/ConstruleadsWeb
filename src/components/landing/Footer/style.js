@@ -1,17 +1,17 @@
 
-
 export const footerWrapper = {
-  maxW: '1440px',
-  mx: 'auto',
-  px: { base: '24px', lg: '80px' },
-  pb: '80px',
+  width: '100%',
+  px: 0,
+  pb: 0,
+  mt: '80px',
 };
 
 export const footerContainer = {
+  width: '100%',
   bg: '#4A4A4A',
-  borderRadius: '0px',
-  px: { base: '32px', lg: '72px' },
-  py: { base: '40px', lg: '56px' },
+  borderRadius: '0',
+  px: { base: '24px', lg: '80px' },
+  py: { base: '48px', lg: '64px' },
 };
 
 export const footerGrid = {
@@ -25,7 +25,7 @@ export const footerGrid = {
 
 export const sectionTitle = {
   color: 'white',
-  fontSize: '20px',
+  fontSize: '14px',
   fontWeight: '600',
   mb: '24px',
 };
