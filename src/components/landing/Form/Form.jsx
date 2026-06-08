@@ -8,6 +8,7 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react';
+import { useInView } from 'react-intersection-observer';
 
 import {
   sectionWrapper,
@@ -33,10 +34,20 @@ const features = [
 ];
 
 export default function Form() {
+  const { ref, inView } = useInView({
+    triggerOnce: true,
+    threshold: 0.55,
+  });
+
   return (
     <Box as="section" {...sectionWrapper}>
-      <Box {...contentGrid}>
-        <Box {...infoCard}>
+      <Box {...contentGrid} ref={ref}>
+        <Box
+          {...infoCard}
+          opacity={inView ? 1 : 0}
+          transform={inView ? 'translateX(0px)' : 'translateX(-60px)'}
+          transition='all 0.9s cubic-bezier(0.22, 1, 0.36, 1)'
+        >
           <Heading
             color="secondary.900"
             fontSize={{ base: '24px', lg: '32px' }}
@@ -62,8 +73,18 @@ export default function Form() {
           </Text>
 
           <Stack gap="16px">
-            {features.map((feature) => (
-              <Flex key={feature.text} {...featureItem}>
+            {features.map((feature, index) => (
+              <Flex
+                key={feature.text}
+                {...featureItem}
+                opacity={inView ? 1 : 0}
+                transform={
+                  inView
+                    ? 'translateX(0px)'
+                    : 'translateX(-30px)'
+                }
+                transition={`all 0.8s cubic-bezier(0.22, 1, 0.36, 1) ${0.15 + index * 0.15}s`}
+              >
                 <Box
                   w="72px"
                   h="72px"
@@ -89,7 +110,12 @@ export default function Form() {
           </Stack>
         </Box>
 
-        <Box {...formCard}>
+        <Box
+          {...formCard}
+          opacity={inView ? 1 : 0}
+          transform={inView ? 'translateX(0px)' : 'translateX(60px)'}
+          transition='all 1s cubic-bezier(0.22, 1, 0.36, 1)'
+        >
           <Image
             src={`${import.meta.env.BASE_URL}bimsa-logo.png`}
             alt="Bimsa Reports"

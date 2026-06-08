@@ -1,22 +1,18 @@
 export const NAV_LINKS = [
   {
     label: "Inicio",
-    href: "#inicio",
+    path: "/",
   },
   {
     label: "Beneficios",
-    href: "#beneficios",
+    path: "/beneficios",
   },
   {
     label: "A quién va dirigido",
-    href: "#audiencia",
+    path: "/audiencia",
   },
   {
     label: "Preguntas frecuentes",
-    href: "#faq",
-  },
-  {
-    label: "Casos de éxito",
-    href: "#casos-exito",
+    path: "/faq",
   },
 ];

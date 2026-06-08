@@ -1,4 +1,4 @@
-
+import { useEffect, useRef, useState } from "react";
 
 import {
   Box,
@@ -48,10 +48,41 @@ const testimonials = [
 ];
 
 export default function Testimonial() {
+  const sectionRef = useRef(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      {
+        threshold: 0.5,
+        rootMargin: '0px 0px -10% 0px',
+      }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <Box {...testimonialSection}>
+    <Box
+      ref={sectionRef}
+      {...testimonialSection}
+    >
       <Flex {...testimonialContainer}>
-        <Heading {...testimonialTitle}>
+        <Heading
+          {...testimonialTitle}
+          opacity={isVisible ? 1 : 0}
+          transform={isVisible ? "translateY(0)" : "translateY(60px)"}
+          transition="all 1s cubic-bezier(0.22, 1, 0.36, 1)"
+        >
           Líderes de la industria ya
           <br />
           <Box as="span" {...testimonialHighlight}>
@@ -59,14 +90,25 @@ export default function Testimonial() {
           </Box>
         </Heading>
 
-        <Flex {...testimonialWrapper}>
+        <Flex
+          {...testimonialWrapper}
+          opacity={isVisible ? 1 : 0}
+          transform={isVisible ? "translateY(0)" : "translateY(80px)"}
+          transition="all 1.1s cubic-bezier(0.22, 1, 0.36, 1)"
+        >
           <Flex {...arrowButton}>
             <FiChevronLeft boxSize={7} />
           </Flex>
 
           <Box {...testimonialGrid}>
             {testimonials.map((testimonial, index) => (
-              <Flex key={index} {...testimonialCard}>
+              <Flex
+                key={index}
+                {...testimonialCard}
+                opacity={isVisible ? 1 : 0}
+                transform={isVisible ? "translateY(0)" : "translateY(120px)"}
+                transition={`all 1s cubic-bezier(0.22, 1, 0.36, 1) ${0.25 + index * 0.2}s`}
+              >
                 <Image
                   src={testimonial.image}
                   alt={testimonial.name}

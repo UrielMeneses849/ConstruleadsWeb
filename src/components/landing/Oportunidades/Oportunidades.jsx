@@ -1,4 +1,5 @@
 import { Box, Flex, Heading, Text, Image } from '@chakra-ui/react';
+import { useInView } from 'react-intersection-observer';
 import {
   section,
   container,
@@ -70,6 +71,17 @@ const beneficios = [
 ];
 
 export default function Oportunidades() {
+  const { ref, inView } = useInView({
+    triggerOnce: true,
+    threshold: 0.55,
+  });
+  const {
+    ref: benefitsRef,
+    inView: benefitsInView,
+  } = useInView({
+    triggerOnce: true,
+    threshold: 0.55,
+  });
   return (
     <Box {...section}>
       <Box {...container}>
@@ -87,8 +99,11 @@ export default function Oportunidades() {
           <Box as='span' {...highlight}> Construleads</Box>
         </Text>
 
-        <Box {...grid}>
-          {oportunidades.map((item) => (
+        <Box
+          {...grid}
+          ref={ref}
+        >
+          {oportunidades.map((item, index) => (
             <Box
               key={item.titulo}
               bg='white'
@@ -98,6 +113,13 @@ export default function Oportunidades() {
               boxShadow='0px 4px 10px rgba(0,0,0,0.12)'
               borderBottom='3px solid'
               borderColor='primary.500'
+              opacity={inView ? 1 : 0}
+              transform={
+                inView
+                  ? 'translateY(0px) scale(1)'
+                  : 'translateY(50px) scale(0.95)'
+              }
+              transition={`all 0.8s cubic-bezier(0.22, 1, 0.36, 1) ${index * 0.12}s`}
             >
               <Image
                 src={item.icono}
@@ -157,16 +179,34 @@ export default function Oportunidades() {
           ))}
         </Box>
 
-        <Box {...benefitsSection}>
-          <Heading {...benefitsTitle}>
+        <Box
+          {...benefitsSection}
+          ref={benefitsRef}
+        >
+          <Heading
+            {...benefitsTitle}
+            opacity={benefitsInView ? 1 : 0}
+            transform={benefitsInView ? 'translateY(0px)' : 'translateY(40px)'}
+            transition='all 0.9s cubic-bezier(0.22, 1, 0.36, 1)'
+          >
             ¿Por qué las empresas líderes
             <br />
             eligen <Box as='span' {...highlight}>Construleads?</Box>
           </Heading>
 
           <Box {...benefitsGrid}>
-            {beneficios.map((item) => (
-              <Box key={item.titulo} {...benefitCard}>
+            {beneficios.map((item, index) => (
+              <Box
+                key={item.titulo}
+                {...benefitCard}
+                opacity={benefitsInView ? 1 : 0}
+                transform={
+                  benefitsInView
+                    ? 'translateY(0px) scale(1)'
+                    : 'translateY(50px) scale(0.95)'
+                }
+                transition={`all 0.8s cubic-bezier(0.22, 1, 0.36, 1) ${0.2 + index * 0.15}s`}
+              >
                 <Flex align='flex-start' gap='14px'>
 <Box
   w='64px'

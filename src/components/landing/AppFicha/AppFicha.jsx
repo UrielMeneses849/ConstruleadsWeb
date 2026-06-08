@@ -1,6 +1,5 @@
-
-
 import { Box, Button, Heading, Image, Text } from '@chakra-ui/react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   section,
@@ -13,8 +12,31 @@ import {
 } from './style';
 
 export default function AppFicha() {
+  const sectionRef = useRef(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      {
+        threshold: 0.5,
+        rootMargin: '0px 0px -10% 0px',
+      }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <Box {...section}>
+    <Box ref={sectionRef} {...section}>
       <Box {...container}>
 
         <Box {...row}>
@@ -22,9 +44,16 @@ export default function AppFicha() {
             src={`${import.meta.env.BASE_URL}ficha.png`}
             alt='Ficha técnica'
             {...image}
+            opacity={isVisible ? 1 : 0}
+            transform={isVisible ? 'translateX(0) rotate(0deg)' : 'translateX(-120px) rotate(-8deg)'}
+            transition='all 1.2s cubic-bezier(0.22, 1, 0.36, 1)'
           />
 
-          <Box>
+          <Box
+            opacity={isVisible ? 1 : 0}
+            transform={isVisible ? 'translateX(0)' : 'translateX(100px)'}
+            transition='all 1s cubic-bezier(0.22, 1, 0.36, 1) 0.2s'
+          >
             <Heading {...title}>
               <Box as='span' {...highlight}>
                 Explora cada proyecto
@@ -57,7 +86,11 @@ export default function AppFicha() {
         </Box>
 
         <Box {...row}>
-          <Box>
+          <Box
+            opacity={isVisible ? 1 : 0}
+            transform={isVisible ? 'translateX(0)' : 'translateX(-100px)'}
+            transition='all 1s cubic-bezier(0.22, 1, 0.36, 1) 0.3s'
+          >
             <Heading {...title}>
               Lleva todo el poder de
               <Box as='span' {...highlight}>
@@ -85,6 +118,9 @@ export default function AppFicha() {
             src={`${import.meta.env.BASE_URL}app.png`}
             alt='Aplicación móvil'
             {...image}
+            opacity={isVisible ? 1 : 0}
+            transform={isVisible ? 'translateX(0) rotate(0deg)' : 'translateX(120px) rotate(8deg)'}
+            transition='all 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.2s'
           />
         </Box>
 

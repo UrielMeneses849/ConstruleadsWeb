@@ -1,5 +1,4 @@
-
-
+import { useEffect, useRef, useState } from "react";
 import {
   Box,
   Flex,
@@ -64,10 +63,40 @@ const cards = [
 ];
 
 export default function Ventajas() {
+  const sectionRef = useRef(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      {
+        threshold: 0.5,
+        rootMargin: '0px 0px -10% 0px',
+      }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
   return (
-    <Box {...section}>
+    <Box
+      ref={sectionRef}
+      {...section}
+    >
       <Box {...container}>
-        <Box {...topContent}>
+        <Box
+          {...topContent}
+          opacity={isVisible ? 1 : 0}
+          transform={isVisible ? "translateY(0)" : "translateY(60px)"}
+          transition="all 1s cubic-bezier(0.22, 1, 0.36, 1)"
+        >
           <Box>
 
             <Heading {...title}>
@@ -85,17 +114,31 @@ export default function Ventajas() {
             src={`${import.meta.env.BASE_URL}construccion.png`}
             alt="Construcción"
             w="100%"
+            opacity={isVisible ? 1 : 0}
+            transform={isVisible ? "translateX(0)" : "translateX(80px)"}
+            transition="all 1.2s cubic-bezier(0.22, 1, 0.36, 1)"
           />
         </Box>
 
-        <Heading {...sectionSubtitle}>
+        <Heading
+          {...sectionSubtitle}
+          opacity={isVisible ? 1 : 0}
+          transform={isVisible ? "translateY(0)" : "translateY(50px)"}
+          transition="all 1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s"
+        >
           Información estructurada que necesitas,
           <Box as="span" {...highlight}> en un solo lugar</Box>
         </Heading>
 
         <Box {...cardsGrid}>
           {cards.map((item, index) => (
-            <Box key={index} {...card}>
+            <Box
+              key={index}
+              {...card}
+              opacity={isVisible ? 1 : 0}
+              transform={isVisible ? "translateY(0)" : "translateY(80px)"}
+              transition={`all 1s cubic-bezier(0.22, 1, 0.36, 1) ${0.3 + index * 0.2}s`}
+            >
               <Flex align="center" gap={3} mb="18px">
                 <Box
                   w="55px"

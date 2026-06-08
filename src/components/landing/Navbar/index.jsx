@@ -3,7 +3,6 @@ import {
   Flex,
   HStack,
   Image,
-  Link,
 } from "@chakra-ui/react";
 
 import { keyframes } from "@emotion/react";
@@ -49,6 +48,13 @@ const onClose = () => {
   
   const navigate = useNavigate();
 
+  const routeMap = {
+    '#inicio': '/',
+    '#beneficios': '/beneficios',
+    '#audiencia': '/audiencia',
+    '#faq': '/faq',
+  };
+
   return (
     <Box
       as="header"
@@ -59,7 +65,11 @@ const onClose = () => {
       <Flex {...navbarStyles.container}>
 
         {/* LOGO */}
-        <Box {...navbarStyles.logo}>
+        <Box
+          {...navbarStyles.logo}
+          cursor="pointer"
+          onClick={() => navigate('/')}
+        >
           <Image
             src={`${import.meta.env.BASE_URL}logo-construleads.svg`}
             h="100%"
@@ -71,13 +81,17 @@ const onClose = () => {
         {/* NAV LINKS */}
         <HStack as="nav" {...navbarStyles.nav}>
           {NAV_LINKS.map((item) => (
-            <Link
+            <Box
               key={item.label}
-              href={item.href}
               {...navbarStyles.navLink}
+              cursor="pointer"
+onClick={() => {
+  console.log('Navigating to:', item.path);
+  navigate(item.path);
+}}
             >
               {item.label}
-            </Link>
+            </Box>
           ))}
         </HStack>
 
