@@ -71,7 +71,8 @@ const onClose = () => {
     <Box
       as="header"
       {...navbarStyles.wrapper}
-      w={{ base: '100%', lg: '95%' }}
+      w={{ base: '95%', lg: '95%' }}
+      mx="auto"
       animation={`${navbarEntrance} 0.8s ease-out`}
     >
       <Flex {...navbarStyles.container}>
@@ -86,7 +87,7 @@ const onClose = () => {
             src={`${import.meta.env.BASE_URL}logo-construleads.svg`}
             h="100%"
             w="auto"
-            objectFit="contain"
+            objectFit="cover"
           />
         </Box>
 

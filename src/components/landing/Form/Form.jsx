@@ -45,7 +45,11 @@ export default function Form() {
         <Box
           {...infoCard}
           opacity={inView ? 1 : 0}
-          transform={inView ? 'translateX(0px)' : 'translateX(-60px)'}
+          transform={
+            inView
+              ? 'translateY(0)'
+              : 'translateY(40px)'
+          }
           transition='all 0.9s cubic-bezier(0.22, 1, 0.36, 1)'
         >
           <Heading
@@ -80,8 +84,8 @@ export default function Form() {
                 opacity={inView ? 1 : 0}
                 transform={
                   inView
-                    ? 'translateX(0px)'
-                    : 'translateX(-30px)'
+                    ? 'translateY(0)'
+                    : 'translateY(20px)'
                 }
                 transition={`all 0.8s cubic-bezier(0.22, 1, 0.36, 1) ${0.15 + index * 0.15}s`}
               >
@@ -113,7 +117,11 @@ export default function Form() {
         <Box
           {...formCard}
           opacity={inView ? 1 : 0}
-          transform={inView ? 'translateX(0px)' : 'translateX(60px)'}
+          transform={
+            inView
+              ? 'translateY(0)'
+              : 'translateY(40px)'
+          }
           transition='all 1s cubic-bezier(0.22, 1, 0.36, 1)'
         >
           <Image
