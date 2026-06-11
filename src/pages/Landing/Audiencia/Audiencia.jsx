@@ -83,7 +83,7 @@ export default function Audiencia() {
         }
       },
       {
-        threshold: 0.35,
+        threshold: 0,
       }
     );
 

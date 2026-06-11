@@ -28,7 +28,7 @@ const textReveal = keyframes`
 const imageReveal = keyframes`
   from {
     opacity: 0;
-    transform: translateX(120px);
+    transform: translateY(120px);
   }
   to {
     opacity: 1;

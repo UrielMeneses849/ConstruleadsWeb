@@ -38,7 +38,7 @@ export default function Beneficios() {
         }
       },
       {
-        threshold: 0.35,
+        threshold: 0,
       }
     );
 

@@ -56,11 +56,15 @@ imageWrapper: {
 },
 
 image: {
-  width: "125%",
-  maxW: "none",
+  width: {
+    base: "100%",
+    lg: "125%",
+  },
+  maxW: "100%",
   objectFit: "contain",
-  transform: "translateX(80px)",
-  userSelect: "none",
-  pointerEvents: "none",
-},
+  transform: {
+    base: "none",
+    lg: "translateY(80px)",
+  },
+}
 };

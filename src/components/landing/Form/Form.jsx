@@ -36,7 +36,7 @@ const features = [
 export default function Form() {
   const { ref, inView } = useInView({
     triggerOnce: true,
-    threshold: 0.55,
+    threshold: 0.3,
   });
 
   return (

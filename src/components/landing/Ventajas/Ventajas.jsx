@@ -74,8 +74,8 @@ export default function Ventajas() {
         }
       },
       {
-        threshold: 0.5,
-        rootMargin: '0px 0px -10% 0px',
+        threshold: 0.3,
+        rootMargin: '0px',
       }
     );
 
@@ -115,7 +115,7 @@ export default function Ventajas() {
             alt="Construcción"
             w="100%"
             opacity={isVisible ? 1 : 0}
-            transform={isVisible ? "translateX(0)" : "translateX(80px)"}
+            transform={isVisible ? "translateY(0)" : "translateY(80px)"}
             transition="all 1.2s cubic-bezier(0.22, 1, 0.36, 1)"
           />
         </Box>

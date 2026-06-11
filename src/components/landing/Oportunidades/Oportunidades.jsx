@@ -73,14 +73,14 @@ const beneficios = [
 export default function Oportunidades() {
   const { ref, inView } = useInView({
     triggerOnce: true,
-    threshold: 0.55,
+    threshold: 0.3,
   });
   const {
     ref: benefitsRef,
     inView: benefitsInView,
   } = useInView({
     triggerOnce: true,
-    threshold: 0.55,
+    threshold: 0.3,
   });
   return (
     <Box {...section}>

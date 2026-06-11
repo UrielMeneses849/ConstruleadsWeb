@@ -23,7 +23,7 @@ export default function AppFicha() {
         }
       },
       {
-        threshold: 0.5,
+        threshold: 0.3,
         rootMargin: '0px 0px -10% 0px',
       }
     );
@@ -45,13 +45,17 @@ export default function AppFicha() {
             alt='Ficha técnica'
             {...image}
             opacity={isVisible ? 1 : 0}
-            transform={isVisible ? 'translateX(0) rotate(0deg)' : 'translateX(-120px) rotate(-8deg)'}
+            transform={
+              isVisible
+                ? 'translateY(0) rotate(0deg)'
+                : 'translateY(80px) rotate(-4deg)'
+            }
             transition='all 1.2s cubic-bezier(0.22, 1, 0.36, 1)'
           />
 
           <Box
             opacity={isVisible ? 1 : 0}
-            transform={isVisible ? 'translateX(0)' : 'translateX(100px)'}
+            transform={isVisible ? 'translateY(0)' : 'translateY(60px)'}
             transition='all 1s cubic-bezier(0.22, 1, 0.36, 1) 0.2s'
           >
             <Heading {...title}>
@@ -88,7 +92,7 @@ export default function AppFicha() {
         <Box {...row}>
           <Box
             opacity={isVisible ? 1 : 0}
-            transform={isVisible ? 'translateX(0)' : 'translateX(-100px)'}
+            transform={isVisible ? 'translateY(0)' : 'translateY(60px)'}
             transition='all 1s cubic-bezier(0.22, 1, 0.36, 1) 0.3s'
           >
             <Heading {...title}>
@@ -119,7 +123,11 @@ export default function AppFicha() {
             alt='Aplicación móvil'
             {...image}
             opacity={isVisible ? 1 : 0}
-            transform={isVisible ? 'translateX(0) rotate(0deg)' : 'translateX(120px) rotate(8deg)'}
+            transform={
+              isVisible
+                ? 'translateY(0) rotate(0deg)'
+                : 'translateY(80px) rotate(4deg)'
+            }
             transition='all 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.2s'
           />
         </Box>
