@@ -17,6 +17,9 @@ useEffect(() => {
   if (isOpen) {
     setShouldRender(true);
     setIsClosing(false);
+    setCurrentStep('email');
+    setCodigo('');
+    setCodigoError('');
     // ← espera un frame antes de activar la animación
     requestAnimationFrame(() => {
       requestAnimationFrame(() => setIsVisible(true));
@@ -29,7 +32,15 @@ useEffect(() => {
 const handleClose = () => {
   setIsClosing(true);
   setIsVisible(false);
+
   setTimeout(() => {
+    setCurrentStep('email');
+    setCodigo('');
+    setCodigoError('');
+    setHasError(false);
+    setErrorMessage('');
+    setTelefonoAsesor('');
+
     setShouldRender(false);
     onClose();
   }, 520);
@@ -304,19 +315,6 @@ transition={
             Validar código
           </Button>
 
-          <Text
-            mt="16px"
-            textAlign="center"
-            color="#FF6600"
-            cursor="pointer"
-            fontSize="14px"
-            fontWeight="500"
-            transition="opacity 0.3s ease"
-            _hover={{ opacity: 0.7 }}
-            onClick={() => { setCurrentStep('email'); setCodigo(''); setCodigoError(''); }}
-          >
-            ← Cambiar correo
-          </Text>
         </>
       )}
 

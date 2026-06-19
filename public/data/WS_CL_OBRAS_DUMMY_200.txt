@@ -1,0 +1,4203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WS_CL_OBRAS>
+
+<datos>
+  <Clave_Proyecto>1001</Clave_Proyecto>
+  <Proyecto>Obra Dummy #1</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Durango</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar interés medio</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>283892098</Inversion>
+  <Sup_Construida>8509</Sup_Construida>
+  <Fecha_Publicacion>2026-06-20</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-18</Fecha_Inicio>
+  <Fecha_Termino>2027-12-11</Fecha_Termino>
+  <Latitude>25.606276</Latitude>
+  <Longitude>-102.19978</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1002</Clave_Proyecto>
+  <Proyecto>Obra Dummy #2</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Tamaulipas</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Educación básica</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>508346243</Inversion>
+  <Sup_Construida>19385</Sup_Construida>
+  <Fecha_Publicacion>2026-06-02</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-03</Fecha_Inicio>
+  <Fecha_Termino>2027-12-14</Fecha_Termino>
+  <Latitude>29.340589</Latitude>
+  <Longitude>-103.724553</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1003</Clave_Proyecto>
+  <Proyecto>Obra Dummy #3</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Chihuahua</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>199587261</Inversion>
+  <Sup_Construida>30852</Sup_Construida>
+  <Fecha_Publicacion>2026-06-02</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-17</Fecha_Inicio>
+  <Fecha_Termino>2027-12-24</Fecha_Termino>
+  <Latitude>29.788834</Latitude>
+  <Longitude>-109.623824</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1004</Clave_Proyecto>
+  <Proyecto>Obra Dummy #4</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Nayarit</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Carreteras</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>237002423</Inversion>
+  <Sup_Construida>6143</Sup_Construida>
+  <Fecha_Publicacion>2026-06-19</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-12</Fecha_Inicio>
+  <Fecha_Termino>2027-12-18</Fecha_Termino>
+  <Latitude>26.059555</Latitude>
+  <Longitude>-112.305812</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1005</Clave_Proyecto>
+  <Proyecto>Obra Dummy #5</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Yucatán</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar interés social</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>640167880</Inversion>
+  <Sup_Construida>49502</Sup_Construida>
+  <Fecha_Publicacion>2026-06-12</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-03</Fecha_Inicio>
+  <Fecha_Termino>2027-12-01</Fecha_Termino>
+  <Latitude>28.911877</Latitude>
+  <Longitude>-111.961339</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1006</Clave_Proyecto>
+  <Proyecto>Obra Dummy #6</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Hidalgo</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Iglesias y templos</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>723941668</Inversion>
+  <Sup_Construida>37483</Sup_Construida>
+  <Fecha_Publicacion>2026-06-24</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-18</Fecha_Inicio>
+  <Fecha_Termino>2027-12-28</Fecha_Termino>
+  <Latitude>25.934048</Latitude>
+  <Longitude>-116.612073</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1007</Clave_Proyecto>
+  <Proyecto>Obra Dummy #7</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Estado de México</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>333563380</Inversion>
+  <Sup_Construida>47183</Sup_Construida>
+  <Fecha_Publicacion>2026-06-16</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-17</Fecha_Inicio>
+  <Fecha_Termino>2027-12-13</Fecha_Termino>
+  <Latitude>20.550051</Latitude>
+  <Longitude>-93.874136</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1008</Clave_Proyecto>
+  <Proyecto>Obra Dummy #8</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Baja California</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Pavimentos</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>106985212</Inversion>
+  <Sup_Construida>46713</Sup_Construida>
+  <Fecha_Publicacion>2026-06-05</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-11</Fecha_Inicio>
+  <Fecha_Termino>2027-12-08</Fecha_Termino>
+  <Latitude>15.064015</Latitude>
+  <Longitude>-100.785377</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1009</Clave_Proyecto>
+  <Proyecto>Obra Dummy #9</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Michoacán</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar de lujo</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>526884582</Inversion>
+  <Sup_Construida>28274</Sup_Construida>
+  <Fecha_Publicacion>2026-06-08</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-07</Fecha_Inicio>
+  <Fecha_Termino>2027-12-06</Fecha_Termino>
+  <Latitude>17.202644</Latitude>
+  <Longitude>-86.354388</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1010</Clave_Proyecto>
+  <Proyecto>Obra Dummy #10</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Tamaulipas</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Instalaciones deportivas</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>965629322</Inversion>
+  <Sup_Construida>26446</Sup_Construida>
+  <Fecha_Publicacion>2026-06-24</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-09</Fecha_Inicio>
+  <Fecha_Termino>2027-12-27</Fecha_Termino>
+  <Latitude>15.75204</Latitude>
+  <Longitude>-98.313327</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1011</Clave_Proyecto>
+  <Proyecto>Obra Dummy #11</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Yucatán</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Parques industriales</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>825518698</Inversion>
+  <Sup_Construida>20689</Sup_Construida>
+  <Fecha_Publicacion>2026-06-17</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-12</Fecha_Inicio>
+  <Fecha_Termino>2027-12-06</Fecha_Termino>
+  <Latitude>19.484611</Latitude>
+  <Longitude>-103.679188</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1012</Clave_Proyecto>
+  <Proyecto>Obra Dummy #12</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Chihuahua</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Aeropuertos</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>350213819</Inversion>
+  <Sup_Construida>41933</Sup_Construida>
+  <Fecha_Publicacion>2026-06-17</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-08</Fecha_Inicio>
+  <Fecha_Termino>2027-12-04</Fecha_Termino>
+  <Latitude>17.779518</Latitude>
+  <Longitude>-103.843844</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1013</Clave_Proyecto>
+  <Proyecto>Obra Dummy #13</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>San Luis Potosí</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Condominios medio</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>847777508</Inversion>
+  <Sup_Construida>48978</Sup_Construida>
+  <Fecha_Publicacion>2026-06-04</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-25</Fecha_Inicio>
+  <Fecha_Termino>2027-12-16</Fecha_Termino>
+  <Latitude>19.760193</Latitude>
+  <Longitude>-99.52965</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1014</Clave_Proyecto>
+  <Proyecto>Obra Dummy #14</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Colima</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Plazas comerciales</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>138192990</Inversion>
+  <Sup_Construida>17557</Sup_Construida>
+  <Fecha_Publicacion>2026-06-27</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-06</Fecha_Inicio>
+  <Fecha_Termino>2027-12-18</Fecha_Termino>
+  <Latitude>17.993287</Latitude>
+  <Longitude>-101.320394</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1015</Clave_Proyecto>
+  <Proyecto>Obra Dummy #15</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Sonora</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>436052472</Inversion>
+  <Sup_Construida>11763</Sup_Construida>
+  <Fecha_Publicacion>2026-06-27</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-04</Fecha_Inicio>
+  <Fecha_Termino>2027-12-02</Fecha_Termino>
+  <Latitude>21.901399</Latitude>
+  <Longitude>-116.759229</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1016</Clave_Proyecto>
+  <Proyecto>Obra Dummy #16</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Coahuila</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Drenaje y saneamiento</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>568739597</Inversion>
+  <Sup_Construida>9897</Sup_Construida>
+  <Fecha_Publicacion>2026-06-18</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-23</Fecha_Inicio>
+  <Fecha_Termino>2027-12-17</Fecha_Termino>
+  <Latitude>16.672951</Latitude>
+  <Longitude>-100.51254</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1017</Clave_Proyecto>
+  <Proyecto>Obra Dummy #17</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Coahuila</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar interés social</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>180830760</Inversion>
+  <Sup_Construida>47221</Sup_Construida>
+  <Fecha_Publicacion>2026-06-18</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-26</Fecha_Inicio>
+  <Fecha_Termino>2027-12-25</Fecha_Termino>
+  <Latitude>30.285628</Latitude>
+  <Longitude>-116.102782</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1018</Clave_Proyecto>
+  <Proyecto>Obra Dummy #18</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Chihuahua</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Educación media</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>701283542</Inversion>
+  <Sup_Construida>6987</Sup_Construida>
+  <Fecha_Publicacion>2026-06-25</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-03</Fecha_Inicio>
+  <Fecha_Termino>2027-12-14</Fecha_Termino>
+  <Latitude>25.196775</Latitude>
+  <Longitude>-95.252715</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1019</Clave_Proyecto>
+  <Proyecto>Obra Dummy #19</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Colima</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Plantas industriales</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>602945767</Inversion>
+  <Sup_Construida>2602</Sup_Construida>
+  <Fecha_Publicacion>2026-06-03</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-14</Fecha_Inicio>
+  <Fecha_Termino>2027-12-17</Fecha_Termino>
+  <Latitude>27.680788</Latitude>
+  <Longitude>-106.311077</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1020</Clave_Proyecto>
+  <Proyecto>Obra Dummy #20</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Oaxaca</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Telecomunicaciones</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>565646659</Inversion>
+  <Sup_Construida>33020</Sup_Construida>
+  <Fecha_Publicacion>2026-06-11</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-14</Fecha_Inicio>
+  <Fecha_Termino>2027-12-09</Fecha_Termino>
+  <Latitude>16.556075</Latitude>
+  <Longitude>-96.960703</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1021</Clave_Proyecto>
+  <Proyecto>Obra Dummy #21</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Nayarit</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar de lujo</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>275354283</Inversion>
+  <Sup_Construida>4795</Sup_Construida>
+  <Fecha_Publicacion>2026-06-12</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-08</Fecha_Inicio>
+  <Fecha_Termino>2027-12-11</Fecha_Termino>
+  <Latitude>20.54107</Latitude>
+  <Longitude>-96.564944</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1022</Clave_Proyecto>
+  <Proyecto>Obra Dummy #22</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Michoacán</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Instalaciones deportivas</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>377121481</Inversion>
+  <Sup_Construida>8051</Sup_Construida>
+  <Fecha_Publicacion>2026-06-08</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-07</Fecha_Inicio>
+  <Fecha_Termino>2027-12-28</Fecha_Termino>
+  <Latitude>18.831892</Latitude>
+  <Longitude>-99.429625</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1023</Clave_Proyecto>
+  <Proyecto>Obra Dummy #23</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Campeche</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>840101609</Inversion>
+  <Sup_Construida>3250</Sup_Construida>
+  <Fecha_Publicacion>2026-06-21</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-07</Fecha_Inicio>
+  <Fecha_Termino>2027-12-20</Fecha_Termino>
+  <Latitude>16.403316</Latitude>
+  <Longitude>-103.038573</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1024</Clave_Proyecto>
+  <Proyecto>Obra Dummy #24</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Veracruz</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Puentes y estructuras</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>987968864</Inversion>
+  <Sup_Construida>15618</Sup_Construida>
+  <Fecha_Publicacion>2026-06-25</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-02</Fecha_Inicio>
+  <Fecha_Termino>2027-12-23</Fecha_Termino>
+  <Latitude>20.133398</Latitude>
+  <Longitude>-90.533657</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1025</Clave_Proyecto>
+  <Proyecto>Obra Dummy #25</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Sinaloa</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda plurifamiliar interés social</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>479673922</Inversion>
+  <Sup_Construida>9582</Sup_Construida>
+  <Fecha_Publicacion>2026-06-19</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-26</Fecha_Inicio>
+  <Fecha_Termino>2027-12-19</Fecha_Termino>
+  <Latitude>24.799498</Latitude>
+  <Longitude>-98.957169</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1026</Clave_Proyecto>
+  <Proyecto>Obra Dummy #26</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Sonora</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Plazas comerciales</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>745515036</Inversion>
+  <Sup_Construida>39222</Sup_Construida>
+  <Fecha_Publicacion>2026-06-28</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-14</Fecha_Inicio>
+  <Fecha_Termino>2027-12-24</Fecha_Termino>
+  <Latitude>17.757724</Latitude>
+  <Longitude>-87.867057</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1027</Clave_Proyecto>
+  <Proyecto>Obra Dummy #27</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Durango</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Plantas industriales</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>248014618</Inversion>
+  <Sup_Construida>17072</Sup_Construida>
+  <Fecha_Publicacion>2026-06-16</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-19</Fecha_Inicio>
+  <Fecha_Termino>2027-12-21</Fecha_Termino>
+  <Latitude>14.965999</Latitude>
+  <Longitude>-97.789941</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1028</Clave_Proyecto>
+  <Proyecto>Obra Dummy #28</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Querétaro</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Aeropuertos</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>944139603</Inversion>
+  <Sup_Construida>6462</Sup_Construida>
+  <Fecha_Publicacion>2026-06-10</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-25</Fecha_Inicio>
+  <Fecha_Termino>2027-12-11</Fecha_Termino>
+  <Latitude>30.226551</Latitude>
+  <Longitude>-102.829329</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1029</Clave_Proyecto>
+  <Proyecto>Obra Dummy #29</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Campeche</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar interés social</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>849834723</Inversion>
+  <Sup_Construida>11160</Sup_Construida>
+  <Fecha_Publicacion>2026-06-18</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-18</Fecha_Inicio>
+  <Fecha_Termino>2027-12-28</Fecha_Termino>
+  <Latitude>24.204919</Latitude>
+  <Longitude>-99.157544</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1030</Clave_Proyecto>
+  <Proyecto>Obra Dummy #30</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Baja California</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Plazas comerciales</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>526119934</Inversion>
+  <Sup_Construida>10403</Sup_Construida>
+  <Fecha_Publicacion>2026-06-14</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-10</Fecha_Inicio>
+  <Fecha_Termino>2027-12-23</Fecha_Termino>
+  <Latitude>29.780273</Latitude>
+  <Longitude>-96.659272</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1031</Clave_Proyecto>
+  <Proyecto>Obra Dummy #31</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Querétaro</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Naves, almacenes y bodegas</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>310811301</Inversion>
+  <Sup_Construida>23866</Sup_Construida>
+  <Fecha_Publicacion>2026-06-28</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-12</Fecha_Inicio>
+  <Fecha_Termino>2027-12-08</Fecha_Termino>
+  <Latitude>31.981042</Latitude>
+  <Longitude>-102.77095</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1032</Clave_Proyecto>
+  <Proyecto>Obra Dummy #32</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Coahuila</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Pavimentos</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>530734503</Inversion>
+  <Sup_Construida>2001</Sup_Construida>
+  <Fecha_Publicacion>2026-06-06</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-15</Fecha_Inicio>
+  <Fecha_Termino>2027-12-02</Fecha_Termino>
+  <Latitude>18.911933</Latitude>
+  <Longitude>-108.652713</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1033</Clave_Proyecto>
+  <Proyecto>Obra Dummy #33</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Zacatecas</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda plurifamiliar interés social</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>599373704</Inversion>
+  <Sup_Construida>29238</Sup_Construida>
+  <Fecha_Publicacion>2026-06-12</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-06</Fecha_Inicio>
+  <Fecha_Termino>2027-12-06</Fecha_Termino>
+  <Latitude>27.853912</Latitude>
+  <Longitude>-88.711064</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1034</Clave_Proyecto>
+  <Proyecto>Obra Dummy #34</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Coahuila</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Plazas comerciales</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>810142056</Inversion>
+  <Sup_Construida>9414</Sup_Construida>
+  <Fecha_Publicacion>2026-07-11</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-19</Fecha_Inicio>
+  <Fecha_Termino>2027-12-07</Fecha_Termino>
+  <Latitude>23.022799</Latitude>
+  <Longitude>-89.64025</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1035</Clave_Proyecto>
+  <Proyecto>Obra Dummy #35</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Nuevo León</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>409246383</Inversion>
+  <Sup_Construida>12042</Sup_Construida>
+  <Fecha_Publicacion>2026-06-18</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-01</Fecha_Inicio>
+  <Fecha_Termino>2027-12-04</Fecha_Termino>
+  <Latitude>18.425287</Latitude>
+  <Longitude>-88.295055</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1036</Clave_Proyecto>
+  <Proyecto>Obra Dummy #36</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>San Luis Potosí</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Carreteras</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>672730698</Inversion>
+  <Sup_Construida>598</Sup_Construida>
+  <Fecha_Publicacion>2026-06-21</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-23</Fecha_Inicio>
+  <Fecha_Termino>2027-12-22</Fecha_Termino>
+  <Latitude>31.136272</Latitude>
+  <Longitude>-96.697967</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1037</Clave_Proyecto>
+  <Proyecto>Obra Dummy #37</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Nuevo León</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar de lujo</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>512775918</Inversion>
+  <Sup_Construida>23478</Sup_Construida>
+  <Fecha_Publicacion>2026-06-12</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-28</Fecha_Inicio>
+  <Fecha_Termino>2027-12-13</Fecha_Termino>
+  <Latitude>14.933132</Latitude>
+  <Longitude>-104.613812</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1038</Clave_Proyecto>
+  <Proyecto>Obra Dummy #38</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Aguascalientes</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Educación media</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>870372320</Inversion>
+  <Sup_Construida>29000</Sup_Construida>
+  <Fecha_Publicacion>2026-06-05</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-26</Fecha_Inicio>
+  <Fecha_Termino>2027-12-22</Fecha_Termino>
+  <Latitude>14.950401</Latitude>
+  <Longitude>-116.290978</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1039</Clave_Proyecto>
+  <Proyecto>Obra Dummy #39</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Nuevo León</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Naves, almacenes y bodegas</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>535498804</Inversion>
+  <Sup_Construida>47832</Sup_Construida>
+  <Fecha_Publicacion>2026-06-17</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-25</Fecha_Inicio>
+  <Fecha_Termino>2027-12-16</Fecha_Termino>
+  <Latitude>24.823764</Latitude>
+  <Longitude>-106.73504</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1040</Clave_Proyecto>
+  <Proyecto>Obra Dummy #40</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Nuevo León</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Agua potable</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>776947333</Inversion>
+  <Sup_Construida>14774</Sup_Construida>
+  <Fecha_Publicacion>2026-06-05</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-09</Fecha_Inicio>
+  <Fecha_Termino>2027-12-06</Fecha_Termino>
+  <Latitude>22.26192</Latitude>
+  <Longitude>-111.64651</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1041</Clave_Proyecto>
+  <Proyecto>Obra Dummy #41</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Guerrero</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar de lujo</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>148961233</Inversion>
+  <Sup_Construida>28794</Sup_Construida>
+  <Fecha_Publicacion>2026-06-08</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-02</Fecha_Inicio>
+  <Fecha_Termino>2027-12-10</Fecha_Termino>
+  <Latitude>28.307117</Latitude>
+  <Longitude>-107.819121</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1042</Clave_Proyecto>
+  <Proyecto>Obra Dummy #42</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Oaxaca</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Educación básica</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>397235268</Inversion>
+  <Sup_Construida>5823</Sup_Construida>
+  <Fecha_Publicacion>2026-06-10</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-01</Fecha_Inicio>
+  <Fecha_Termino>2027-12-12</Fecha_Termino>
+  <Latitude>24.370298</Latitude>
+  <Longitude>-87.486053</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1043</Clave_Proyecto>
+  <Proyecto>Obra Dummy #43</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Baja California</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Plantas industriales</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>743861782</Inversion>
+  <Sup_Construida>35974</Sup_Construida>
+  <Fecha_Publicacion>2026-06-17</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-06</Fecha_Inicio>
+  <Fecha_Termino>2027-12-01</Fecha_Termino>
+  <Latitude>20.751426</Latitude>
+  <Longitude>-95.275811</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1044</Clave_Proyecto>
+  <Proyecto>Obra Dummy #44</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Michoacán</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Puentes y estructuras</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>838193103</Inversion>
+  <Sup_Construida>42774</Sup_Construida>
+  <Fecha_Publicacion>2026-06-17</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-08</Fecha_Inicio>
+  <Fecha_Termino>2027-12-22</Fecha_Termino>
+  <Latitude>20.812183</Latitude>
+  <Longitude>-100.734695</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1045</Clave_Proyecto>
+  <Proyecto>Obra Dummy #45</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Yucatán</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Condominios de lujo</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>823775501</Inversion>
+  <Sup_Construida>37906</Sup_Construida>
+  <Fecha_Publicacion>2026-06-05</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-25</Fecha_Inicio>
+  <Fecha_Termino>2027-12-07</Fecha_Termino>
+  <Latitude>32.087457</Latitude>
+  <Longitude>-111.710652</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1046</Clave_Proyecto>
+  <Proyecto>Obra Dummy #46</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Sonora</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Hoteles 4 y 5 estrellas</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>602457121</Inversion>
+  <Sup_Construida>49762</Sup_Construida>
+  <Fecha_Publicacion>2026-06-11</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-10</Fecha_Inicio>
+  <Fecha_Termino>2027-12-19</Fecha_Termino>
+  <Latitude>21.051929</Latitude>
+  <Longitude>-104.57333</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1047</Clave_Proyecto>
+  <Proyecto>Obra Dummy #47</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Quintana Roo</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>309799806</Inversion>
+  <Sup_Construida>39524</Sup_Construida>
+  <Fecha_Publicacion>2026-06-01</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-08</Fecha_Inicio>
+  <Fecha_Termino>2027-12-15</Fecha_Termino>
+  <Latitude>25.510467</Latitude>
+  <Longitude>-102.2304</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1048</Clave_Proyecto>
+  <Proyecto>Obra Dummy #48</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Michoacán</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Agua potable</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>559688054</Inversion>
+  <Sup_Construida>36646</Sup_Construida>
+  <Fecha_Publicacion>2026-06-06</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-18</Fecha_Inicio>
+  <Fecha_Termino>2027-12-07</Fecha_Termino>
+  <Latitude>29.046675</Latitude>
+  <Longitude>-90.511833</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1049</Clave_Proyecto>
+  <Proyecto>Obra Dummy #49</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Morelos</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Condominios de lujo</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>328459844</Inversion>
+  <Sup_Construida>609</Sup_Construida>
+  <Fecha_Publicacion>2026-06-16</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-08</Fecha_Inicio>
+  <Fecha_Termino>2027-12-26</Fecha_Termino>
+  <Latitude>25.931282</Latitude>
+  <Longitude>-96.474498</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1050</Clave_Proyecto>
+  <Proyecto>Obra Dummy #50</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Morelos</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Iglesias y templos</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>613593814</Inversion>
+  <Sup_Construida>1367</Sup_Construida>
+  <Fecha_Publicacion>2026-06-02</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-04</Fecha_Inicio>
+  <Fecha_Termino>2027-12-23</Fecha_Termino>
+  <Latitude>29.126118</Latitude>
+  <Longitude>-90.214112</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1051</Clave_Proyecto>
+  <Proyecto>Obra Dummy #51</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>San Luis Potosí</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>413742674</Inversion>
+  <Sup_Construida>29325</Sup_Construida>
+  <Fecha_Publicacion>2026-06-13</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-23</Fecha_Inicio>
+  <Fecha_Termino>2027-12-25</Fecha_Termino>
+  <Latitude>24.703939</Latitude>
+  <Longitude>-111.801255</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1052</Clave_Proyecto>
+  <Proyecto>Obra Dummy #52</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Sonora</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Agua potable</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>485762571</Inversion>
+  <Sup_Construida>26820</Sup_Construida>
+  <Fecha_Publicacion>2026-06-24</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-07</Fecha_Inicio>
+  <Fecha_Termino>2027-12-11</Fecha_Termino>
+  <Latitude>21.554226</Latitude>
+  <Longitude>-105.583404</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1053</Clave_Proyecto>
+  <Proyecto>Obra Dummy #53</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Quintana Roo</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Condominios medio</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>237147271</Inversion>
+  <Sup_Construida>46050</Sup_Construida>
+  <Fecha_Publicacion>2026-06-12</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-28</Fecha_Inicio>
+  <Fecha_Termino>2027-12-19</Fecha_Termino>
+  <Latitude>18.443508</Latitude>
+  <Longitude>-96.55903</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1054</Clave_Proyecto>
+  <Proyecto>Obra Dummy #54</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Querétaro</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Iglesias y templos</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>897918796</Inversion>
+  <Sup_Construida>3744</Sup_Construida>
+  <Fecha_Publicacion>2026-06-02</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-09</Fecha_Inicio>
+  <Fecha_Termino>2027-12-02</Fecha_Termino>
+  <Latitude>17.376884</Latitude>
+  <Longitude>-104.225993</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1055</Clave_Proyecto>
+  <Proyecto>Obra Dummy #55</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Sinaloa</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Naves, almacenes y bodegas</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>126802002</Inversion>
+  <Sup_Construida>25626</Sup_Construida>
+  <Fecha_Publicacion>2026-06-13</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-28</Fecha_Inicio>
+  <Fecha_Termino>2027-12-20</Fecha_Termino>
+  <Latitude>23.174976</Latitude>
+  <Longitude>-86.235336</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1056</Clave_Proyecto>
+  <Proyecto>Obra Dummy #56</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Querétaro</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Telecomunicaciones</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>960024279</Inversion>
+  <Sup_Construida>43806</Sup_Construida>
+  <Fecha_Publicacion>2026-06-20</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-10</Fecha_Inicio>
+  <Fecha_Termino>2027-12-04</Fecha_Termino>
+  <Latitude>26.066069</Latitude>
+  <Longitude>-87.332411</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1057</Clave_Proyecto>
+  <Proyecto>Obra Dummy #57</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Guerrero</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda plurifamiliar interés social</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>553894692</Inversion>
+  <Sup_Construida>39514</Sup_Construida>
+  <Fecha_Publicacion>2026-06-06</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-03</Fecha_Inicio>
+  <Fecha_Termino>2027-12-23</Fecha_Termino>
+  <Latitude>31.30281</Latitude>
+  <Longitude>-91.812233</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1058</Clave_Proyecto>
+  <Proyecto>Obra Dummy #58</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Tabasco</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Edificios de oficinas</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>118349540</Inversion>
+  <Sup_Construida>43482</Sup_Construida>
+  <Fecha_Publicacion>2026-06-10</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-02</Fecha_Inicio>
+  <Fecha_Termino>2027-12-18</Fecha_Termino>
+  <Latitude>16.258177</Latitude>
+  <Longitude>-102.764107</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1059</Clave_Proyecto>
+  <Proyecto>Obra Dummy #59</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Nayarit</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Naves, almacenes y bodegas</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>114891935</Inversion>
+  <Sup_Construida>34150</Sup_Construida>
+  <Fecha_Publicacion>2026-06-28</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-06</Fecha_Inicio>
+  <Fecha_Termino>2027-12-06</Fecha_Termino>
+  <Latitude>31.665485</Latitude>
+  <Longitude>-110.73225</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1060</Clave_Proyecto>
+  <Proyecto>Obra Dummy #60</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Tamaulipas</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Agua potable</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>635376338</Inversion>
+  <Sup_Construida>10940</Sup_Construida>
+  <Fecha_Publicacion>2026-06-28</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-05</Fecha_Inicio>
+  <Fecha_Termino>2027-12-09</Fecha_Termino>
+  <Latitude>25.427436</Latitude>
+  <Longitude>-86.385312</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1061</Clave_Proyecto>
+  <Proyecto>Obra Dummy #61</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Hidalgo</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda plurifamiliar interés social</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>697275303</Inversion>
+  <Sup_Construida>8474</Sup_Construida>
+  <Fecha_Publicacion>2026-06-05</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-09</Fecha_Inicio>
+  <Fecha_Termino>2027-12-12</Fecha_Termino>
+  <Latitude>30.348544</Latitude>
+  <Longitude>-101.784008</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1062</Clave_Proyecto>
+  <Proyecto>Obra Dummy #62</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Chiapas</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Edificios de oficinas</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>721640156</Inversion>
+  <Sup_Construida>14440</Sup_Construida>
+  <Fecha_Publicacion>2026-06-25</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-20</Fecha_Inicio>
+  <Fecha_Termino>2027-12-13</Fecha_Termino>
+  <Latitude>25.157424</Latitude>
+  <Longitude>-90.325138</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1063</Clave_Proyecto>
+  <Proyecto>Obra Dummy #63</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Tamaulipas</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>329059464</Inversion>
+  <Sup_Construida>10125</Sup_Construida>
+  <Fecha_Publicacion>2026-06-03</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-20</Fecha_Inicio>
+  <Fecha_Termino>2027-12-19</Fecha_Termino>
+  <Latitude>27.405591</Latitude>
+  <Longitude>-107.297979</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1064</Clave_Proyecto>
+  <Proyecto>Obra Dummy #64</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Baja California</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Telecomunicaciones</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>149432817</Inversion>
+  <Sup_Construida>22558</Sup_Construida>
+  <Fecha_Publicacion>2026-06-22</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-09</Fecha_Inicio>
+  <Fecha_Termino>2027-12-17</Fecha_Termino>
+  <Latitude>28.64508</Latitude>
+  <Longitude>-103.780978</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1065</Clave_Proyecto>
+  <Proyecto>Obra Dummy #65</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Guerrero</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar interés social</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>874461041</Inversion>
+  <Sup_Construida>13612</Sup_Construida>
+  <Fecha_Publicacion>2026-06-16</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-19</Fecha_Inicio>
+  <Fecha_Termino>2027-12-28</Fecha_Termino>
+  <Latitude>25.720767</Latitude>
+  <Longitude>-94.564186</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1066</Clave_Proyecto>
+  <Proyecto>Obra Dummy #66</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Chiapas</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Educación básica</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>486782525</Inversion>
+  <Sup_Construida>19548</Sup_Construida>
+  <Fecha_Publicacion>2026-06-10</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-25</Fecha_Inicio>
+  <Fecha_Termino>2027-12-24</Fecha_Termino>
+  <Latitude>30.641034</Latitude>
+  <Longitude>-116.43887</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1067</Clave_Proyecto>
+  <Proyecto>Obra Dummy #67</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Aguascalientes</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Naves, almacenes y bodegas</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>915589144</Inversion>
+  <Sup_Construida>2661</Sup_Construida>
+  <Fecha_Publicacion>2026-06-15</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-19</Fecha_Inicio>
+  <Fecha_Termino>2027-12-10</Fecha_Termino>
+  <Latitude>29.454817</Latitude>
+  <Longitude>-93.572251</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1068</Clave_Proyecto>
+  <Proyecto>Obra Dummy #68</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Coahuila</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Agua potable</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>303266706</Inversion>
+  <Sup_Construida>9180</Sup_Construida>
+  <Fecha_Publicacion>2026-06-01</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-20</Fecha_Inicio>
+  <Fecha_Termino>2027-12-24</Fecha_Termino>
+  <Latitude>17.77642</Latitude>
+  <Longitude>-101.467666</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1069</Clave_Proyecto>
+  <Proyecto>Obra Dummy #69</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Querétaro</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar de lujo</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>994167212</Inversion>
+  <Sup_Construida>15096</Sup_Construida>
+  <Fecha_Publicacion>2026-06-22</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-08</Fecha_Inicio>
+  <Fecha_Termino>2027-12-03</Fecha_Termino>
+  <Latitude>19.053455</Latitude>
+  <Longitude>-113.343967</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1070</Clave_Proyecto>
+  <Proyecto>Obra Dummy #70</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Zacatecas</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Edificios de oficinas</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>835395845</Inversion>
+  <Sup_Construida>23139</Sup_Construida>
+  <Fecha_Publicacion>2026-06-12</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-01</Fecha_Inicio>
+  <Fecha_Termino>2027-12-06</Fecha_Termino>
+  <Latitude>31.19634</Latitude>
+  <Longitude>-88.877898</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1071</Clave_Proyecto>
+  <Proyecto>Obra Dummy #71</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Coahuila</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Parques industriales</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>794810769</Inversion>
+  <Sup_Construida>6483</Sup_Construida>
+  <Fecha_Publicacion>2026-06-20</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-23</Fecha_Inicio>
+  <Fecha_Termino>2027-12-23</Fecha_Termino>
+  <Latitude>14.787033</Latitude>
+  <Longitude>-114.227948</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1072</Clave_Proyecto>
+  <Proyecto>Obra Dummy #72</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Aguascalientes</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Telecomunicaciones</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>797186030</Inversion>
+  <Sup_Construida>23737</Sup_Construida>
+  <Fecha_Publicacion>2026-06-18</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-28</Fecha_Inicio>
+  <Fecha_Termino>2027-12-25</Fecha_Termino>
+  <Latitude>28.241322</Latitude>
+  <Longitude>-115.334939</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1073</Clave_Proyecto>
+  <Proyecto>Obra Dummy #73</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Chihuahua</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar interés medio</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>752205131</Inversion>
+  <Sup_Construida>37610</Sup_Construida>
+  <Fecha_Publicacion>2026-06-14</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-09</Fecha_Inicio>
+  <Fecha_Termino>2027-12-03</Fecha_Termino>
+  <Latitude>30.045141</Latitude>
+  <Longitude>-97.944061</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1074</Clave_Proyecto>
+  <Proyecto>Obra Dummy #74</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Nayarit</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Plazas comerciales</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>352287970</Inversion>
+  <Sup_Construida>16693</Sup_Construida>
+  <Fecha_Publicacion>2026-06-05</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-14</Fecha_Inicio>
+  <Fecha_Termino>2027-12-24</Fecha_Termino>
+  <Latitude>24.962321</Latitude>
+  <Longitude>-88.577889</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1075</Clave_Proyecto>
+  <Proyecto>Obra Dummy #75</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Quintana Roo</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Naves, almacenes y bodegas</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>417852154</Inversion>
+  <Sup_Construida>26928</Sup_Construida>
+  <Fecha_Publicacion>2026-06-04</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-03</Fecha_Inicio>
+  <Fecha_Termino>2027-12-10</Fecha_Termino>
+  <Latitude>28.570175</Latitude>
+  <Longitude>-108.859015</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1076</Clave_Proyecto>
+  <Proyecto>Obra Dummy #76</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Chihuahua</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Pavimentos</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>130554797</Inversion>
+  <Sup_Construida>11331</Sup_Construida>
+  <Fecha_Publicacion>2026-06-03</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-10</Fecha_Inicio>
+  <Fecha_Termino>2027-12-26</Fecha_Termino>
+  <Latitude>16.128163</Latitude>
+  <Longitude>-103.980992</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1077</Clave_Proyecto>
+  <Proyecto>Obra Dummy #77</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Yucatán</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar de lujo</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>488037728</Inversion>
+  <Sup_Construida>29775</Sup_Construida>
+  <Fecha_Publicacion>2026-06-13</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-13</Fecha_Inicio>
+  <Fecha_Termino>2027-12-02</Fecha_Termino>
+  <Latitude>27.780386</Latitude>
+  <Longitude>-105.842644</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1078</Clave_Proyecto>
+  <Proyecto>Obra Dummy #78</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Jalisco</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Educación básica</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>569647498</Inversion>
+  <Sup_Construida>5943</Sup_Construida>
+  <Fecha_Publicacion>2026-06-17</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-17</Fecha_Inicio>
+  <Fecha_Termino>2027-12-07</Fecha_Termino>
+  <Latitude>26.120771</Latitude>
+  <Longitude>-100.564838</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1079</Clave_Proyecto>
+  <Proyecto>Obra Dummy #79</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Chihuahua</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Parques industriales</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>885011677</Inversion>
+  <Sup_Construida>3962</Sup_Construida>
+  <Fecha_Publicacion>2026-06-18</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-19</Fecha_Inicio>
+  <Fecha_Termino>2027-12-19</Fecha_Termino>
+  <Latitude>14.560353</Latitude>
+  <Longitude>-105.750902</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1080</Clave_Proyecto>
+  <Proyecto>Obra Dummy #80</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Colima</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Agua potable</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>193042357</Inversion>
+  <Sup_Construida>15508</Sup_Construida>
+  <Fecha_Publicacion>2026-06-19</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-05</Fecha_Inicio>
+  <Fecha_Termino>2027-12-16</Fecha_Termino>
+  <Latitude>16.955435</Latitude>
+  <Longitude>-114.148212</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1081</Clave_Proyecto>
+  <Proyecto>Obra Dummy #81</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Estado de México</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Condominios medio</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>522730195</Inversion>
+  <Sup_Construida>13607</Sup_Construida>
+  <Fecha_Publicacion>2026-06-15</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-02</Fecha_Inicio>
+  <Fecha_Termino>2027-12-01</Fecha_Termino>
+  <Latitude>18.540457</Latitude>
+  <Longitude>-87.609372</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1082</Clave_Proyecto>
+  <Proyecto>Obra Dummy #82</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Tlaxcala</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Plazas comerciales</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>210975191</Inversion>
+  <Sup_Construida>4561</Sup_Construida>
+  <Fecha_Publicacion>2026-06-01</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-20</Fecha_Inicio>
+  <Fecha_Termino>2027-12-02</Fecha_Termino>
+  <Latitude>20.236633</Latitude>
+  <Longitude>-92.968489</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1083</Clave_Proyecto>
+  <Proyecto>Obra Dummy #83</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Sinaloa</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Naves, almacenes y bodegas</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>985232817</Inversion>
+  <Sup_Construida>30378</Sup_Construida>
+  <Fecha_Publicacion>2026-06-05</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-04</Fecha_Inicio>
+  <Fecha_Termino>2027-12-01</Fecha_Termino>
+  <Latitude>24.313791</Latitude>
+  <Longitude>-88.994261</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1084</Clave_Proyecto>
+  <Proyecto>Obra Dummy #84</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Puebla</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Carreteras</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>362945000</Inversion>
+  <Sup_Construida>20730</Sup_Construida>
+  <Fecha_Publicacion>2026-06-14</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-10</Fecha_Inicio>
+  <Fecha_Termino>2027-12-11</Fecha_Termino>
+  <Latitude>30.634581</Latitude>
+  <Longitude>-96.980049</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1085</Clave_Proyecto>
+  <Proyecto>Obra Dummy #85</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Michoacán</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Condominios de lujo</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>681124786</Inversion>
+  <Sup_Construida>23925</Sup_Construida>
+  <Fecha_Publicacion>2026-06-28</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-10</Fecha_Inicio>
+  <Fecha_Termino>2027-12-10</Fecha_Termino>
+  <Latitude>23.202286</Latitude>
+  <Longitude>-88.056557</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1086</Clave_Proyecto>
+  <Proyecto>Obra Dummy #86</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Campeche</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Hoteles 4 y 5 estrellas</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>306671932</Inversion>
+  <Sup_Construida>41654</Sup_Construida>
+  <Fecha_Publicacion>2026-06-04</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-27</Fecha_Inicio>
+  <Fecha_Termino>2027-12-18</Fecha_Termino>
+  <Latitude>15.421187</Latitude>
+  <Longitude>-92.67888</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1087</Clave_Proyecto>
+  <Proyecto>Obra Dummy #87</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Nuevo León</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Parques industriales</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>319337902</Inversion>
+  <Sup_Construida>23396</Sup_Construida>
+  <Fecha_Publicacion>2026-06-20</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-11</Fecha_Inicio>
+  <Fecha_Termino>2027-12-20</Fecha_Termino>
+  <Latitude>18.903169</Latitude>
+  <Longitude>-106.047179</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1088</Clave_Proyecto>
+  <Proyecto>Obra Dummy #88</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Querétaro</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Carreteras</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>702296508</Inversion>
+  <Sup_Construida>9735</Sup_Construida>
+  <Fecha_Publicacion>2026-06-09</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-16</Fecha_Inicio>
+  <Fecha_Termino>2027-12-24</Fecha_Termino>
+  <Latitude>23.395513</Latitude>
+  <Longitude>-107.786781</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1089</Clave_Proyecto>
+  <Proyecto>Obra Dummy #89</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Coahuila</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda plurifamiliar interés social</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>650415993</Inversion>
+  <Sup_Construida>21979</Sup_Construida>
+  <Fecha_Publicacion>2026-06-13</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-06</Fecha_Inicio>
+  <Fecha_Termino>2027-12-13</Fecha_Termino>
+  <Latitude>29.735423</Latitude>
+  <Longitude>-115.355743</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1090</Clave_Proyecto>
+  <Proyecto>Obra Dummy #90</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Durango</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Agencias automotrices</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>372430690</Inversion>
+  <Sup_Construida>3065</Sup_Construida>
+  <Fecha_Publicacion>2026-06-22</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-04</Fecha_Inicio>
+  <Fecha_Termino>2027-12-04</Fecha_Termino>
+  <Latitude>27.012404</Latitude>
+  <Longitude>-106.729668</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1091</Clave_Proyecto>
+  <Proyecto>Obra Dummy #91</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Morelos</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>356668769</Inversion>
+  <Sup_Construida>46073</Sup_Construida>
+  <Fecha_Publicacion>2026-06-12</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-25</Fecha_Inicio>
+  <Fecha_Termino>2027-12-03</Fecha_Termino>
+  <Latitude>27.905604</Latitude>
+  <Longitude>-94.601817</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1092</Clave_Proyecto>
+  <Proyecto>Obra Dummy #92</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Estado de México</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Carreteras</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>362430870</Inversion>
+  <Sup_Construida>24932</Sup_Construida>
+  <Fecha_Publicacion>2026-06-09</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-12</Fecha_Inicio>
+  <Fecha_Termino>2027-12-02</Fecha_Termino>
+  <Latitude>20.648232</Latitude>
+  <Longitude>-102.657874</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1093</Clave_Proyecto>
+  <Proyecto>Obra Dummy #93</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Chiapas</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda plurifamiliar interés social</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>793411263</Inversion>
+  <Sup_Construida>14114</Sup_Construida>
+  <Fecha_Publicacion>2026-06-24</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-08</Fecha_Inicio>
+  <Fecha_Termino>2027-12-22</Fecha_Termino>
+  <Latitude>25.423024</Latitude>
+  <Longitude>-88.674658</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1094</Clave_Proyecto>
+  <Proyecto>Obra Dummy #94</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Chihuahua</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Hoteles 4 y 5 estrellas</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>525464555</Inversion>
+  <Sup_Construida>12187</Sup_Construida>
+  <Fecha_Publicacion>2026-06-06</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-26</Fecha_Inicio>
+  <Fecha_Termino>2027-12-03</Fecha_Termino>
+  <Latitude>29.746281</Latitude>
+  <Longitude>-86.656958</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1095</Clave_Proyecto>
+  <Proyecto>Obra Dummy #95</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Oaxaca</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Parques industriales</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>199985629</Inversion>
+  <Sup_Construida>34690</Sup_Construida>
+  <Fecha_Publicacion>2026-06-16</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-24</Fecha_Inicio>
+  <Fecha_Termino>2027-12-01</Fecha_Termino>
+  <Latitude>14.745199</Latitude>
+  <Longitude>-116.430185</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1096</Clave_Proyecto>
+  <Proyecto>Obra Dummy #96</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Baja California Sur</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Pavimentos</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>540114691</Inversion>
+  <Sup_Construida>14211</Sup_Construida>
+  <Fecha_Publicacion>2026-06-02</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-01</Fecha_Inicio>
+  <Fecha_Termino>2027-12-01</Fecha_Termino>
+  <Latitude>28.76872</Latitude>
+  <Longitude>-104.067229</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1097</Clave_Proyecto>
+  <Proyecto>Obra Dummy #97</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Ciudad de México</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar interés medio</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>391558486</Inversion>
+  <Sup_Construida>20152</Sup_Construida>
+  <Fecha_Publicacion>2026-06-19</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-21</Fecha_Inicio>
+  <Fecha_Termino>2027-12-21</Fecha_Termino>
+  <Latitude>21.265199</Latitude>
+  <Longitude>-97.937778</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1098</Clave_Proyecto>
+  <Proyecto>Obra Dummy #98</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Tabasco</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Plazas comerciales</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>167464713</Inversion>
+  <Sup_Construida>46529</Sup_Construida>
+  <Fecha_Publicacion>2026-06-08</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-21</Fecha_Inicio>
+  <Fecha_Termino>2027-12-23</Fecha_Termino>
+  <Latitude>32.440359</Latitude>
+  <Longitude>-108.005437</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1099</Clave_Proyecto>
+  <Proyecto>Obra Dummy #99</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Quintana Roo</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Naves, almacenes y bodegas</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>706304202</Inversion>
+  <Sup_Construida>42870</Sup_Construida>
+  <Fecha_Publicacion>2026-06-28</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-03</Fecha_Inicio>
+  <Fecha_Termino>2027-12-22</Fecha_Termino>
+  <Latitude>16.972692</Latitude>
+  <Longitude>-88.27906</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1100</Clave_Proyecto>
+  <Proyecto>Obra Dummy #100</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Aguascalientes</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Carreteras</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>576697752</Inversion>
+  <Sup_Construida>41654</Sup_Construida>
+  <Fecha_Publicacion>2026-06-02</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-26</Fecha_Inicio>
+  <Fecha_Termino>2027-12-22</Fecha_Termino>
+  <Latitude>23.979591</Latitude>
+  <Longitude>-93.754158</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1101</Clave_Proyecto>
+  <Proyecto>Obra Dummy #101</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Morelos</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar interés social</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>986963322</Inversion>
+  <Sup_Construida>43520</Sup_Construida>
+  <Fecha_Publicacion>2026-06-27</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-01</Fecha_Inicio>
+  <Fecha_Termino>2027-12-14</Fecha_Termino>
+  <Latitude>19.622223</Latitude>
+  <Longitude>-105.433514</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1102</Clave_Proyecto>
+  <Proyecto>Obra Dummy #102</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Nayarit</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Educación básica</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>235884087</Inversion>
+  <Sup_Construida>45624</Sup_Construida>
+  <Fecha_Publicacion>2026-06-21</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-03</Fecha_Inicio>
+  <Fecha_Termino>2027-12-11</Fecha_Termino>
+  <Latitude>16.21939</Latitude>
+  <Longitude>-89.318886</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1103</Clave_Proyecto>
+  <Proyecto>Obra Dummy #103</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Chihuahua</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>725564663</Inversion>
+  <Sup_Construida>22176</Sup_Construida>
+  <Fecha_Publicacion>2026-06-19</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-21</Fecha_Inicio>
+  <Fecha_Termino>2027-12-21</Fecha_Termino>
+  <Latitude>24.847386</Latitude>
+  <Longitude>-98.743949</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1104</Clave_Proyecto>
+  <Proyecto>Obra Dummy #104</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Sinaloa</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Puentes y estructuras</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>565746169</Inversion>
+  <Sup_Construida>47844</Sup_Construida>
+  <Fecha_Publicacion>2026-06-21</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-16</Fecha_Inicio>
+  <Fecha_Termino>2027-12-07</Fecha_Termino>
+  <Latitude>15.140735</Latitude>
+  <Longitude>-112.970089</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1105</Clave_Proyecto>
+  <Proyecto>Obra Dummy #105</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Coahuila</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda plurifamiliar interés social</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>427459373</Inversion>
+  <Sup_Construida>45502</Sup_Construida>
+  <Fecha_Publicacion>2026-06-18</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-15</Fecha_Inicio>
+  <Fecha_Termino>2027-12-25</Fecha_Termino>
+  <Latitude>27.140693</Latitude>
+  <Longitude>-107.556945</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1106</Clave_Proyecto>
+  <Proyecto>Obra Dummy #106</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Chiapas</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Plazas comerciales</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>807225526</Inversion>
+  <Sup_Construida>32129</Sup_Construida>
+  <Fecha_Publicacion>2026-06-10</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-25</Fecha_Inicio>
+  <Fecha_Termino>2027-12-20</Fecha_Termino>
+  <Latitude>30.754285</Latitude>
+  <Longitude>-91.020352</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1107</Clave_Proyecto>
+  <Proyecto>Obra Dummy #107</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Sinaloa</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Parques industriales</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>219058949</Inversion>
+  <Sup_Construida>13230</Sup_Construida>
+  <Fecha_Publicacion>2026-06-26</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-24</Fecha_Inicio>
+  <Fecha_Termino>2027-12-01</Fecha_Termino>
+  <Latitude>22.001648</Latitude>
+  <Longitude>-91.665836</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1108</Clave_Proyecto>
+  <Proyecto>Obra Dummy #108</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Michoacán</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Carreteras</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>539144646</Inversion>
+  <Sup_Construida>39790</Sup_Construida>
+  <Fecha_Publicacion>2026-06-06</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-10</Fecha_Inicio>
+  <Fecha_Termino>2027-12-26</Fecha_Termino>
+  <Latitude>16.494647</Latitude>
+  <Longitude>-115.999022</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1109</Clave_Proyecto>
+  <Proyecto>Obra Dummy #109</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Puebla</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar de lujo</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>610902228</Inversion>
+  <Sup_Construida>42305</Sup_Construida>
+  <Fecha_Publicacion>2026-06-07</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-06</Fecha_Inicio>
+  <Fecha_Termino>2027-12-18</Fecha_Termino>
+  <Latitude>21.63207</Latitude>
+  <Longitude>-100.174732</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1110</Clave_Proyecto>
+  <Proyecto>Obra Dummy #110</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Chihuahua</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Edificios de oficinas</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>680049511</Inversion>
+  <Sup_Construida>544</Sup_Construida>
+  <Fecha_Publicacion>2026-06-08</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-10</Fecha_Inicio>
+  <Fecha_Termino>2027-12-16</Fecha_Termino>
+  <Latitude>16.246529</Latitude>
+  <Longitude>-102.558601</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1111</Clave_Proyecto>
+  <Proyecto>Obra Dummy #111</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Morelos</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Plantas industriales</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>849151713</Inversion>
+  <Sup_Construida>23468</Sup_Construida>
+  <Fecha_Publicacion>2026-06-07</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-27</Fecha_Inicio>
+  <Fecha_Termino>2027-12-09</Fecha_Termino>
+  <Latitude>22.043977</Latitude>
+  <Longitude>-114.020337</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1112</Clave_Proyecto>
+  <Proyecto>Obra Dummy #112</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Colima</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Carreteras</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>773333413</Inversion>
+  <Sup_Construida>15713</Sup_Construida>
+  <Fecha_Publicacion>2026-06-22</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-14</Fecha_Inicio>
+  <Fecha_Termino>2027-12-01</Fecha_Termino>
+  <Latitude>28.411547</Latitude>
+  <Longitude>-94.135308</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1113</Clave_Proyecto>
+  <Proyecto>Obra Dummy #113</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Chihuahua</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar de lujo</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>802509567</Inversion>
+  <Sup_Construida>34567</Sup_Construida>
+  <Fecha_Publicacion>2026-06-28</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-18</Fecha_Inicio>
+  <Fecha_Termino>2027-12-22</Fecha_Termino>
+  <Latitude>28.313272</Latitude>
+  <Longitude>-107.012447</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1114</Clave_Proyecto>
+  <Proyecto>Obra Dummy #114</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Veracruz</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Educación media</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>996726218</Inversion>
+  <Sup_Construida>9517</Sup_Construida>
+  <Fecha_Publicacion>2026-06-07</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-09</Fecha_Inicio>
+  <Fecha_Termino>2027-12-23</Fecha_Termino>
+  <Latitude>17.154978</Latitude>
+  <Longitude>-87.137747</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1115</Clave_Proyecto>
+  <Proyecto>Obra Dummy #115</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Tamaulipas</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Plantas industriales</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>121415626</Inversion>
+  <Sup_Construida>35961</Sup_Construida>
+  <Fecha_Publicacion>2026-06-05</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-08</Fecha_Inicio>
+  <Fecha_Termino>2027-12-08</Fecha_Termino>
+  <Latitude>28.855212</Latitude>
+  <Longitude>-101.646638</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1116</Clave_Proyecto>
+  <Proyecto>Obra Dummy #116</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Tlaxcala</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Aeropuertos</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>469527651</Inversion>
+  <Sup_Construida>12917</Sup_Construida>
+  <Fecha_Publicacion>2026-06-10</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-19</Fecha_Inicio>
+  <Fecha_Termino>2027-12-17</Fecha_Termino>
+  <Latitude>27.842286</Latitude>
+  <Longitude>-100.202228</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1117</Clave_Proyecto>
+  <Proyecto>Obra Dummy #117</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Nayarit</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Condominios de lujo</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>182130341</Inversion>
+  <Sup_Construida>15235</Sup_Construida>
+  <Fecha_Publicacion>2026-06-24</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-04</Fecha_Inicio>
+  <Fecha_Termino>2027-12-13</Fecha_Termino>
+  <Latitude>17.652725</Latitude>
+  <Longitude>-111.864552</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1118</Clave_Proyecto>
+  <Proyecto>Obra Dummy #118</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Veracruz</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Educación superior</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>466617624</Inversion>
+  <Sup_Construida>29326</Sup_Construida>
+  <Fecha_Publicacion>2026-06-11</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-09</Fecha_Inicio>
+  <Fecha_Termino>2027-12-06</Fecha_Termino>
+  <Latitude>16.166552</Latitude>
+  <Longitude>-86.467393</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1119</Clave_Proyecto>
+  <Proyecto>Obra Dummy #119</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Michoacán</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Parques industriales</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>703035806</Inversion>
+  <Sup_Construida>14104</Sup_Construida>
+  <Fecha_Publicacion>2026-06-27</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-22</Fecha_Inicio>
+  <Fecha_Termino>2027-12-12</Fecha_Termino>
+  <Latitude>27.69548</Latitude>
+  <Longitude>-92.761071</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1120</Clave_Proyecto>
+  <Proyecto>Obra Dummy #120</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Puebla</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Pavimentos</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>237557224</Inversion>
+  <Sup_Construida>34371</Sup_Construida>
+  <Fecha_Publicacion>2026-06-19</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-09</Fecha_Inicio>
+  <Fecha_Termino>2027-12-03</Fecha_Termino>
+  <Latitude>30.58647</Latitude>
+  <Longitude>-106.44028</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1121</Clave_Proyecto>
+  <Proyecto>Obra Dummy #121</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Baja California</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar interés medio</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>263296361</Inversion>
+  <Sup_Construida>40035</Sup_Construida>
+  <Fecha_Publicacion>2026-06-24</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-24</Fecha_Inicio>
+  <Fecha_Termino>2027-12-11</Fecha_Termino>
+  <Latitude>24.640032</Latitude>
+  <Longitude>-86.61726</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1122</Clave_Proyecto>
+  <Proyecto>Obra Dummy #122</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Chiapas</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Edificios de oficinas</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>846068991</Inversion>
+  <Sup_Construida>2566</Sup_Construida>
+  <Fecha_Publicacion>2026-06-07</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-16</Fecha_Inicio>
+  <Fecha_Termino>2027-12-18</Fecha_Termino>
+  <Latitude>17.251543</Latitude>
+  <Longitude>-116.345541</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1123</Clave_Proyecto>
+  <Proyecto>Obra Dummy #123</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Michoacán</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>524527876</Inversion>
+  <Sup_Construida>26161</Sup_Construida>
+  <Fecha_Publicacion>2026-06-14</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-14</Fecha_Inicio>
+  <Fecha_Termino>2027-12-03</Fecha_Termino>
+  <Latitude>25.236851</Latitude>
+  <Longitude>-97.52375</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1124</Clave_Proyecto>
+  <Proyecto>Obra Dummy #124</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Aguascalientes</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Telecomunicaciones</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>676025500</Inversion>
+  <Sup_Construida>32937</Sup_Construida>
+  <Fecha_Publicacion>2026-06-14</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-02</Fecha_Inicio>
+  <Fecha_Termino>2027-12-05</Fecha_Termino>
+  <Latitude>28.534624</Latitude>
+  <Longitude>-105.728455</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1125</Clave_Proyecto>
+  <Proyecto>Obra Dummy #125</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Puebla</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar interés social</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>717711275</Inversion>
+  <Sup_Construida>5359</Sup_Construida>
+  <Fecha_Publicacion>2026-06-20</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-03</Fecha_Inicio>
+  <Fecha_Termino>2027-12-22</Fecha_Termino>
+  <Latitude>29.727925</Latitude>
+  <Longitude>-105.236744</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1126</Clave_Proyecto>
+  <Proyecto>Obra Dummy #126</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Colima</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Agencias automotrices</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>650826447</Inversion>
+  <Sup_Construida>42087</Sup_Construida>
+  <Fecha_Publicacion>2026-06-15</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-01</Fecha_Inicio>
+  <Fecha_Termino>2027-12-28</Fecha_Termino>
+  <Latitude>20.525406</Latitude>
+  <Longitude>-101.884713</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1127</Clave_Proyecto>
+  <Proyecto>Obra Dummy #127</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Chihuahua</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Naves, almacenes y bodegas</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>828509677</Inversion>
+  <Sup_Construida>34482</Sup_Construida>
+  <Fecha_Publicacion>2026-06-14</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-09</Fecha_Inicio>
+  <Fecha_Termino>2027-12-07</Fecha_Termino>
+  <Latitude>16.044744</Latitude>
+  <Longitude>-99.854176</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1128</Clave_Proyecto>
+  <Proyecto>Obra Dummy #128</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Yucatán</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Drenaje y saneamiento</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>147055921</Inversion>
+  <Sup_Construida>9013</Sup_Construida>
+  <Fecha_Publicacion>2026-06-28</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-16</Fecha_Inicio>
+  <Fecha_Termino>2027-12-03</Fecha_Termino>
+  <Latitude>27.317053</Latitude>
+  <Longitude>-92.656318</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1129</Clave_Proyecto>
+  <Proyecto>Obra Dummy #129</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Durango</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar de lujo</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>693032399</Inversion>
+  <Sup_Construida>15768</Sup_Construida>
+  <Fecha_Publicacion>2026-06-26</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-07</Fecha_Inicio>
+  <Fecha_Termino>2027-12-03</Fecha_Termino>
+  <Latitude>31.48074</Latitude>
+  <Longitude>-91.682186</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1130</Clave_Proyecto>
+  <Proyecto>Obra Dummy #130</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Colima</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Instalaciones deportivas</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>148747384</Inversion>
+  <Sup_Construida>16750</Sup_Construida>
+  <Fecha_Publicacion>2026-06-18</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-14</Fecha_Inicio>
+  <Fecha_Termino>2027-12-01</Fecha_Termino>
+  <Latitude>24.699447</Latitude>
+  <Longitude>-95.819703</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1131</Clave_Proyecto>
+  <Proyecto>Obra Dummy #131</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Ciudad de México</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Naves, almacenes y bodegas</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>684414050</Inversion>
+  <Sup_Construida>30252</Sup_Construida>
+  <Fecha_Publicacion>2026-06-20</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-04</Fecha_Inicio>
+  <Fecha_Termino>2027-12-06</Fecha_Termino>
+  <Latitude>20.428031</Latitude>
+  <Longitude>-116.936685</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1132</Clave_Proyecto>
+  <Proyecto>Obra Dummy #132</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Ciudad de México</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Puentes y estructuras</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>618724500</Inversion>
+  <Sup_Construida>18996</Sup_Construida>
+  <Fecha_Publicacion>2026-06-24</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-17</Fecha_Inicio>
+  <Fecha_Termino>2027-12-08</Fecha_Termino>
+  <Latitude>19.847249</Latitude>
+  <Longitude>-93.1931</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1133</Clave_Proyecto>
+  <Proyecto>Obra Dummy #133</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Yucatán</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Condominios medio</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>121432951</Inversion>
+  <Sup_Construida>11826</Sup_Construida>
+  <Fecha_Publicacion>2026-06-25</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-07</Fecha_Inicio>
+  <Fecha_Termino>2027-12-12</Fecha_Termino>
+  <Latitude>32.256851</Latitude>
+  <Longitude>-101.633692</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1134</Clave_Proyecto>
+  <Proyecto>Obra Dummy #134</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Sonora</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Edificios de oficinas</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>404796863</Inversion>
+  <Sup_Construida>47455</Sup_Construida>
+  <Fecha_Publicacion>2026-06-27</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-22</Fecha_Inicio>
+  <Fecha_Termino>2027-12-18</Fecha_Termino>
+  <Latitude>23.729221</Latitude>
+  <Longitude>-109.256309</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1135</Clave_Proyecto>
+  <Proyecto>Obra Dummy #135</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Tlaxcala</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Naves, almacenes y bodegas</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>693660720</Inversion>
+  <Sup_Construida>46520</Sup_Construida>
+  <Fecha_Publicacion>2026-06-20</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-20</Fecha_Inicio>
+  <Fecha_Termino>2027-12-18</Fecha_Termino>
+  <Latitude>30.731544</Latitude>
+  <Longitude>-90.617657</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1136</Clave_Proyecto>
+  <Proyecto>Obra Dummy #136</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Yucatán</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Agua potable</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>559523468</Inversion>
+  <Sup_Construida>48111</Sup_Construida>
+  <Fecha_Publicacion>2026-06-22</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-23</Fecha_Inicio>
+  <Fecha_Termino>2027-12-13</Fecha_Termino>
+  <Latitude>18.450522</Latitude>
+  <Longitude>-94.339486</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1137</Clave_Proyecto>
+  <Proyecto>Obra Dummy #137</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Zacatecas</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Condominios medio</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>872890566</Inversion>
+  <Sup_Construida>38632</Sup_Construida>
+  <Fecha_Publicacion>2026-06-26</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-22</Fecha_Inicio>
+  <Fecha_Termino>2027-12-27</Fecha_Termino>
+  <Latitude>21.183487</Latitude>
+  <Longitude>-88.882509</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1138</Clave_Proyecto>
+  <Proyecto>Obra Dummy #138</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Michoacán</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Educación media</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>608523581</Inversion>
+  <Sup_Construida>18043</Sup_Construida>
+  <Fecha_Publicacion>2026-06-17</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-04</Fecha_Inicio>
+  <Fecha_Termino>2027-12-14</Fecha_Termino>
+  <Latitude>28.360821</Latitude>
+  <Longitude>-101.53225</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1139</Clave_Proyecto>
+  <Proyecto>Obra Dummy #139</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Sinaloa</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Parques industriales</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>526225298</Inversion>
+  <Sup_Construida>28153</Sup_Construida>
+  <Fecha_Publicacion>2026-06-25</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-26</Fecha_Inicio>
+  <Fecha_Termino>2027-12-12</Fecha_Termino>
+  <Latitude>19.115013</Latitude>
+  <Longitude>-113.957619</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1140</Clave_Proyecto>
+  <Proyecto>Obra Dummy #140</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Zacatecas</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Puentes y estructuras</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>741726963</Inversion>
+  <Sup_Construida>38320</Sup_Construida>
+  <Fecha_Publicacion>2026-06-21</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-16</Fecha_Inicio>
+  <Fecha_Termino>2027-12-05</Fecha_Termino>
+  <Latitude>16.319227</Latitude>
+  <Longitude>-100.96979</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1141</Clave_Proyecto>
+  <Proyecto>Obra Dummy #141</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Estado de México</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar de lujo</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>879163247</Inversion>
+  <Sup_Construida>17905</Sup_Construida>
+  <Fecha_Publicacion>2026-06-08</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-24</Fecha_Inicio>
+  <Fecha_Termino>2027-12-15</Fecha_Termino>
+  <Latitude>24.696448</Latitude>
+  <Longitude>-107.366628</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1142</Clave_Proyecto>
+  <Proyecto>Obra Dummy #142</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Chihuahua</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Iglesias y templos</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>275870496</Inversion>
+  <Sup_Construida>27774</Sup_Construida>
+  <Fecha_Publicacion>2026-06-03</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-08</Fecha_Inicio>
+  <Fecha_Termino>2027-12-19</Fecha_Termino>
+  <Latitude>28.025697</Latitude>
+  <Longitude>-115.473117</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1143</Clave_Proyecto>
+  <Proyecto>Obra Dummy #143</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Chiapas</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>278752377</Inversion>
+  <Sup_Construida>4291</Sup_Construida>
+  <Fecha_Publicacion>2026-06-25</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-21</Fecha_Inicio>
+  <Fecha_Termino>2027-12-17</Fecha_Termino>
+  <Latitude>15.815798</Latitude>
+  <Longitude>-114.634858</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1144</Clave_Proyecto>
+  <Proyecto>Obra Dummy #144</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Nuevo León</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Carreteras</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>642875274</Inversion>
+  <Sup_Construida>46418</Sup_Construida>
+  <Fecha_Publicacion>2026-06-03</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-21</Fecha_Inicio>
+  <Fecha_Termino>2027-12-27</Fecha_Termino>
+  <Latitude>18.384375</Latitude>
+  <Longitude>-101.080183</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1145</Clave_Proyecto>
+  <Proyecto>Obra Dummy #145</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Sinaloa</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar interés social</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>288601943</Inversion>
+  <Sup_Construida>30246</Sup_Construida>
+  <Fecha_Publicacion>2026-06-05</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-22</Fecha_Inicio>
+  <Fecha_Termino>2027-12-15</Fecha_Termino>
+  <Latitude>29.704183</Latitude>
+  <Longitude>-97.805502</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1146</Clave_Proyecto>
+  <Proyecto>Obra Dummy #146</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Zacatecas</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Hoteles 4 y 5 estrellas</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>420673706</Inversion>
+  <Sup_Construida>27556</Sup_Construida>
+  <Fecha_Publicacion>2026-06-04</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-19</Fecha_Inicio>
+  <Fecha_Termino>2027-12-15</Fecha_Termino>
+  <Latitude>28.275727</Latitude>
+  <Longitude>-89.00931</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1147</Clave_Proyecto>
+  <Proyecto>Obra Dummy #147</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Nuevo León</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Naves, almacenes y bodegas</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>834960533</Inversion>
+  <Sup_Construida>43473</Sup_Construida>
+  <Fecha_Publicacion>2026-06-11</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-22</Fecha_Inicio>
+  <Fecha_Termino>2027-12-13</Fecha_Termino>
+  <Latitude>18.989718</Latitude>
+  <Longitude>-97.017884</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1148</Clave_Proyecto>
+  <Proyecto>Obra Dummy #148</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Nuevo León</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Carreteras</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>200468729</Inversion>
+  <Sup_Construida>31148</Sup_Construida>
+  <Fecha_Publicacion>2026-06-08</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-09</Fecha_Inicio>
+  <Fecha_Termino>2027-12-06</Fecha_Termino>
+  <Latitude>32.437798</Latitude>
+  <Longitude>-100.465025</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1149</Clave_Proyecto>
+  <Proyecto>Obra Dummy #149</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Zacatecas</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Condominios medio</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>598665753</Inversion>
+  <Sup_Construida>35177</Sup_Construida>
+  <Fecha_Publicacion>2026-06-16</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-17</Fecha_Inicio>
+  <Fecha_Termino>2027-12-11</Fecha_Termino>
+  <Latitude>14.527348</Latitude>
+  <Longitude>-105.325057</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1150</Clave_Proyecto>
+  <Proyecto>Obra Dummy #150</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Michoacán</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Agencias automotrices</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>819458413</Inversion>
+  <Sup_Construida>29842</Sup_Construida>
+  <Fecha_Publicacion>2026-06-06</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-15</Fecha_Inicio>
+  <Fecha_Termino>2027-12-26</Fecha_Termino>
+  <Latitude>32.34222</Latitude>
+  <Longitude>-92.172175</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1151</Clave_Proyecto>
+  <Proyecto>Obra Dummy #151</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Tabasco</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>793907840</Inversion>
+  <Sup_Construida>33901</Sup_Construida>
+  <Fecha_Publicacion>2026-06-09</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-20</Fecha_Inicio>
+  <Fecha_Termino>2027-12-10</Fecha_Termino>
+  <Latitude>18.761972</Latitude>
+  <Longitude>-91.216539</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1152</Clave_Proyecto>
+  <Proyecto>Obra Dummy #152</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Nuevo León</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Aeropuertos</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>211155980</Inversion>
+  <Sup_Construida>2020</Sup_Construida>
+  <Fecha_Publicacion>2026-06-17</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-18</Fecha_Inicio>
+  <Fecha_Termino>2027-12-06</Fecha_Termino>
+  <Latitude>16.137456</Latitude>
+  <Longitude>-95.319621</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1153</Clave_Proyecto>
+  <Proyecto>Obra Dummy #153</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Hidalgo</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda plurifamiliar interés social</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>590922315</Inversion>
+  <Sup_Construida>31085</Sup_Construida>
+  <Fecha_Publicacion>2026-06-16</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-11</Fecha_Inicio>
+  <Fecha_Termino>2027-12-20</Fecha_Termino>
+  <Latitude>25.50682</Latitude>
+  <Longitude>-103.376962</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1154</Clave_Proyecto>
+  <Proyecto>Obra Dummy #154</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Baja California</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Educación básica</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>307470233</Inversion>
+  <Sup_Construida>27334</Sup_Construida>
+  <Fecha_Publicacion>2026-06-21</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-17</Fecha_Inicio>
+  <Fecha_Termino>2027-12-25</Fecha_Termino>
+  <Latitude>30.238411</Latitude>
+  <Longitude>-107.855849</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1155</Clave_Proyecto>
+  <Proyecto>Obra Dummy #155</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Zacatecas</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Plantas industriales</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>939773950</Inversion>
+  <Sup_Construida>20720</Sup_Construida>
+  <Fecha_Publicacion>2026-06-02</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-23</Fecha_Inicio>
+  <Fecha_Termino>2027-12-11</Fecha_Termino>
+  <Latitude>21.744818</Latitude>
+  <Longitude>-102.129703</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1156</Clave_Proyecto>
+  <Proyecto>Obra Dummy #156</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Aguascalientes</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Agua potable</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>823140534</Inversion>
+  <Sup_Construida>48382</Sup_Construida>
+  <Fecha_Publicacion>2026-06-28</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-27</Fecha_Inicio>
+  <Fecha_Termino>2027-12-26</Fecha_Termino>
+  <Latitude>16.252976</Latitude>
+  <Longitude>-109.822199</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1157</Clave_Proyecto>
+  <Proyecto>Obra Dummy #157</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Jalisco</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar interés medio</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>112935198</Inversion>
+  <Sup_Construida>18138</Sup_Construida>
+  <Fecha_Publicacion>2026-06-11</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-26</Fecha_Inicio>
+  <Fecha_Termino>2027-12-17</Fecha_Termino>
+  <Latitude>24.911103</Latitude>
+  <Longitude>-97.285035</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1158</Clave_Proyecto>
+  <Proyecto>Obra Dummy #158</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Baja California Sur</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Instalaciones deportivas</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>746445764</Inversion>
+  <Sup_Construida>36663</Sup_Construida>
+  <Fecha_Publicacion>2026-06-20</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-21</Fecha_Inicio>
+  <Fecha_Termino>2027-12-01</Fecha_Termino>
+  <Latitude>19.709411</Latitude>
+  <Longitude>-114.445572</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1159</Clave_Proyecto>
+  <Proyecto>Obra Dummy #159</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Quintana Roo</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>856612310</Inversion>
+  <Sup_Construida>597</Sup_Construida>
+  <Fecha_Publicacion>2026-06-04</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-26</Fecha_Inicio>
+  <Fecha_Termino>2027-12-01</Fecha_Termino>
+  <Latitude>21.676469</Latitude>
+  <Longitude>-107.499468</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1160</Clave_Proyecto>
+  <Proyecto>Obra Dummy #160</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Jalisco</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Carreteras</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>905395770</Inversion>
+  <Sup_Construida>33719</Sup_Construida>
+  <Fecha_Publicacion>2026-06-24</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-14</Fecha_Inicio>
+  <Fecha_Termino>2027-12-04</Fecha_Termino>
+  <Latitude>20.914732</Latitude>
+  <Longitude>-87.244862</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1161</Clave_Proyecto>
+  <Proyecto>Obra Dummy #161</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Nuevo León</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar interés medio</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>180949407</Inversion>
+  <Sup_Construida>45185</Sup_Construida>
+  <Fecha_Publicacion>2026-06-13</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-26</Fecha_Inicio>
+  <Fecha_Termino>2027-12-03</Fecha_Termino>
+  <Latitude>20.440782</Latitude>
+  <Longitude>-89.631029</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1162</Clave_Proyecto>
+  <Proyecto>Obra Dummy #162</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Campeche</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Edificios de oficinas</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>968890829</Inversion>
+  <Sup_Construida>16086</Sup_Construida>
+  <Fecha_Publicacion>2026-06-28</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-12</Fecha_Inicio>
+  <Fecha_Termino>2027-12-07</Fecha_Termino>
+  <Latitude>29.506154</Latitude>
+  <Longitude>-94.839739</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1163</Clave_Proyecto>
+  <Proyecto>Obra Dummy #163</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Tamaulipas</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>865152105</Inversion>
+  <Sup_Construida>18735</Sup_Construida>
+  <Fecha_Publicacion>2026-06-04</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-19</Fecha_Inicio>
+  <Fecha_Termino>2027-12-20</Fecha_Termino>
+  <Latitude>30.047706</Latitude>
+  <Longitude>-113.840423</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1164</Clave_Proyecto>
+  <Proyecto>Obra Dummy #164</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Veracruz</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Pavimentos</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>490184705</Inversion>
+  <Sup_Construida>4577</Sup_Construida>
+  <Fecha_Publicacion>2026-06-06</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-14</Fecha_Inicio>
+  <Fecha_Termino>2027-12-25</Fecha_Termino>
+  <Latitude>31.872939</Latitude>
+  <Longitude>-95.83517</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1165</Clave_Proyecto>
+  <Proyecto>Obra Dummy #165</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Nuevo León</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar de lujo</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>858711378</Inversion>
+  <Sup_Construida>6229</Sup_Construida>
+  <Fecha_Publicacion>2026-06-02</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-08</Fecha_Inicio>
+  <Fecha_Termino>2027-12-20</Fecha_Termino>
+  <Latitude>16.898302</Latitude>
+  <Longitude>-92.185629</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1166</Clave_Proyecto>
+  <Proyecto>Obra Dummy #166</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Jalisco</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Educación básica</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>248489154</Inversion>
+  <Sup_Construida>1325</Sup_Construida>
+  <Fecha_Publicacion>2026-06-11</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-19</Fecha_Inicio>
+  <Fecha_Termino>2027-12-23</Fecha_Termino>
+  <Latitude>20.632787</Latitude>
+  <Longitude>-96.323068</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1167</Clave_Proyecto>
+  <Proyecto>Obra Dummy #167</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Baja California Sur</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>363089728</Inversion>
+  <Sup_Construida>27329</Sup_Construida>
+  <Fecha_Publicacion>2026-06-02</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-16</Fecha_Inicio>
+  <Fecha_Termino>2027-12-08</Fecha_Termino>
+  <Latitude>18.276519</Latitude>
+  <Longitude>-116.917561</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1168</Clave_Proyecto>
+  <Proyecto>Obra Dummy #168</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Colima</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Telecomunicaciones</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>630015258</Inversion>
+  <Sup_Construida>23193</Sup_Construida>
+  <Fecha_Publicacion>2026-06-03</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-17</Fecha_Inicio>
+  <Fecha_Termino>2027-12-17</Fecha_Termino>
+  <Latitude>17.277168</Latitude>
+  <Longitude>-86.430085</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1169</Clave_Proyecto>
+  <Proyecto>Obra Dummy #169</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Veracruz</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Condominios de lujo</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>660385225</Inversion>
+  <Sup_Construida>4856</Sup_Construida>
+  <Fecha_Publicacion>2026-06-18</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-25</Fecha_Inicio>
+  <Fecha_Termino>2027-12-08</Fecha_Termino>
+  <Latitude>14.742336</Latitude>
+  <Longitude>-98.369237</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1170</Clave_Proyecto>
+  <Proyecto>Obra Dummy #170</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Yucatán</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Educación media</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>674871205</Inversion>
+  <Sup_Construida>4529</Sup_Construida>
+  <Fecha_Publicacion>2026-06-19</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-15</Fecha_Inicio>
+  <Fecha_Termino>2027-12-08</Fecha_Termino>
+  <Latitude>22.060721</Latitude>
+  <Longitude>-98.222371</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1171</Clave_Proyecto>
+  <Proyecto>Obra Dummy #171</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Guerrero</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Plantas industriales</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>169859561</Inversion>
+  <Sup_Construida>13047</Sup_Construida>
+  <Fecha_Publicacion>2026-06-06</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-04</Fecha_Inicio>
+  <Fecha_Termino>2027-12-10</Fecha_Termino>
+  <Latitude>21.415225</Latitude>
+  <Longitude>-116.994484</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1172</Clave_Proyecto>
+  <Proyecto>Obra Dummy #172</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Estado de México</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Pavimentos</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>227648090</Inversion>
+  <Sup_Construida>24994</Sup_Construida>
+  <Fecha_Publicacion>2026-06-27</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-25</Fecha_Inicio>
+  <Fecha_Termino>2027-12-02</Fecha_Termino>
+  <Latitude>22.864399</Latitude>
+  <Longitude>-107.899141</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1173</Clave_Proyecto>
+  <Proyecto>Obra Dummy #173</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Michoacán</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar interés social</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>780585843</Inversion>
+  <Sup_Construida>12830</Sup_Construida>
+  <Fecha_Publicacion>2026-06-11</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-24</Fecha_Inicio>
+  <Fecha_Termino>2027-12-22</Fecha_Termino>
+  <Latitude>26.889662</Latitude>
+  <Longitude>-116.297787</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1174</Clave_Proyecto>
+  <Proyecto>Obra Dummy #174</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Campeche</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Iglesias y templos</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>431269191</Inversion>
+  <Sup_Construida>25686</Sup_Construida>
+  <Fecha_Publicacion>2026-06-05</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-14</Fecha_Inicio>
+  <Fecha_Termino>2027-12-05</Fecha_Termino>
+  <Latitude>27.219449</Latitude>
+  <Longitude>-97.896109</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1175</Clave_Proyecto>
+  <Proyecto>Obra Dummy #175</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Tamaulipas</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Parques industriales</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>440694522</Inversion>
+  <Sup_Construida>43609</Sup_Construida>
+  <Fecha_Publicacion>2026-06-27</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-28</Fecha_Inicio>
+  <Fecha_Termino>2027-12-19</Fecha_Termino>
+  <Latitude>23.382529</Latitude>
+  <Longitude>-107.558966</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1176</Clave_Proyecto>
+  <Proyecto>Obra Dummy #176</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Puebla</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Pavimentos</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>905167463</Inversion>
+  <Sup_Construida>37339</Sup_Construida>
+  <Fecha_Publicacion>2026-06-04</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-16</Fecha_Inicio>
+  <Fecha_Termino>2027-12-08</Fecha_Termino>
+  <Latitude>18.248936</Latitude>
+  <Longitude>-86.375074</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1177</Clave_Proyecto>
+  <Proyecto>Obra Dummy #177</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Oaxaca</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar de lujo</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>561122393</Inversion>
+  <Sup_Construida>31321</Sup_Construida>
+  <Fecha_Publicacion>2026-06-25</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-06</Fecha_Inicio>
+  <Fecha_Termino>2027-12-24</Fecha_Termino>
+  <Latitude>25.805807</Latitude>
+  <Longitude>-96.961952</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1178</Clave_Proyecto>
+  <Proyecto>Obra Dummy #178</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Yucatán</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Edificios de oficinas</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>371018812</Inversion>
+  <Sup_Construida>10696</Sup_Construida>
+  <Fecha_Publicacion>2026-06-17</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-15</Fecha_Inicio>
+  <Fecha_Termino>2027-12-24</Fecha_Termino>
+  <Latitude>24.076928</Latitude>
+  <Longitude>-98.345812</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1179</Clave_Proyecto>
+  <Proyecto>Obra Dummy #179</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Coahuila</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Parques industriales</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>600035649</Inversion>
+  <Sup_Construida>2245</Sup_Construida>
+  <Fecha_Publicacion>2026-06-28</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-08</Fecha_Inicio>
+  <Fecha_Termino>2027-12-22</Fecha_Termino>
+  <Latitude>22.040106</Latitude>
+  <Longitude>-107.030185</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1180</Clave_Proyecto>
+  <Proyecto>Obra Dummy #180</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Coahuila</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Telecomunicaciones</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>400288195</Inversion>
+  <Sup_Construida>42357</Sup_Construida>
+  <Fecha_Publicacion>2026-06-13</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-13</Fecha_Inicio>
+  <Fecha_Termino>2027-12-02</Fecha_Termino>
+  <Latitude>30.850789</Latitude>
+  <Longitude>-109.396844</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1181</Clave_Proyecto>
+  <Proyecto>Obra Dummy #181</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Sinaloa</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar interés medio</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>316963054</Inversion>
+  <Sup_Construida>7009</Sup_Construida>
+  <Fecha_Publicacion>2026-06-07</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-26</Fecha_Inicio>
+  <Fecha_Termino>2027-12-25</Fecha_Termino>
+  <Latitude>23.136231</Latitude>
+  <Longitude>-110.175893</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1182</Clave_Proyecto>
+  <Proyecto>Obra Dummy #182</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Oaxaca</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Educación media</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>956380567</Inversion>
+  <Sup_Construida>6292</Sup_Construida>
+  <Fecha_Publicacion>2026-06-22</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-12</Fecha_Inicio>
+  <Fecha_Termino>2027-12-14</Fecha_Termino>
+  <Latitude>27.339754</Latitude>
+  <Longitude>-109.802669</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1183</Clave_Proyecto>
+  <Proyecto>Obra Dummy #183</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Michoacán</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>548604823</Inversion>
+  <Sup_Construida>49177</Sup_Construida>
+  <Fecha_Publicacion>2026-06-14</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-18</Fecha_Inicio>
+  <Fecha_Termino>2027-12-25</Fecha_Termino>
+  <Latitude>27.421238</Latitude>
+  <Longitude>-91.078388</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1184</Clave_Proyecto>
+  <Proyecto>Obra Dummy #184</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Hidalgo</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Carreteras</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>169884137</Inversion>
+  <Sup_Construida>690</Sup_Construida>
+  <Fecha_Publicacion>2026-06-08</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-25</Fecha_Inicio>
+  <Fecha_Termino>2027-12-15</Fecha_Termino>
+  <Latitude>17.839768</Latitude>
+  <Longitude>-97.070197</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1185</Clave_Proyecto>
+  <Proyecto>Obra Dummy #185</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Nayarit</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda unifamiliar interés social</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>340067742</Inversion>
+  <Sup_Construida>18063</Sup_Construida>
+  <Fecha_Publicacion>2026-06-02</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-08</Fecha_Inicio>
+  <Fecha_Termino>2027-12-27</Fecha_Termino>
+  <Latitude>30.443872</Latitude>
+  <Longitude>-106.320291</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1186</Clave_Proyecto>
+  <Proyecto>Obra Dummy #186</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Ciudad de México</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Educación básica</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>258661739</Inversion>
+  <Sup_Construida>39585</Sup_Construida>
+  <Fecha_Publicacion>2026-06-18</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-05</Fecha_Inicio>
+  <Fecha_Termino>2027-12-10</Fecha_Termino>
+  <Latitude>20.917214</Latitude>
+  <Longitude>-106.827082</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1187</Clave_Proyecto>
+  <Proyecto>Obra Dummy #187</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Aguascalientes</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>En ejecución</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>123091653</Inversion>
+  <Sup_Construida>26539</Sup_Construida>
+  <Fecha_Publicacion>2026-06-17</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-13</Fecha_Inicio>
+  <Fecha_Termino>2027-12-02</Fecha_Termino>
+  <Latitude>22.582834</Latitude>
+  <Longitude>-89.851516</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1188</Clave_Proyecto>
+  <Proyecto>Obra Dummy #188</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Nayarit</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Drenaje y saneamiento</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>276500558</Inversion>
+  <Sup_Construida>25267</Sup_Construida>
+  <Fecha_Publicacion>2026-06-08</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-25</Fecha_Inicio>
+  <Fecha_Termino>2027-12-07</Fecha_Termino>
+  <Latitude>20.410531</Latitude>
+  <Longitude>-115.64648</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1189</Clave_Proyecto>
+  <Proyecto>Obra Dummy #189</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Veracruz</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Condominios de lujo</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Demolición</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>688613743</Inversion>
+  <Sup_Construida>4908</Sup_Construida>
+  <Fecha_Publicacion>2026-06-10</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-05</Fecha_Inicio>
+  <Fecha_Termino>2027-12-20</Fecha_Termino>
+  <Latitude>26.740623</Latitude>
+  <Longitude>-112.303611</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1190</Clave_Proyecto>
+  <Proyecto>Obra Dummy #190</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Guerrero</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Educación básica</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Contratado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>692118155</Inversion>
+  <Sup_Construida>34050</Sup_Construida>
+  <Fecha_Publicacion>2026-06-06</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-08</Fecha_Inicio>
+  <Fecha_Termino>2027-12-23</Fecha_Termino>
+  <Latitude>15.799573</Latitude>
+  <Longitude>-100.679748</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1191</Clave_Proyecto>
+  <Proyecto>Obra Dummy #191</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Puebla</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Parques industriales</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Obra nueva</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>548211899</Inversion>
+  <Sup_Construida>49144</Sup_Construida>
+  <Fecha_Publicacion>2026-06-06</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-09</Fecha_Inicio>
+  <Fecha_Termino>2027-12-17</Fecha_Termino>
+  <Latitude>25.519186</Latitude>
+  <Longitude>-109.48158</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1192</Clave_Proyecto>
+  <Proyecto>Obra Dummy #192</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Estado de México</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Telecomunicaciones</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Ampliación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>812286129</Inversion>
+  <Sup_Construida>16462</Sup_Construida>
+  <Fecha_Publicacion>2026-06-22</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-04</Fecha_Inicio>
+  <Fecha_Termino>2027-12-26</Fecha_Termino>
+  <Latitude>23.190082</Latitude>
+  <Longitude>-97.822547</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1193</Clave_Proyecto>
+  <Proyecto>Obra Dummy #193</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Hidalgo</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Vivienda plurifamiliar interés social</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos de inversion</Tipo_Proyecto>
+  <Etapa>Planeación</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>635992375</Inversion>
+  <Sup_Construida>28583</Sup_Construida>
+  <Fecha_Publicacion>2026-06-24</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-09</Fecha_Inicio>
+  <Fecha_Termino>2027-12-22</Fecha_Termino>
+  <Latitude>23.791871</Latitude>
+  <Longitude>-104.960603</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1194</Clave_Proyecto>
+  <Proyecto>Obra Dummy #194</Proyecto>
+  <Region>Noroeste</Region>
+  <Estado_Proyecto>Sinaloa</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Edificios de oficinas</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Remodelación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>998535496</Inversion>
+  <Sup_Construida>9001</Sup_Construida>
+  <Fecha_Publicacion>2026-06-10</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-23</Fecha_Inicio>
+  <Fecha_Termino>2027-12-04</Fecha_Termino>
+  <Latitude>18.749396</Latitude>
+  <Longitude>-110.270939</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1195</Clave_Proyecto>
+  <Proyecto>Obra Dummy #195</Proyecto>
+  <Region>Centro</Region>
+  <Estado_Proyecto>Morelos</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Plantas industriales</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>560577246</Inversion>
+  <Sup_Construida>39959</Sup_Construida>
+  <Fecha_Publicacion>2026-06-13</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-03</Fecha_Inicio>
+  <Fecha_Termino>2027-12-20</Fecha_Termino>
+  <Latitude>25.943229</Latitude>
+  <Longitude>-115.860412</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1196</Clave_Proyecto>
+  <Proyecto>Obra Dummy #196</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Nayarit</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Aeropuertos</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>164307314</Inversion>
+  <Sup_Construida>21058</Sup_Construida>
+  <Fecha_Publicacion>2026-06-23</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-20</Fecha_Inicio>
+  <Fecha_Termino>2027-12-05</Fecha_Termino>
+  <Latitude>30.014038</Latitude>
+  <Longitude>-101.194213</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1197</Clave_Proyecto>
+  <Proyecto>Obra Dummy #197</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Michoacán</Estado_Proyecto>
+  <Genero>Vivienda</Genero>
+  <Subgenero>Condominios de lujo</Subgenero>
+  <Tipo_Obra>Remodelación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Terminado</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>539912689</Inversion>
+  <Sup_Construida>22901</Sup_Construida>
+  <Fecha_Publicacion>2026-06-24</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-02</Fecha_Inicio>
+  <Fecha_Termino>2027-12-22</Fecha_Termino>
+  <Latitude>25.738538</Latitude>
+  <Longitude>-92.935262</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1198</Clave_Proyecto>
+  <Proyecto>Obra Dummy #198</Proyecto>
+  <Region>Oeste</Region>
+  <Estado_Proyecto>Michoacán</Estado_Proyecto>
+  <Genero>Edificacion</Genero>
+  <Subgenero>Hoteles 4 y 5 estrellas</Subgenero>
+  <Tipo_Obra>Nueva</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>836664388</Inversion>
+  <Sup_Construida>10658</Sup_Construida>
+  <Fecha_Publicacion>2026-06-26</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-23</Fecha_Inicio>
+  <Fecha_Termino>2027-12-22</Fecha_Termino>
+  <Latitude>20.942979</Latitude>
+  <Longitude>-114.53522</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1199</Clave_Proyecto>
+  <Proyecto>Obra Dummy #199</Proyecto>
+  <Region>Noreste</Region>
+  <Estado_Proyecto>Tamaulipas</Estado_Proyecto>
+  <Genero>Industrial</Genero>
+  <Subgenero>Laboratorios</Subgenero>
+  <Tipo_Obra>Rehabilitación</Tipo_Obra>
+  <Tipo_Desarrollo>Mantenimiento</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Proyecto</Etapa>
+  <Sector>Privado</Sector>
+  <Inversion>506305813</Inversion>
+  <Sup_Construida>43082</Sup_Construida>
+  <Fecha_Publicacion>2026-06-12</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-18</Fecha_Inicio>
+  <Fecha_Termino>2027-12-12</Fecha_Termino>
+  <Latitude>30.411926</Latitude>
+  <Longitude>-95.75993</Longitude>
+</datos>
+
+<datos>
+  <Clave_Proyecto>1200</Clave_Proyecto>
+  <Proyecto>Obra Dummy #200</Proyecto>
+  <Region>Sureste</Region>
+  <Estado_Proyecto>Veracruz</Estado_Proyecto>
+  <Genero>Infraestructura</Genero>
+  <Subgenero>Agua potable</Subgenero>
+  <Tipo_Obra>Ampliación</Tipo_Obra>
+  <Tipo_Desarrollo>Adecuación</Tipo_Desarrollo>
+  <Tipo_Proyecto>Proyectos contratados</Tipo_Proyecto>
+  <Etapa>Concurso</Etapa>
+  <Sector>Gobierno</Sector>
+  <Inversion>614351585</Inversion>
+  <Sup_Construida>31896</Sup_Construida>
+  <Fecha_Publicacion>2026-06-25</Fecha_Publicacion>
+  <Fecha_Inicio>2026-07-22</Fecha_Inicio>
+  <Fecha_Termino>2027-12-22</Fecha_Termino>
+  <Latitude>20.71203</Latitude>
+  <Longitude>-113.863763</Longitude>
+</datos>
+</WS_CL_OBRAS>
