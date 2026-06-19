@@ -88,49 +88,6 @@ const metricasDinamicas = [
         </Flex>
       </Box>
 
-      <Box
-        bg="white"
-        p={4}
-        borderRadius="28px"
-        border="1px solid #E5E7EB"
-      >
-        <Heading size="sm" mb={3}>
-          Reporte programado
-        </Heading>
-
-        <HStack>
-          <Box
-            as="select"
-            flex="1"
-            h="32px"
-            px={2}
-            border="1px solid"
-            borderColor="#E5E7EB"
-            borderRadius="md"
-          >
-            <option>PDF</option>
-            <option>Excel</option>
-          </Box>
-
-          <Box
-            as="select"
-            flex="1"
-            h="32px"
-            px={2}
-            border="1px solid"
-            borderColor="#E5E7EB"
-            borderRadius="md"
-          >
-            <option>Semanal</option>
-            <option>Quincenal</option>
-            <option>Mensual</option>
-          </Box>
-        </HStack>
-
-        <Button mt={3} size="sm" bg="#FF6600" color="white" _hover={{ bg: '#E65C00' }} w="full">
-          Programar envío
-        </Button>
-      </Box>
                               
       <Box
         bg="white"
@@ -167,7 +124,6 @@ const metricasDinamicas = [
               >
                 {item.icon}
               </Flex>
-
               <Box>
                 <HStack spacing={1} align="baseline">
                   <Text fontSize="18px" fontWeight="800">
@@ -177,7 +133,6 @@ const metricasDinamicas = [
                     <Text fontWeight="700">{item.suffix}</Text>
                   )}
                 </HStack>
-
                 <Text
                   mt={1}
                   fontSize="12px"
