@@ -16,7 +16,7 @@ import {
 
 import SidebarFiltros from './SidebarFiltros';
 import Mapa from './Mapa';
-import PanelResumen from './PanelResumen';
+import Resultados from './views/ResultadosView';
 
 export default function Construleads() {
   const isAuthenticated =
@@ -26,6 +26,7 @@ export default function Construleads() {
 
   const [filtros, setFiltros] = useState({});
   const [filteredObras, setFilteredObras] = useState([]);
+  const [activeView, setActiveView] = useState('mapa');
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -65,13 +66,14 @@ export default function Construleads() {
             h="48px"
             display="flex"
             alignItems="center"
-            bg="#FFF1E8"
+            bg={activeView === 'mapa' ? '#FFF1E8' : 'transparent'}
             borderRadius="10px"
-            color="#FF6600"
-            borderBottom="2px solid #FF6600"
+            color={activeView === 'mapa' ? '#FF6600' : '#414141'}
+            borderBottom={activeView === 'mapa' ? '2px solid #FF6600' : 'none'}
             fontWeight="500"
             cursor="pointer"
             fontSize="14px"
+            onClick={() => setActiveView('mapa')}
           >
             Mapa
           </Box>
@@ -81,9 +83,13 @@ export default function Construleads() {
             h="48px"
             display="flex"
             alignItems="center"
-            color="#414141"
+            bg={activeView === 'resultados' ? '#FFF1E8' : 'transparent'}
+            borderRadius="10px"
+            color={activeView === 'resultados' ? '#FF6600' : '#414141'}
+            borderBottom={activeView === 'resultados' ? '2px solid #FF6600' : 'none'}
             cursor="pointer"
             fontSize="14px"
+            onClick={() => setActiveView('resultados')}
           >
             Resultados
           </Box>
@@ -183,15 +189,18 @@ export default function Construleads() {
         />
 
         <Box flex="1">
-          <Mapa
-            filtros={filtros}
-            onFilteredData={setFilteredObras}
-          />
+          {activeView === 'mapa' ? (
+            <Mapa
+              filtros={filtros}
+              onFilteredData={setFilteredObras}
+            />
+          ) : (
+            <Resultados
+              filtros={filtros}
+              obras={filteredObras}
+            />
+          )}
         </Box>
-
-        <PanelResumen
-          obras={filteredObras}
-        />
       </Flex>
     </Box>
   );

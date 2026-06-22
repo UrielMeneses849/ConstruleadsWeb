@@ -4,6 +4,7 @@ import {
   Button,
   Text,
 } from '@chakra-ui/react';
+import PanelResumen from './PanelResumen';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 
 export default function Mapa({ filtros = {}, onFilteredData }) {
@@ -668,8 +669,23 @@ useEffect(() => {
               </Button>
             </Box>
           )}
+
+          <Box
+            position="absolute"
+            left="24px"
+            right="24px"
+            bottom="24px"
+            zIndex={15}
+          >
+            <Box
+              p={4}
+            >
+              <PanelResumen obras={filteredObras} />
+            </Box>
+          </Box>
         </Box>
       </Box>
+      
     </Box>
   );
 }

@@ -8,7 +8,7 @@ import {
   Button,
 } from '@chakra-ui/react';
 
-export default function PanelResumen({ obras = [] }) {
+export default function PanelResumen({ obras = [], variant = 'sidebar' }) {
 
 const totalProyectos = obras.length;
 const inversionTotal = obras.reduce(
@@ -38,64 +38,154 @@ const maxValor = topEstados[0]?.[1] || 1;
 const metricasDinamicas = [
   {
     valor: totalProyectos.toLocaleString(),
-    label: 'Proyectos encontrados',
+    label: 'Proyectos',
     color: '#3B82F6',
-    icon: '◫',
   },
   {
     valor: `$${(inversionTotal / 1000000).toFixed(2)}`,
     suffix: 'MDP',
-    label: 'Inversión total',
+    label: 'Inversión',
     color: '#FF6600',
-    icon: '◌',
   },
   {
     valor: estadosConProyectos.toLocaleString(),
-    label: 'Estados con proyectos',
+    label: 'Estados',
     color: '#2FB15A',
-    icon: '◇',
   },
   {
     valor: superficieTotal.toLocaleString(),
-    label: 'Superficie general',
+    label: 'Superficie',
     color: '#7C5CFA',
-    icon: '◐',
   },
 ];
+
+if (variant === 'floating') {
   return (
-    <VStack
-      w="340px"
-      gap={2}
+    <Flex
       align="stretch"
+      gap={3}
+      w="100%"
     >
       <Box
-        bg="white"
+        flex="2.2"
+        minW="0"
         p={4}
-        borderRadius="28px"
+        borderRadius="12px"
+        boxShadow="0 12px 30px rgba(0,0,0,.12)"
         border="1px solid #E5E7EB"
       >
-        <HStack justify="space-between" mb={3}>
-          <Heading size="sm">Descargas</Heading>
-          <Text fontSize="12px" color="#6B7280">5 archivos</Text>
-        </HStack>
+        <Heading size="sm" mb={3} px={3}>
+          Resumen de proyectos
+        </Heading>
 
-        <Flex wrap="wrap" gap={2}>
-          <Button size="xs" bg="#FF6600" color="white" _hover={{ bg: '#E65C00' }}>PDF</Button>
-          <Button size="xs" variant="outline" borderColor="#FF6600" color="#FF6600">Clásica</Button>
-          <Button size="xs" variant="outline" borderColor="#FF6600" color="#FF6600">Contactos</Button>
-          <Button size="xs" variant="outline" borderColor="#FF6600" color="#FF6600">Compañías</Button>
-          <Button size="xs" variant="outline" borderColor="#FF6600" color="#FF6600">Prospección</Button>
+        <Flex gap={2} w="100%" px={3} align="stretch">
+          {metricasDinamicas.map((item) => (
+            <Box
+              key={item.label}
+              flex="1 1 0"
+              minW="0"
+
+              borderRadius="16px"
+              px={3}
+              py={2}
+            >
+              <HStack spacing={1} align="baseline" mb={1}>
+                <Text fontSize="22px" fontWeight="400">
+                  {item.valor}
+                </Text>
+                {item.suffix && (
+                  <Text fontWeight="400">{item.suffix}</Text>
+                )}
+              </HStack>
+
+              <Text
+                w="100%"
+                fontSize="11px"
+                color="#6B7280"
+                whiteSpace="nowrap"
+                overflow="visible"
+              >
+                {item.label}
+              </Text>
+            </Box>
+          ))}
         </Flex>
       </Box>
 
-                              
+      <Box
+        minW="340px"
+        maxW="340px"
+
+        p={4}
+        borderRadius="24px"
+        boxShadow="0 12px 30px rgba(0,0,0,.12)"
+        border="1px solid #E5E7EB"
+        display="flex"
+        flexDirection="column"
+        justifyContent="center"
+        alignItems="center"
+      >
+        <Flex justify="space-between" align="center" mb={2} w="100%">
+          <Heading size="sm">Descargas</Heading>
+          <Text fontSize="12px" color="#6B7280">
+            5 archivos
+          </Text>
+        </Flex>
+
+        <HStack spacing={2} w="100%" align="center" justify="center">
+          <Box flex="1">
+            <select
+              defaultValue="pdf"
+              style={{
+                width: '100%',
+                height: '48px',
+                border: '1px solid #FF6600',
+                borderRadius: '8px',
+                padding: '0 12px',
+                background: 'white',
+              }}
+            >
+              <option value="pdf">PDF</option>
+              <option value="excel-clasica">Excel - Clásica</option>
+              <option value="excel-contactos">Excel - Contactos</option>
+              <option value="excel-companias">Excel - Compañías</option>
+              <option value="excel-prospeccion">Excel - Prospección</option>
+            </select>
+          </Box>
+
+          <Button
+            flex="0 0 130px"
+            h="48px"
+            bg="#FF6600"
+            color="white"
+            _hover={{ bg: '#E65C00' }}
+          >
+            Descargar
+          </Button>
+        </HStack>
+      </Box>
+    </Flex>
+  );
+}
+
+  return (
+    <VStack
+      w="100%"
+      gap={2}
+      align="stretch"
+      flexFlow="row"
+    >
+
       <Box
         bg="white"
         p={1}
-        borderRadius="28px"
+        pl={4}
+        pr={4}
+        borderRadius="22px"
         border="1px solid #E5E7EB"
+        width="100%"
       >
-        <Heading size="sm" mb={2} px={3}>
+        <Heading size="sm" mb={2} >
           Resumen de proyectos
         </Heading>
 
@@ -105,32 +195,20 @@ const metricasDinamicas = [
               key={item.label}
               flex="1"
               minW="125px"
-              bg="#F7F7F9"
               borderRadius="22px"
               p={3}
               flexDirection="column"
               align="flex-start"
-              gap={2}
+              gap={1}
             >
-              <Flex
-                w="34px"
-                h="34px"
-                borderRadius="10px"
-                bg={`${item.color}15`}
-                color={item.color}
-                align="center"
-                justify="center"
-                fontSize="16px"
-              >
-                {item.icon}
-              </Flex>
+              
               <Box>
                 <HStack spacing={1} align="baseline">
-                  <Text fontSize="18px" fontWeight="800">
+                  <Text fontSize="18px" fontWeight="400">
                     {item.valor}
                   </Text>
                   {item.suffix && (
-                    <Text fontWeight="700">{item.suffix}</Text>
+                    <Text fontWeight="400">{item.suffix}</Text>
                   )}
                 </HStack>
                 <Text
@@ -150,48 +228,51 @@ const metricasDinamicas = [
 
       <Box
         bg="white"
-        p={6}
+        p={4}
         borderRadius="28px"
         border="1px solid #E5E7EB"
+        minW="420px"
       >
-        <Heading size="md" mb={6}>
-          Top 5 estados por proyectos
-        </Heading>
+        <HStack justify="space-between" mb={5}>
+          <Heading size="sm">Descargas</Heading>
+          <Text fontSize="12px" color="#6B7280">5 archivos</Text>
+        </HStack>
 
-        <VStack align="stretch" gap={5}>
-          {topEstados.map(([nombre, valor], index) => {
-            const colores = ['#FF6600', '#F97316', '#FB8C00', '#F4A261', '#E9B88D'];
-            return (
-            <Flex key={nombre} align="center" gap={4}>
-              <Text
-                minW="110px"
-                fontWeight="700"
-                fontSize="14px"
-              >
-                {nombre}
-              </Text>
+        <Flex gap={2} align="center">
+          <Box flex="1">
+            <select
+              defaultValue="pdf"
+              style={{
+                width: '100%',
+                height: '36px',
+                border: '1px solid #FF6600',
+                borderRadius: '8px',
+                padding: '0 12px',
+                background: 'white',
+              }}
+            >
+              <option value="pdf">PDF</option>
+              <option value="excel-clasica">Excel - Clásica</option>
+              <option value="excel-contactos">Excel - Contactos</option>
+              <option value="excel-companias">Excel - Compañías</option>
+              <option value="excel-prospeccion">Excel - Prospección</option>
+            </select>
+          </Box>
 
-              <Box flex="1">
-                <Box
-                  h="10px"
-                  borderRadius="full"
-                  bg="#F3F4F6"
-                >
-                  <Box
-                    h="100%"
-                    w={`${(valor / maxValor) * 100}%`}
-                    borderRadius="full"
-                    bg={colores[index] || '#FF6600'}
-                  />
-                </Box>
-              </Box>
+          <Button
+            minW="120px"
+            h="36px"
+            bg="#FF6600"
+            color="white"
+            _hover={{ bg: '#E65C00' }}
+          >
+            Descargar
+          </Button>
+        </Flex>
 
-              <Text fontWeight="600">{valor}</Text>
-            </Flex>
-          );
-          })}
-        </VStack>
-      </Box>
+
+    </Box>
+
 
     </VStack>
   );
