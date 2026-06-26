@@ -6,65 +6,18 @@ import {
 } from '@chakra-ui/react';
 import PanelResumen from './PanelResumen';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
+import { MarkerClusterer } from '@googlemaps/markerclusterer';
 
-export default function Mapa({ filtros = {}, onFilteredData }) {
-  const [obras, setObras] = useState([]);
+export default function Mapa({
+  obras = [],
+  filtros = {},
+  onFilteredData,
+}) {
   const [filteredObras, setFilteredObras] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
   const mapRef = useRef(null);
+  const lastPublishedCount = useRef(-1);
 
-  useEffect(() => {
-    fetch(`${import.meta.env.BASE_URL}data/WS_CL_OBRAS_DUMMY_200.txt`)
-      .then(response => response.text())
-      .then(str => {
-        const parser = new DOMParser();
-        const xml = parser.parseFromString(str, 'application/xml');
-        const datosNodes = Array.from(xml.getElementsByTagName('datos'));
-        const parsedObras = datosNodes.map(node => {
-          const lat = node.getElementsByTagName('Latitude')[0]?.textContent || '';
-          const lon = node.getElementsByTagName('Longitude')[0]?.textContent || '';
-          const proyecto = node.getElementsByTagName('Proyecto')[0]?.textContent || '';
-          const genero = node.getElementsByTagName('Genero')[0]?.textContent || 'Sin género';
-          const subgenero = node.getElementsByTagName('Subgenero')[0]?.textContent || '';
-          const tipoObra = node.getElementsByTagName('Tipo_Obra')[0]?.textContent || '';
-          const estado = node.getElementsByTagName('Estado_Proyecto')[0]?.textContent || '';
-          const region = node.getElementsByTagName('Region')[0]?.textContent || '';
-          const sector = node.getElementsByTagName('Sector')[0]?.textContent || '';
-          const tipoProyecto = node.getElementsByTagName('Tipo_Proyecto')[0]?.textContent || '';
-          const tipoDesarrollo = node.getElementsByTagName('Tipo_Desarrollo')[0]?.textContent || '';
-          const etapa = node.getElementsByTagName('Etapa')[0]?.textContent || '';
-          const inversion = Number(node.getElementsByTagName('Inversion')[0]?.textContent || 0);
-          const superficie = Number(node.getElementsByTagName('Sup_Construida')[0]?.textContent || 0);
-const fechaPublicacion = node.getElementsByTagName('Fecha_Publicacion')[0]?.textContent || '';
-const fechaInicio = node.getElementsByTagName('Fecha_Inicio')[0]?.textContent || '';
-const fechaTerminacion = node.getElementsByTagName('Fecha_Termino')[0]?.textContent || '';
-          return {
-            lat,
-            lon,
-            proyecto,
-            genero,
-            subgenero,
-            tipoObra,
-            estado,
-            region,
-            sector,
-            tipoProyecto,
-            tipoDesarrollo,
-            etapa,
-            inversion,
-            superficie,
-            fechaPublicacion,
-            fechaInicio,
-            fechaTerminacion,
-          };
-        });
-        setObras(parsedObras);
-        setFilteredObras(parsedObras);
-      })
-      .catch(() => {
-        setObras([]);
-      });
-  }, []);
 
   useEffect(() => {
     const applyFilters = () => {
@@ -111,6 +64,11 @@ const fechaTerminacion = node.getElementsByTagName('Fecha_Termino')[0]?.textCont
           'SUBGENEROS XML:',
           [...new Set(obras.map((o) => o.subgenero))]
         );
+
+        console.log(
+  'TIPO OBRA XML:',
+  [...new Set(obras.map((o) => o.tipoObra))]
+);
 
         console.log(
           'SECTORES XML:',
@@ -172,76 +130,7 @@ const parseDate = (dateStr) => {
 
 // FILTRO FECHAS DESACTIVADO TEMPORALMENTE
 console.log('FILTRO FECHAS DESACTIVADO TEMPORALMENTE');
-
-if (
-  selectedDateField &&
-  selectedDateField !== 'Todas' &&
-  diasSeleccionados !== undefined
-) {
-  const today = new Date();
-
-  today.setHours(0, 0, 0, 0);
-
-  let fechaLimite = new Date(today);
-
-  if (diasSeleccionados > 0) {
-    fechaLimite.setDate(
-      today.getDate() + diasSeleccionados
-    );
-  }
-
-  resultado = resultado.filter((o) => {
-    let fechaProyecto = null;
-
-    switch (selectedDateField) {
-      case 'Fecha de publicación':
-        fechaProyecto = parseDate(
-          o.fechaPublicacion
-        );
-        break;
-
-      case 'Fecha de inicio probable':
-        fechaProyecto = parseDate(
-          o.fechaInicio
-        );
-        break;
-
-      case 'Fecha de término probable':
-        fechaProyecto = parseDate(
-          o.fechaTerminacion
-        );
-        break;
-
-      default:
-        return true;
-    }
-
-    if (!fechaProyecto) {
-      return false;
-    }
-
-    fechaProyecto.setHours(0, 0, 0, 0);
-
-    // HOY
-    if (diasSeleccionados === 0) {
-      return (
-        fechaProyecto.getTime() ===
-        today.getTime()
-      );
-    }
-
-    // RANGO
-    return (
-      fechaProyecto >= today &&
-      fechaProyecto <= fechaLimite
-    );
-  });
-
-  console.log(
-    'POST FECHAS:',
-    resultado.length
-  );
-}
+console.log('FILTRO FECHAS OMITIDO PARA DEBUG');
 
 const regiones =
   filtrosActivos.regiones ||
@@ -263,6 +152,92 @@ const subgeneros =
   filtrosActivos.selectedSubgeneros ||
   [];
 
+  const tiposObraPorSubgenero = {
+  Lujo: [
+    'Condominios de Lujo',
+    'Vivienda Unifamiliar de Lujo',
+  ],
+
+  Medio: [
+    'Condominios Medio',
+    'Vivienda Unifamiliar Interes Medio',
+  ],
+
+  Social: [
+    'Vivienda Plurifamiliar Interes Social',
+    'Vivienda Unifamiliar Interes Social',
+  ],
+
+  Comercial: [
+    'Plazas Comercio, Tiendas, Autoservicio',
+    'Edificios de Oficinas',
+    'Bancarias, Bolsa y Corredurias',
+    'Agencias Automotrices y Talleres',
+    'Centrales de Carga y Distribucion',
+    'Restaurantes y Salones de Eventos',
+    'Mercados Publicos y Centrales de Abastos',
+    'Cines y Teatros',
+    'Centros de Diversiones',
+    'Gasolinerias',
+    'Terminales de Transporte',
+    'Edificios de Estacionamiento',
+  ],
+
+  Educativo: [
+    'Edificios de Educacion Superior',
+    'Edificios de Educacion Basica',
+    'Edificios de Educacion Media',
+  ],
+
+  Institucional: [
+    'Judiciales y Bomberos',
+    'Albergues, Orfanatos, Asilos y Conventos',
+    'Iglesias y Templos',
+    'Crematorios y Velatorios',
+    'Instalaciones Deportivas',
+  ],
+
+  Salud: [
+    'Centros de Rehabilitacion y Salud',
+    'Clinicas, Hospitales y Centros Medicos',
+  ],
+
+  Turistico: [
+    'Desarrollos Turisticos - Hoteleros',
+    'Hoteles 4, 5 Estrellas, G.Turismo, Negocios',
+    'Hoteles de 1, 2 y 3 Estrellas y Moteles',
+  ],
+
+  Industrial: [
+    'Naves, Almacenes y Bodegas',
+    'Camaras Frigorificas y Rastros',
+    'Laboratorios',
+    'Plantas Industriales',
+    'Parques Industriales',
+    'Petroleras, Petroquimicas y Refinerias',
+    'Hidro + Termoelectricas y Subestaciones',
+  ],
+
+  Infraestructura: [
+    'Hidro - Agropecuaria',
+    'Agua Potable',
+    'Drenaje y Saneamiento',
+    'Telecomunicaciones',
+    'Electrificacion',
+    'Maritimas',
+    'Aeropuertos',
+    'Vias Ferreas, Tren Ligero, Metro',
+    'Urbanizacion',
+    'Carreteras',
+    'Redes de Gas',
+    'Presas',
+    'Plantas de Tratamiento de Agua',
+    'Puentes y Estructuras',
+    'Pavimentos',
+    'Tren Alta Velocidad',
+  ],
+};
+
 const sectores =
   filtrosActivos.sectores ||
   filtrosActivos.selectedSectores ||
@@ -282,6 +257,9 @@ const tipoObra =
   filtrosActivos.tipoObra ||
   filtrosActivos.selectedTipoObra ||
   [];
+
+console.log('FILTRO SUBGENEROS:', subgeneros);
+console.log('FILTRO TIPO OBRA:', tipoObra);
 
 const tiposProyecto =
   filtrosActivos.tiposProyecto ||
@@ -308,12 +286,9 @@ const tiposProyecto =
         console.log('POST GENEROS:', resultado.length);
       }
 
-      // Independent filters for tipoObra, desarrollos, etapas, tiposProyecto, subgeneros (in this order)
+      // Tipo Obra ya se maneja desde el filtro visual de Subgénero
       if (tipoObra.length) {
-        resultado = resultado.filter((o) =>
-          tipoObra.includes(o.tipoObra)
-        );
-        console.log('POST TIPO OBRA:', resultado.length);
+        console.log('TIPO OBRA LEGACY IGNORADO:', tipoObra);
       }
 
       if (desarrollos.length) {
@@ -338,6 +313,18 @@ const tiposProyecto =
           [...new Set(resultado.map(o => o.tipoProyecto))]
         );
 
+        console.log(
+  'TIPOS PROYECTO SELECCIONADOS:',
+  filtros.tipoProyecto
+);
+
+console.log(
+  'TIPOS PROYECTO PRIMERAS OBRAS:',
+  obras.slice(0,5).map(
+    o => o.tipoProyecto
+  )
+);
+
         resultado = resultado.filter((o) =>
           tiposProyecto.includes(o.tipoProyecto)
         );
@@ -346,11 +333,29 @@ const tiposProyecto =
       }
 
       if (subgeneros.length) {
-        resultado = resultado.filter((o) =>
-          subgeneros.includes(o.subgenero)
-        );
-        console.log('POST SUBGENEROS:', resultado.length);
-      }
+  const tiposObraPermitidos = subgeneros.flatMap(
+    (sub) => tiposObraPorSubgenero[sub] || []
+  );
+
+  console.log(
+    'SUBGENEROS SELECCIONADOS:',
+    subgeneros
+  );
+
+  console.log(
+    'TIPOS OBRA RESUELTOS:',
+    tiposObraPermitidos
+  );
+
+  resultado = resultado.filter((o) =>
+    tiposObraPermitidos.includes(o.tipoObra)
+  );
+
+  console.log(
+    'POST SUBGENEROS:',
+    resultado.length
+  );
+}
 
       const investmentMin = Number(filtrosActivos.investmentMin || 0);
       const investmentMax = Number(filtrosActivos.investmentMax || 0);
@@ -423,14 +428,19 @@ const tiposProyecto =
       );
 
       console.log('RESULTADO FINAL:', resultado.length);
-      console.log('SET FILTERED OBRAS EJECUTANDO');
+
       setFilteredObras(resultado);
 
-      if (onFilteredData) {
+      if (
+        onFilteredData &&
+        lastPublishedCount.current !== resultado.length
+      ) {
+        lastPublishedCount.current = resultado.length;
         onFilteredData(resultado);
       }
     };
 
+    console.log('MAPA RECALCULANDO FILTROS');
     applyFilters();
 
     window.addEventListener(
@@ -450,7 +460,7 @@ useEffect(() => {
   console.log(
     'MAPA RECIBIÓ:',
     filteredObras.length,
-    'OBRAS'
+    'OBRAS FILTRADAS'
   );
     const apiKey =
       import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
@@ -467,6 +477,7 @@ useEffect(() => {
         const { Map } = await importLibrary('maps');
         const { AdvancedMarkerElement } = await importLibrary('marker');
 
+        if (!mapRef.current) return;
         const map = new Map(mapRef.current, {
           center: { lat: 23.6345, lng: -102.5528 },
           zoom: 5,
@@ -474,6 +485,7 @@ useEffect(() => {
         });
 
         let activeMarkerElement = null;
+        const markers = [];
 
         const formatInvestment = (value) => {
           if (!value) return '0 MDP';
@@ -502,9 +514,18 @@ useEffect(() => {
           }
         };
 
+        console.log(
+          'OBRAS A PINTAR EN MAPA:',
+          filteredObras.length
+        );
         filteredObras.forEach((obra) => {
           const latNum = parseFloat(obra.lat);
-          const lonNum = parseFloat(obra.lon);
+          const lonNum = parseFloat(obra.lng);
+          console.log('COORDENADAS:', {
+            proyecto: obra.proyecto,
+            lat: latNum,
+            lng: lonNum,
+          });
 
           if (!isNaN(latNum) && !isNaN(lonNum)) {
             // Create custom HTML marker
@@ -515,8 +536,8 @@ useEffect(() => {
                 align-items:center;
                 gap:6px;
                 background:white;
-                border:2px solid #FF6600;
-                border-radius:999px;
+                border:1px solid #D1D5DB;
+                border-radius:8px;
                 padding:6px 10px;
                 box-shadow:0 4px 12px rgba(0,0,0,.15);
                 font-family:Inter,sans-serif;
@@ -533,7 +554,6 @@ useEffect(() => {
 
             // Create the marker using AdvancedMarkerElement with custom content
             const marker = new AdvancedMarkerElement({
-              map,
               position: {
                 lat: latNum,
                 lng: lonNum,
@@ -541,6 +561,8 @@ useEffect(() => {
               title: obra.proyecto,
               content: markerContent,
             });
+
+            markers.push(marker);
 
             markerContent.addEventListener('click', (e) => {
               e.stopPropagation();
@@ -567,6 +589,43 @@ useEffect(() => {
           }
         });
 
+new MarkerClusterer({
+  map,
+  markers,
+
+  renderer: {
+    render({ count, position }) {
+      const clusterElement = document.createElement('div');
+
+      clusterElement.innerHTML = `
+        <div style="
+          min-width:34px;
+          height:30px;
+          padding:0 8px;
+          border-radius:8px;
+          background:white;
+          border:1px solid #D1D5DB;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-family:Inter,sans-serif;
+          font-weight:800;
+          font-size:13px;
+          color:#202020;
+          box-shadow:0 4px 12px rgba(0,0,0,.16);
+        ">
+          ${count}
+        </div>
+      `;
+
+      return new google.maps.marker.AdvancedMarkerElement({
+        position,
+        content: clusterElement,
+      });
+    },
+  },
+});
+
         map.addListener('click', () => {
           if (activeMarkerElement) {
             activeMarkerElement.style.transform = 'scale(1)';
@@ -585,41 +644,42 @@ useEffect(() => {
   return (
     <Box
       bg="white"
-      h="100%"
-      borderRadius="20px"
-      p={2}
-      boxShadow="sm"
+  h="calc(100vh - 96px)"
+      borderRadius="12px"
+      p={0}
+      border="1px solid #ECECEC"
+      overflow="hidden"
     >
       <Box
         h="100%"
-        borderRadius="16px"
-        overflow="auto"
-        border="1px solid #E5E7EB"
-        p={4}
+        borderRadius="12px"
+        overflow="hidden"
+        border="0"
+        p={0}
       >
-        <Box position="relative" h="100%" w="100%">
-          <Box ref={mapRef} h="100%" w="100%" />
+        <Box position="relative" h="100%" minH="640px" w="100%">
+          <Box ref={mapRef} h="100%" minH="640px" w="100%" />
 
           {selectedProject && (
             <Box
               position="absolute"
-              top="20px"
-              left="20px"
+              top="16px"
+              left="16px"
               bg="white"
-              borderRadius="20px"
-              p={5}
-              w="340px"
-              boxShadow="0 12px 32px rgba(0,0,0,.18)"
+              borderRadius="12px"
+              p={4}
+              w="320px"
+              boxShadow="0 8px 24px rgba(0,0,0,.12)"
               zIndex={20}
-              border="1px solid #F0F0F0"
+              border="1px solid #ECECEC"
             >
               <Box
                 display="inline-block"
-                bg="#FFF3EB"
+                bg="#FAFAFA"
                 color="#FF6600"
-                px={3}
+                px={2}
                 py={1}
-                borderRadius="999px"
+                borderRadius="8px"
                 fontSize="12px"
                 fontWeight="700"
                 mb={3}
@@ -627,19 +687,19 @@ useEffect(() => {
                 {selectedProject.genero}
               </Box>
 
-              <Text fontSize="20px" fontWeight="800" mb={4} lineHeight="1.2">
+              <Text fontSize="18px" fontWeight="800" mb={3} lineHeight="1.25" color="#202020">
                 {selectedProject.proyecto}
               </Text>
 
-              <Box display="grid" gridTemplateColumns="1fr 1fr" gap={3} mb={4}>
-                <Box bg="#F8F8F8" p={3} borderRadius="14px">
+              <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2} mb={3}>
+                <Box bg="#FAFAFA" p={2} borderRadius="8px" border="1px solid #ECECEC">
                   <Text fontSize="11px" color="gray.500">💰 Inversión</Text>
                   <Text fontWeight="800" color="#FF6600">
                     {selectedProject.inversion}
                   </Text>
                 </Box>
 
-                <Box bg="#F8F8F8" p={3} borderRadius="14px">
+                <Box bg="#FAFAFA" p={2} borderRadius="8px" border="1px solid #ECECEC">
                   <Text fontSize="11px" color="gray.500">📐 Superficie</Text>
                   <Text fontWeight="800">
                     {selectedProject.superficie}
@@ -648,11 +708,11 @@ useEffect(() => {
               </Box>
 
               <Box
-                bg="#FFF8F3"
-                border="1px solid #FFE0CC"
-                borderRadius="12px"
-                p={3}
-                mb={4}
+                bg="#FAFAFA"
+                border="1px solid #ECECEC"
+                borderRadius="8px"
+                p={2}
+                mb={3}
                 fontSize="13px"
                 color="gray.600"
               >
@@ -664,6 +724,8 @@ useEffect(() => {
                 bg="#FF6600"
                 color="white"
                 _hover={{ bg: '#E85D00' }}
+                borderRadius="8px"
+                transition="all 180ms ease"
               >
                 Ver ficha completa →
               </Button>
@@ -672,13 +734,13 @@ useEffect(() => {
 
           <Box
             position="absolute"
-            left="24px"
-            right="24px"
-            bottom="24px"
+            left="16px"
+            right="16px"
+            bottom="16px"
             zIndex={15}
           >
             <Box
-              p={4}
+              p={2}
             >
               <PanelResumen obras={filteredObras} />
             </Box>

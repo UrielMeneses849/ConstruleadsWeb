@@ -65,7 +65,7 @@ export function parseObrasXml(xmlText) {
       ),
 
       fechaPublicacion: normalizeDate(
-        item.querySelector('Fecha_Publicacion')?.textContent || ''
+        item.querySelector('Fecha_publicacion')?.textContent || ''
       ),
 
       fechaInicio: normalizeDate(
@@ -73,28 +73,37 @@ export function parseObrasXml(xmlText) {
       ),
 
       fechaTermino: normalizeDate(
-        item.querySelector('Fecha_Termino')?.textContent || ''
+        item.querySelector('Fecha_Terminacion')?.textContent || ''
       ),
 
-      fechaPublicacionDate: item.querySelector('Fecha_Publicacion')?.textContent
-        ? new Date(item.querySelector('Fecha_Publicacion')?.textContent.trim())
+      fechaPublicacionDate: item.querySelector('Fecha_publicacion')?.textContent
+        ? new Date(item.querySelector('Fecha_publicacion')?.textContent.trim())
         : null,
 
       fechaInicioDate: item.querySelector('Fecha_Inicio')?.textContent
         ? new Date(item.querySelector('Fecha_Inicio')?.textContent.trim())
         : null,
 
-      fechaTerminoDate: item.querySelector('Fecha_Termino')?.textContent
-        ? new Date(item.querySelector('Fecha_Termino')?.textContent.trim())
+      fechaTerminoDate: item.querySelector('Fecha_Terminacion')?.textContent
+        ? new Date(item.querySelector('Fecha_Terminacion')?.textContent.trim())
         : null,
 
       lat: Number(
-        item.querySelector('Latitude')?.textContent || 0
+        item.querySelector('proy_ubicacionlatitud')?.textContent || 0
       ),
 
       lng: Number(
-        item.querySelector('Longitude')?.textContent || 0
+        item.querySelector('proy_ubicacionlongitud')?.textContent || 0
       ),
+
+      localizacion:
+        item.querySelector('Localizacion1')?.textContent || '',
+
+      descripcion:
+        item.querySelector('Descripcion')?.textContent || '',
+
+      compania:
+        item.querySelector('Compania')?.textContent || '',
     })
   );
 }

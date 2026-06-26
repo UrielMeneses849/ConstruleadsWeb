@@ -73,10 +73,22 @@ export async function validarCodigo(email, codigo) {
 
   const row = xml.querySelector("row");
 
-  return {
+  const result = {
     estatus: row?.getAttribute("estatus"),
     mensaje:
       row?.getAttribute("mensaje") ||
       row?.getAttribute("msg_accesos"),
+    idUsuario: row?.getAttribute("id_usuario"),
+    nombreUsuario: row?.getAttribute("nombre_usuario"),
+    idSession: row?.getAttribute("id_session"),
   };
+
+  if (result.estatus === "1") {
+    localStorage.setItem(
+      "construleadsUser",
+      JSON.stringify(result)
+    );
+  }
+
+  return result;
 }
