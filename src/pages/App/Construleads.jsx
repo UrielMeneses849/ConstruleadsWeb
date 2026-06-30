@@ -10,6 +10,7 @@ import {
 
 import {
   FiMoon,
+  FiSun,
   FiSettings,
   FiLogOut,
 } from 'react-icons/fi';
@@ -17,6 +18,7 @@ import {
 import SidebarFiltros from './SidebarFiltros';
 import Mapa from './Mapa';
 import Resultados from './views/ResultadosView';
+import DownloadPanel from './DownloadPanel';
 import { obtenerObras } from '../../api/obras';
 import { parseObrasXml } from '../../utils/parseObrasXml';
 
@@ -31,12 +33,66 @@ export default function Construleads() {
   const [loadingObras, setLoadingObras] = useState(true);
   const [filteredObras, setFilteredObras] = useState([]);
   const [activeView, setActiveView] = useState('mapa');
+  const [colorMode, setColorMode] = useState(() =>
+    localStorage.getItem('cl_color_mode') || 'light'
+  );
+  const isDarkMode = colorMode === 'dark';
+
+  const appColors = isDarkMode
+    ? {
+        pageBg: '#111111',
+        surface: '#181818',
+        surfaceMuted: '#222222',
+        hover: '#242424',
+        selected: '#2A2A2A',
+        border: '#333333',
+        text: '#E5E7EB',
+        textStrong: '#F5F5F5',
+        textMuted: '#A3A3A3',
+        inputBg: '#1F1F1F',
+        shadow: '0 12px 30px rgba(0,0,0,.34)',
+        navBg: '#E65C00',
+        navBorder: '#E65C00',
+      }
+    : {
+        pageBg: '#FAFAFA',
+        surface: '#FFFFFF',
+        surfaceMuted: '#FAFAFA',
+        hover: '#FAFAFA',
+        selected: '#FAFAFA',
+        border: '#ECECEC',
+        text: '#374151',
+        textStrong: '#202020',
+        textMuted: '#6B7280',
+        inputBg: '#FFFFFF',
+        shadow: '0 8px 24px rgba(0,0,0,.10)',
+        navBg: '#FF6600',
+        navBorder: '#FF6600',
+      };
 
   useEffect(() => {
-    if (Array.isArray(obras) && obras.length > 0) {
-      setFilteredObras(obras);
-    }
-  }, [obras]);
+    localStorage.setItem('cl_color_mode', colorMode);
+  }, [colorMode]);
+
+  useEffect(() => {
+    const syncFilters = () => {
+      setFiltros(window.construleadsFilters || {});
+    };
+
+    syncFilters();
+
+    window.addEventListener(
+      'construleads-filters-changed',
+      syncFilters
+    );
+
+    return () => {
+      window.removeEventListener(
+        'construleads-filters-changed',
+        syncFilters
+      );
+    };
+  }, []);
 
   useEffect(() => {
     async function cargarObras() {
@@ -82,12 +138,27 @@ export default function Construleads() {
 
   return (
     <Box
-      bg="#FAFAFA"
+      bg={appColors.pageBg}
       minH="100vh"
       p={3}
+      color={appColors.text}
+      transition="background 180ms ease, color 180ms ease"
+      style={{
+        '--cl-page-bg': appColors.pageBg,
+        '--cl-surface': appColors.surface,
+        '--cl-surface-muted': appColors.surfaceMuted,
+        '--cl-hover': appColors.hover,
+        '--cl-selected': appColors.selected,
+        '--cl-border': appColors.border,
+        '--cl-text': appColors.text,
+        '--cl-text-strong': appColors.textStrong,
+        '--cl-text-muted': appColors.textMuted,
+        '--cl-input-bg': appColors.inputBg,
+        '--cl-shadow': appColors.shadow,
+      }}
     >
       <Flex
-        bg="white"
+        bg={appColors.navBg}
         borderRadius="12px"
         px={4}
         py={2}
@@ -95,15 +166,23 @@ export default function Construleads() {
         minH="60px"
         align="center"
         justify="flex-start"
-        border="1px solid #ECECEC"
+        border={`1px solid ${appColors.navBorder}`}
         gap={4}
       >
-        <Image
-          src={`${import.meta.env.BASE_URL}logo-construleads.svg`}
-          alt="BIMSA Reports"
-          h="36px"
-          objectFit="contain"
-        />
+        <Box
+          w="252px"
+          flexShrink={0}
+          display="flex"
+          alignItems="center"
+        >
+          <Image
+            src={`${import.meta.env.BASE_URL}logo-construleads.svg`}
+            alt="BIMSA Reports"
+            h="48px"
+            objectFit="contain"
+            filter="brightness(0) invert(1)"
+          />
+        </Box>
 
         <HStack
           spacing={1}
@@ -116,14 +195,14 @@ export default function Construleads() {
             display="flex"
             alignItems="center"
             bg="transparent"
-            borderRadius="8px"
-            color={activeView === 'mapa' ? '#FF6600' : '#202020'}
-            borderBottom={activeView === 'mapa' ? '3px solid #FF6600' : '3px solid transparent'}
+            
+            color="white"
+            borderBottom={activeView === 'mapa' ? '3px solid white' : '3px solid transparent'}
             fontWeight={activeView === 'mapa' ? '600' : '500'}
             cursor="pointer"
             fontSize="14px"
             transition="all 180ms ease"
-            _hover={{ bg: '#FAFAFA', color: activeView === 'mapa' ? '#FF6600' : '#202020' }}
+            _hover={{ bg: 'rgba(255,255,255,.14)', color: 'white' }}
             onClick={() => setActiveView('mapa')}
           >
             Mapa
@@ -135,14 +214,13 @@ export default function Construleads() {
             display="flex"
             alignItems="center"
             bg="transparent"
-            borderRadius="8px"
-            color={activeView === 'resultados' ? '#FF6600' : '#202020'}
-            borderBottom={activeView === 'resultados' ? '3px solid #FF6600' : '3px solid transparent'}
+            color="white"
+            borderBottom={activeView === 'resultados' ? '3px solid white' : '3px solid transparent'}
             fontWeight={activeView === 'resultados' ? '600' : '500'}
             cursor="pointer"
             fontSize="14px"
             transition="all 180ms ease"
-            _hover={{ bg: '#FAFAFA', color: activeView === 'resultados' ? '#FF6600' : '#202020' }}
+            _hover={{ bg: 'rgba(255,255,255,.14)', color: 'white' }}
             onClick={() => setActiveView('resultados')}
           >
             Resultados
@@ -153,14 +231,14 @@ export default function Construleads() {
             h="44px"
             display="flex"
             alignItems="center"
-            color="#202020"
+            color="white"
             cursor="pointer"
             fontSize="14px"
             fontWeight="500"
             borderRadius="8px"
             borderBottom="3px solid transparent"
             transition="all 180ms ease"
-            _hover={{ bg: '#FAFAFA' }}
+            _hover={{ bg: 'rgba(255,255,255,.14)' }}
           >
             Gráficas
           </Box>
@@ -170,14 +248,14 @@ export default function Construleads() {
             h="44px"
             display="flex"
             alignItems="center"
-            color="#202020"
+            color="white"
             cursor="pointer"
             fontSize="14px"
             fontWeight="500"
             borderRadius="8px"
             borderBottom="3px solid transparent"
             transition="all 180ms ease"
-            _hover={{ bg: '#FAFAFA' }}
+            _hover={{ bg: 'rgba(255,255,255,.14)' }}
           >
             Analytics
           </Box>
@@ -187,14 +265,14 @@ export default function Construleads() {
             h="44px"
             display="flex"
             alignItems="center"
-            color="#202020"
+            color="white"
             cursor="pointer"
             fontSize="14px"
             fontWeight="500"
             borderRadius="8px"
             borderBottom="3px solid transparent"
             transition="all 180ms ease"
-            _hover={{ bg: '#FAFAFA' }}
+            _hover={{ bg: 'rgba(255,255,255,.14)' }}
           >
             Personalizado
           </Box>
@@ -202,30 +280,35 @@ export default function Construleads() {
 
         <HStack spacing={3}>
           <Box
-            as={FiMoon}
+            as={isDarkMode ? FiSun : FiMoon}
             boxSize="20px"
-            color="#6B7280"
+            color="white"
             cursor="pointer"
             transition="all 180ms ease"
-            _hover={{ color: '#202020' }}
+            _hover={{ color: 'rgba(255,255,255,.82)' }}
+            onClick={() => {
+              setColorMode((current) =>
+                current === 'dark' ? 'light' : 'dark'
+              );
+            }}
           />
 
           <Box
             as={FiSettings}
             boxSize="20px"
-            color="#6B7280"
+            color="white"
             cursor="pointer"
             transition="all 180ms ease"
-            _hover={{ color: '#202020' }}
+            _hover={{ color: 'rgba(255,255,255,.82)' }}
           />
 
           <Box
             as={FiLogOut}
             boxSize="20px"
-            color="#6B7280"
+            color="white"
             cursor="pointer"
             transition="all 180ms ease"
-            _hover={{ color: '#202020' }}
+            _hover={{ color: 'rgba(255,255,255,.82)' }}
           />
 
                    <Box position="relative">
@@ -233,13 +316,13 @@ export default function Construleads() {
     w="32px"
     h="32px"
     borderRadius="full"
-    bg="#66AEE8"
+    bg="white"
     display="flex"
     alignItems="center"
     justifyContent="center"
     fontWeight="600"
     fontSize="12px"
-    color="#071B52"
+    color="#FF6600"
   >
     UM
   </Box>
@@ -260,14 +343,25 @@ export default function Construleads() {
 
       <Flex gap={3}>
         <SidebarFiltros
+          obras={obras}
           onApplyFilters={setFiltros}
         />
 
-        <Box flex="1">
+        <Box flex="1" position="relative">
+          <Box
+            position="absolute"
+            top={1}
+            right={14}
+            zIndex={30}
+          >
+            <DownloadPanel />
+          </Box>
+
           <Box display={activeView === 'mapa' ? 'block' : 'none'}>
             <Mapa
               obras={obras}
               filtros={filtros}
+              isDarkMode={isDarkMode}
               onFilteredData={setFilteredObras}
             />
           </Box>
@@ -275,7 +369,7 @@ export default function Construleads() {
           <Box display={activeView === 'resultados' ? 'block' : 'none'}>
             <Resultados
               filtros={filtros}
-              obras={filteredObras.length ? filteredObras : obras}
+              obras={filteredObras}
             />
           </Box>
         </Box>

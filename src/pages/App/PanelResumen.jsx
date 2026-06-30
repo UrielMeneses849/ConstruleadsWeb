@@ -5,10 +5,13 @@ import {
   Heading,
   Text,
   Flex,
-  Button,
 } from '@chakra-ui/react';
 
 export default function PanelResumen({ obras = [], variant = 'sidebar' }) {
+const numberFormatter = new Intl.NumberFormat('es-MX');
+const compactFormatter = new Intl.NumberFormat('es-MX', {
+  maximumFractionDigits: 2,
+});
 
 const totalProyectos = obras.length;
 const inversionTotal = obras.reduce(
@@ -37,27 +40,95 @@ const maxValor = topEstados[0]?.[1] || 1;
 
 const metricasDinamicas = [
   {
-    valor: totalProyectos.toLocaleString(),
+    valor: numberFormatter.format(totalProyectos),
     label: 'Proyectos',
     color: '#3B82F6',
   },
   {
-    valor: `$${(inversionTotal / 1000000).toFixed(2)}`,
+    valor: `$${compactFormatter.format(inversionTotal / 1000000)}`,
     suffix: 'MDP',
     label: 'Inversión',
     color: '#FF6600',
   },
   {
-    valor: estadosConProyectos.toLocaleString(),
+    valor: numberFormatter.format(estadosConProyectos),
     label: 'Estados',
     color: '#2FB15A',
   },
   {
-    valor: superficieTotal.toLocaleString(),
+    valor: numberFormatter.format(superficieTotal),
+    suffix: 'm²',
     label: 'Superficie',
     color: '#7C5CFA',
   },
 ];
+
+if (variant === 'map') {
+  return (
+    <VStack align="stretch" gap={2} w="100%">
+      {metricasDinamicas.map((item) => (
+        <Box
+          key={item.label}
+          bg="var(--cl-surface)"
+          border="1px solid var(--cl-border)"
+          borderRadius="12px"
+          boxShadow="var(--cl-shadow)"
+          color="var(--cl-text)"
+          p={3}
+          position="relative"
+          overflow="hidden"
+        >
+          <Box
+            position="absolute"
+            left={0}
+            top={0}
+            bottom={0}
+            w="3px"
+            bg={item.color}
+          />
+
+          <Flex align="center" gap={2} mb={2}>
+            <Box
+              w="8px"
+              h="8px"
+              borderRadius="full"
+              bg={item.color}
+              flexShrink={0}
+            />
+            <Text
+              fontSize="11px"
+              fontWeight="700"
+              color="var(--cl-text-muted)"
+              lineHeight="1"
+            >
+              {item.label}
+            </Text>
+          </Flex>
+
+          <HStack spacing={1} align="baseline">
+            <Text
+              fontSize={item.label === 'Superficie' ? '16px' : '18px'}
+              fontWeight="700"
+              lineHeight="1.1"
+              color="var(--cl-text-strong)"
+            >
+              {item.valor}
+            </Text>
+            {item.suffix && (
+              <Text
+                fontSize="11px"
+                fontWeight="700"
+                color="var(--cl-text-muted)"
+              >
+                {item.suffix}
+              </Text>
+            )}
+          </HStack>
+        </Box>
+      ))}
+    </VStack>
+  );
+}
 
 if (variant === 'floating') {
   return (
@@ -71,8 +142,10 @@ if (variant === 'floating') {
         minW="0"
         p={4}
         borderRadius="12px"
-        boxShadow="0 12px 30px rgba(0,0,0,.12)"
-        border="1px solid #E5E7EB"
+        boxShadow="var(--cl-shadow)"
+        border="1px solid var(--cl-border)"
+        bg="var(--cl-surface)"
+        color="var(--cl-text)"
       >
         <Heading size="sm" mb={3} px={3}>
           Resumen de proyectos
@@ -101,7 +174,7 @@ if (variant === 'floating') {
               <Text
                 w="100%"
                 fontSize="11px"
-                color="#6B7280"
+                color="var(--cl-text-muted)"
                 whiteSpace="nowrap"
                 overflow="visible"
               >
@@ -112,58 +185,6 @@ if (variant === 'floating') {
         </Flex>
       </Box>
 
-      <Box
-        minW="340px"
-        maxW="340px"
-
-        p={4}
-        borderRadius="24px"
-        boxShadow="0 12px 30px rgba(0,0,0,.12)"
-        border="1px solid #E5E7EB"
-        display="flex"
-        flexDirection="column"
-        justifyContent="center"
-        alignItems="center"
-      >
-        <Flex justify="space-between" align="center" mb={2} w="100%">
-          <Heading size="sm">Descargas</Heading>
-          <Text fontSize="12px" color="#6B7280">
-            5 archivos
-          </Text>
-        </Flex>
-
-        <HStack spacing={2} w="100%" align="center" justify="center">
-          <Box flex="1">
-            <select
-              defaultValue="pdf"
-              style={{
-                width: '100%',
-                height: '48px',
-                border: '1px solid #FF6600',
-                borderRadius: '8px',
-                padding: '0 12px',
-                background: 'white',
-              }}
-            >
-              <option value="pdf">PDF</option>
-              <option value="excel-clasica">Excel - Clásica</option>
-              <option value="excel-contactos">Excel - Contactos</option>
-              <option value="excel-companias">Excel - Compañías</option>
-              <option value="excel-prospeccion">Excel - Prospección</option>
-            </select>
-          </Box>
-
-          <Button
-            flex="0 0 130px"
-            h="48px"
-            bg="#FF6600"
-            color="white"
-            _hover={{ bg: '#E65C00' }}
-          >
-            Descargar
-          </Button>
-        </HStack>
-      </Box>
     </Flex>
   );
 }
@@ -177,12 +198,13 @@ if (variant === 'floating') {
     >
 
       <Box
-        bg="white"
+        bg="var(--cl-surface)"
         p={1}
         pl={4}
         pr={4}
         borderRadius="22px"
-        border="1px solid #E5E7EB"
+        border="1px solid var(--cl-border)"
+        color="var(--cl-text)"
         width="100%"
       >
         <Heading size="sm" mb={2} >
@@ -208,13 +230,13 @@ if (variant === 'floating') {
                     {item.valor}
                   </Text>
                   {item.suffix && (
-                    <Text fontWeight="400">{item.suffix}</Text>
+                    <Text fontWeight="100">{item.suffix}</Text>
                   )}
                 </HStack>
                 <Text
                   mt={1}
                   fontSize="12px"
-                  color="#6B7280"
+                  color="var(--cl-text-muted)"
                   maxW="90px"
                   lineHeight="1.2"
                 >
@@ -225,54 +247,6 @@ if (variant === 'floating') {
           ))}
         </Flex>
       </Box>
-
-      <Box
-        bg="white"
-        p={4}
-        borderRadius="28px"
-        border="1px solid #E5E7EB"
-        minW="420px"
-      >
-        <HStack justify="space-between" mb={5}>
-          <Heading size="sm">Descargas</Heading>
-          <Text fontSize="12px" color="#6B7280">5 archivos</Text>
-        </HStack>
-
-        <Flex gap={2} align="center">
-          <Box flex="1">
-            <select
-              defaultValue="pdf"
-              style={{
-                width: '100%',
-                height: '36px',
-                border: '1px solid #FF6600',
-                borderRadius: '8px',
-                padding: '0 12px',
-                background: 'white',
-              }}
-            >
-              <option value="pdf">PDF</option>
-              <option value="excel-clasica">Excel - Clásica</option>
-              <option value="excel-contactos">Excel - Contactos</option>
-              <option value="excel-companias">Excel - Compañías</option>
-              <option value="excel-prospeccion">Excel - Prospección</option>
-            </select>
-          </Box>
-
-          <Button
-            minW="120px"
-            h="36px"
-            bg="#FF6600"
-            color="white"
-            _hover={{ bg: '#E65C00' }}
-          >
-            Descargar
-          </Button>
-        </Flex>
-
-
-    </Box>
-
 
     </VStack>
   );

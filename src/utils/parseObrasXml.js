@@ -11,8 +11,58 @@ export function parseObrasXml(xmlText) {
   const normalizeDate = (value = '') =>
     value.trim();
 
+  const parseDateValue = (value = '') => {
+    const normalized = value.trim();
+    if (!normalized) return null;
+
+    const isoMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
+      return new Date(Number(year), Number(month) - 1, Number(day));
+    }
+
+    const localMatch = normalized.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+    if (localMatch) {
+      const [, day, month, year] = localMatch;
+      return new Date(Number(year), Number(month) - 1, Number(day));
+    }
+
+    const parsed = new Date(normalized);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const getText = (item, tags) => {
+    for (const tag of tags) {
+      const value = item.querySelector(tag)?.textContent?.trim();
+
+      if (value) return value;
+    }
+
+    return '';
+  };
+
   return Array.from(xml.getElementsByTagName('datos')).map(
-    (item) => ({
+    (item) => {
+      const fechaPublicacion = getText(item, [
+        'Fecha_publicacion',
+        'Fecha_Publicacion',
+        'FECHA_PUBLICACION',
+        'Fecha_Publicación',
+      ]);
+      const fechaInicio = getText(item, [
+        'Fecha_Inicio',
+        'FECHA_INICIO',
+        'Fecha_inicio',
+      ]);
+      const fechaTermino = getText(item, [
+        'Fecha_Terminacion',
+        'Fecha_Termino',
+        'FECHA_TERMINACION',
+        'FECHA_TERMINO',
+        'Fecha_Término',
+      ]);
+
+      return ({
       clave:
         item.querySelector('Clave_Proyecto')?.textContent || '',
 
@@ -65,28 +115,22 @@ export function parseObrasXml(xmlText) {
       ),
 
       fechaPublicacion: normalizeDate(
-        item.querySelector('Fecha_publicacion')?.textContent || ''
+        fechaPublicacion
       ),
 
       fechaInicio: normalizeDate(
-        item.querySelector('Fecha_Inicio')?.textContent || ''
+        fechaInicio
       ),
 
       fechaTermino: normalizeDate(
-        item.querySelector('Fecha_Terminacion')?.textContent || ''
+        fechaTermino
       ),
 
-      fechaPublicacionDate: item.querySelector('Fecha_publicacion')?.textContent
-        ? new Date(item.querySelector('Fecha_publicacion')?.textContent.trim())
-        : null,
+      fechaPublicacionDate: parseDateValue(fechaPublicacion),
 
-      fechaInicioDate: item.querySelector('Fecha_Inicio')?.textContent
-        ? new Date(item.querySelector('Fecha_Inicio')?.textContent.trim())
-        : null,
+      fechaInicioDate: parseDateValue(fechaInicio),
 
-      fechaTerminoDate: item.querySelector('Fecha_Terminacion')?.textContent
-        ? new Date(item.querySelector('Fecha_Terminacion')?.textContent.trim())
-        : null,
+      fechaTerminoDate: parseDateValue(fechaTermino),
 
       lat: Number(
         item.querySelector('proy_ubicacionlatitud')?.textContent || 0
@@ -104,6 +148,7 @@ export function parseObrasXml(xmlText) {
 
       compania:
         item.querySelector('Compania')?.textContent || '',
-    })
+      });
+    }
   );
 }

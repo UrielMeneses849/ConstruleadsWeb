@@ -1,24 +1,32 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Box,
   VStack,
   Heading,
-  Button,
   Text,
   Flex,
   SimpleGrid,
 } from '@chakra-ui/react';
 
 // Accordion helper
-function FilterAccordion({ title, count, expanded, onToggle, children }) {
+function FilterAccordion({
+  title,
+  expanded,
+  onToggle,
+  children,
+  contentMaxH,
+  allowOverflow = false,
+}) {
   return (
     <Box
-      border="1px solid #ECECEC"
+      border="1px solid var(--cl-border)"
       borderRadius="12px"
-      bg="white"
+      bg="var(--cl-surface)"
       mb={2}
-      overflow="hidden"
+      overflow={allowOverflow && expanded ? 'visible' : 'hidden'}
       flexShrink={0}
+      position="relative"
+      zIndex={allowOverflow && expanded ? 20 : 1}
       transition="all .18s ease"
     >
       <Flex
@@ -28,29 +36,13 @@ function FilterAccordion({ title, count, expanded, onToggle, children }) {
         py={2}
         minH="44px"
         cursor="pointer"
-        _hover={{ bg: '#FAFAFA' }}
+        _hover={{ bg: 'var(--cl-surface-muted)' }}
         onClick={onToggle}
         userSelect="none"
         transition="all .18s ease"
       >
-        <Text fontSize="13px" fontWeight="600" color="#202020" display="flex" alignItems="center">
+        <Text fontSize="13px" fontWeight="600" color={TEXT_STRONG} display="flex" alignItems="center">
           {title}
-          {typeof count === 'number' && count > 0 ? (
-            <Box
-              as="span"
-              bg="#F3F4F6"
-              color="#202020"
-              px={2}
-              py={0.5}
-              borderRadius="8px"
-              fontWeight="700"
-              fontSize="11px"
-              ml={2}
-              display="inline-block"
-            >
-              {count}
-            </Box>
-          ) : null}
         </Text>
         <Box
           display="flex"
@@ -60,14 +52,14 @@ function FilterAccordion({ title, count, expanded, onToggle, children }) {
           h="24px"
           borderRadius="8px"
           transition="all 180ms ease"
-          _hover={{ bg: '#FAFAFA' }}
+          _hover={{ bg: 'var(--cl-surface-muted)' }}
         >
           <Box
             as="svg"
             viewBox="0 0 20 20"
             w="14px"
             h="14px"
-            color="#6B7280"
+            color="var(--cl-text-muted)"
             transition="transform .22s ease"
             transform={expanded ? 'rotate(180deg)' : 'rotate(0deg)'}
             fill="none"
@@ -85,8 +77,13 @@ function FilterAccordion({ title, count, expanded, onToggle, children }) {
           pt={0}
           pb={3}
           px={3}
-          borderTop="1px solid #ECECEC"
-          bg="white"
+          borderTop="1px solid var(--cl-border)"
+          bg="var(--cl-surface)"
+          maxH={contentMaxH}
+          overflowY={allowOverflow ? 'visible' : contentMaxH ? 'auto' : 'visible'}
+          overflowX={allowOverflow ? 'visible' : 'hidden'}
+          position="relative"
+          zIndex={allowOverflow ? 30 : 1}
         >
           {children}
         </Box>
@@ -95,19 +92,107 @@ function FilterAccordion({ title, count, expanded, onToggle, children }) {
   );
 }
 
-function getDefaultAccordion(tab) {
-  return tab === 'avanzados'
-    ? { Subgénero: true }
-    : { 'Fecha de consulta': true };
+function getDefaultAccordion() {
+  return { 'Fecha de consulta': true };
 }
 
-export default function SidebarFiltros() {
+const TEXT_PRIMARY = 'var(--cl-text)';
+const TEXT_STRONG = 'var(--cl-text-strong)';
+const TEXT_SECONDARY = 'var(--cl-text-muted)';
+const ACCENT_GRAY = '#4B5563';
+
+function parseFilterDate(value) {
+  if (!value) return null;
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  const normalized = String(value).trim();
+  if (!normalized) return null;
+
+  const isoMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const localMatch = normalized.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (localMatch) {
+    const [, day, month, year] = localMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function toDateInputValue(date) {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateForDisplay(value) {
+  const date = parseFilterDate(value);
+  if (!date) return 'Seleccionar';
+
+  return new Intl.DateTimeFormat('es-MX', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date);
+}
+
+function addMonths(date, months) {
+  return new Date(date.getFullYear(), date.getMonth() + months, 1);
+}
+
+function getCalendarDays(monthDate) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const startDay = (firstDay.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const days = [];
+
+  for (let index = 0; index < startDay; index += 1) {
+    days.push(null);
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    days.push(new Date(year, month, day));
+  }
+
+  while (days.length % 7 !== 0) {
+    days.push(null);
+  }
+
+  return days;
+}
+
+function getObraDateByFilter(obra, fechaSeleccionada) {
+  if (fechaSeleccionada === 'Fecha de inicio probable') {
+    return parseFilterDate(obra.fechaInicioDate) || parseFilterDate(obra.fechaInicio);
+  }
+
+  if (fechaSeleccionada === 'Fecha de término probable') {
+    return parseFilterDate(obra.fechaTerminoDate) || parseFilterDate(obra.fechaTermino);
+  }
+
+  return parseFilterDate(obra.fechaPublicacionDate) || parseFilterDate(obra.fechaPublicacion);
+}
+
+export default function SidebarFiltros({ obras = [] }) {
   // Accordions state
   const [openedAccordions, setOpenedAccordions] = useState(
-    getDefaultAccordion('principales')
+    getDefaultAccordion()
   );
-  const [activeFilterTab, setActiveFilterTab] = useState('principales');
-  const [expandedRegions, setExpandedRegions] = useState({});
+  const [expandedRegion, setExpandedRegion] = useState(null);
+  const [expandedGenero, setExpandedGenero] = useState(null);
+  const [expandedSubgenero, setExpandedSubgenero] = useState(null);
 
   const periodosConsulta = [
     'Hoy',
@@ -130,6 +215,16 @@ export default function SidebarFiltros() {
 
   const [periodoIndex, setPeriodoIndex] = useState(
     savedFilters.periodoIndex ?? 2
+  );
+  const [dateRangeStart, setDateRangeStart] = useState(
+    savedFilters.dateRangeStart || ''
+  );
+  const [dateRangeEnd, setDateRangeEnd] = useState(
+    savedFilters.dateRangeEnd || ''
+  );
+  const [openDatePicker, setOpenDatePicker] = useState(null);
+  const [calendarMonth, setCalendarMonth] = useState(() =>
+    parseFilterDate(savedFilters.dateRangeStart) || new Date()
   );
 
   const [selectedValues, setSelectedValues] = useState(
@@ -177,10 +272,10 @@ export default function SidebarFiltros() {
 
   // Inversión dual-range slider states
   const [investmentMin, setInvestmentMin] = useState(
-    typeof savedFilters.investmentMin === 'number' ? savedFilters.investmentMin : 100000000
+    typeof savedFilters.investmentMin === 'number' ? savedFilters.investmentMin : 0
   );
   const [investmentMax, setInvestmentMax] = useState(
-    typeof savedFilters.investmentMax === 'number' ? savedFilters.investmentMax : 800000000
+    typeof savedFilters.investmentMax === 'number' ? savedFilters.investmentMax : 0
   );
 
   const hasLoadedFilters = useRef(true);
@@ -188,14 +283,19 @@ export default function SidebarFiltros() {
   useEffect(() => {
     const handleEsc = (event) => {
       if (event.key === 'Escape') {
-        setOpenDropdown(null);
+        setOpenDatePicker(null);
       }
+    };
+    const handleClickOutside = () => {
+      setOpenDatePicker(null);
     };
 
     window.addEventListener('keydown', handleEsc);
+    window.addEventListener('click', handleClickOutside);
 
     return () => {
       window.removeEventListener('keydown', handleEsc);
+      window.removeEventListener('click', handleClickOutside);
     };
   }, []);
 
@@ -214,6 +314,8 @@ export default function SidebarFiltros() {
       selectedDesarrollos,
       selectedTipoObra,
       periodoIndex,
+      dateRangeStart,
+      dateRangeEnd,
       selectedTiposProyecto,
       investmentMin,
       investmentMax,
@@ -232,6 +334,8 @@ export default function SidebarFiltros() {
         selectedDesarrollos,
         selectedTipoObra,
         periodoIndex,
+        dateRangeStart,
+        dateRangeEnd,
         selectedTiposProyecto,
         investmentMin,
         investmentMax,
@@ -249,17 +353,14 @@ export default function SidebarFiltros() {
     selectedDesarrollos,
     selectedTipoObra,
     periodoIndex,
+    dateRangeStart,
+    dateRangeEnd,
     selectedTiposProyecto,
     investmentMin,
     investmentMax,
   ]);
 
   useEffect(() => {
-    if (!selectedRegiones.length) {
-      setSelectedEstados([]);
-      return;
-    }
-
     const estados = selectedRegiones.flatMap(
       (region) => estadosPorRegion[region] || []
     );
@@ -273,29 +374,6 @@ export default function SidebarFiltros() {
     });
   }, [selectedRegiones]);
 
-  useEffect(() => {
-    if (!selectedGeneros.length) {
-      setSelectedSubgeneros([]);
-      return;
-    }
-
-    const disponibles = selectedGeneros.flatMap((genero) =>
-      Object.keys(subgenerosPorGenero[genero] || {})
-    );
-
-    setSelectedSubgeneros((actuales) => {
-      const vigentes = actuales.filter((item) =>
-        disponibles.includes(item)
-      );
-
-      const faltantes = disponibles.filter(
-        (item) => !vigentes.includes(item)
-      );
-
-      return [...vigentes, ...faltantes];
-    });
-  }, [selectedGeneros]);
-
   const estadosPorRegion = {
     Oeste: ['Jalisco', 'Colima', 'Michoacán', 'Nayarit'],
     Noroeste: ['Baja California', 'Baja California Sur', 'Sonora', 'Sinaloa', 'Chihuahua', 'Durango'],
@@ -303,6 +381,27 @@ export default function SidebarFiltros() {
     Sureste: ['Guerrero', 'Oaxaca', 'Veracruz', 'Tabasco', 'Chiapas', 'Campeche', 'Yucatán', 'Quintana Roo'],
     Noreste: ['Nuevo León', 'Coahuila', 'Tamaulipas', 'San Luis Potosí', 'Zacatecas', 'Aguascalientes']
   };
+
+  function getRegionesForEstados(estados) {
+    return Object.entries(estadosPorRegion)
+      .filter(([, estadosRegion]) =>
+        estadosRegion.length > 0 &&
+        estadosRegion.every((estado) => estados.includes(estado))
+      )
+      .map(([region]) => region);
+  }
+
+  function getGenerosForSubgeneros(subgeneros) {
+    return Object.entries(subgenerosPorGenero)
+      .filter(([, subgenerosGenero]) => {
+        const subgenerosDisponibles = Object.keys(subgenerosGenero || {});
+        return subgenerosDisponibles.length > 0 &&
+          subgenerosDisponibles.every((subgenero) =>
+            subgeneros.includes(subgenero)
+          );
+      })
+      .map(([genero]) => genero);
+  }
 
   const subgenerosPorGenero = {
     Vivienda: {
@@ -515,15 +614,93 @@ export default function SidebarFiltros() {
     selectedValues['Fecha de consulta'] ||
     'Fecha de publicación';
 
-  const periodoSeleccionado =
-    periodosConsulta[periodoIndex];
+  const dateBounds = useMemo(() => {
+    const dates = (obras || [])
+      .map((obra) => getObraDateByFilter(obra, fechaSeleccionada))
+      .filter(Boolean)
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    if (!dates.length) {
+      return {
+        min: '',
+        max: '',
+      };
+    }
+
+    return {
+      min: toDateInputValue(dates[0]),
+      max: toDateInputValue(dates[dates.length - 1]),
+    };
+  }, [obras, fechaSeleccionada]);
+
+  const investmentBounds = useMemo(() => {
+    const values = (obras || [])
+      .map((obra) => Number(obra.inversion || 0))
+      .filter((value) => Number.isFinite(value) && value > 0)
+      .sort((a, b) => a - b);
+
+    if (!values.length) {
+      return {
+        min: 0,
+        max: 1000000,
+      };
+    }
+
+    const min = Math.floor(values[0] / 1000000) * 1000000;
+    const max = Math.ceil(values[values.length - 1] / 1000000) * 1000000;
+
+    return {
+      min,
+      max: Math.max(max, min + 1000000),
+    };
+  }, [obras]);
+
+  useEffect(() => {
+    if (!dateBounds.min || !dateBounds.max) return;
+
+    setDateRangeStart((current) => {
+      if (!current || current < dateBounds.min || current > dateBounds.max) {
+        return dateBounds.min;
+      }
+
+      return current;
+    });
+
+    setDateRangeEnd((current) => {
+      if (!current || current > dateBounds.max || current < dateBounds.min) {
+        return dateBounds.max;
+      }
+
+      return current;
+    });
+  }, [dateBounds.min, dateBounds.max, dateRangeStart, dateRangeEnd]);
+
+  useEffect(() => {
+    if (!investmentBounds.max) return;
+
+    setInvestmentMin((current) => {
+      if (!current || current < investmentBounds.min || current > investmentBounds.max) {
+        return investmentBounds.min;
+      }
+
+      return current;
+    });
+
+    setInvestmentMax((current) => {
+      if (!current || current > investmentBounds.max || current < investmentBounds.min) {
+        return investmentBounds.max;
+      }
+
+      return current;
+    });
+  }, [investmentBounds.min, investmentBounds.max]);
 
   const fechaHint =
     fechaSeleccionada === 'Fecha de publicación'
-      ? `📢 Consultando proyectos publicados durante los últimos ${periodoSeleccionado}.`
+      ? 'Consultando proyectos por fecha de publicación dentro del rango seleccionado.'
       : fechaSeleccionada === 'Fecha de inicio probable'
-      ? `🚧 Consultando proyectos que iniciarán durante los próximos ${periodoSeleccionado}.`
-      : `🏁 Consultando proyectos con fecha estimada de término durante los próximos ${periodoSeleccionado}.`;
+      ? 'Consultando proyectos por fecha probable de inicio dentro del rango seleccionado.'
+      : 'Consultando proyectos por fecha probable de término dentro del rango seleccionado.';
 
 
   const filtrosActivos = {
@@ -542,7 +719,15 @@ export default function SidebarFiltros() {
     investmentMin,
     investmentMax,
     periodoIndex,
-    fechaConsulta: selectedValues['Fecha de consulta'],
+    dateRangeStart,
+    dateRangeEnd,
+    fechaInicio: dateRangeStart,
+    fechaFin: dateRangeEnd,
+    fechaRango: {
+      desde: dateRangeStart,
+      hasta: dateRangeEnd,
+    },
+    fechaConsulta: fechaSeleccionada,
     superficie: (() => {
       const raw = selectedValues['M² superficie'];
 
@@ -584,6 +769,8 @@ export default function SidebarFiltros() {
     investmentMin,
     investmentMax,
     periodoIndex,
+    dateRangeStart,
+    dateRangeEnd,
     selectedValues,
   ]);
 
@@ -608,12 +795,12 @@ export default function SidebarFiltros() {
                 width: '100%',
                 fontSize: '13px',
                 padding: '6px 8px',
-                border: '1px solid #ECECEC',
+                border: '1px solid var(--cl-border)',
                 borderRadius: '8px',
                 marginBottom: 4,
                 outline: 'none',
-                color: '#202020',
-                background: '#FAFAFA'
+                color: TEXT_PRIMARY,
+                background: 'var(--cl-surface-muted)'
               }}
             />
           </Box>
@@ -629,12 +816,12 @@ export default function SidebarFiltros() {
                 borderRadius="8px"
                 cursor="pointer"
                 align="center"
-                bg={selected ? '#FAFAFA' : 'white'}
-                color={selected ? '#202020' : '#202020'}
-                boxShadow={selected ? 'inset 0 0 0 1px #D1D5DB' : 'none'}
+                bg={selected ? 'var(--cl-surface-muted)' : 'var(--cl-surface)'}
+                color={TEXT_PRIMARY}
+                boxShadow={selected ? 'inset 0 0 0 1px var(--cl-border)' : 'none'}
                 fontSize="13px"
                 transition="all 180ms ease"
-                _hover={{ bg: '#FAFAFA' }}
+                _hover={{ bg: 'var(--cl-surface-muted)' }}
                 onClick={() => {
                   setSelectedArr((prev) =>
                     prev.includes(option)
@@ -651,7 +838,7 @@ export default function SidebarFiltros() {
                   readOnly
                   style={{
                     marginRight: 8,
-                    accentColor: '#202020',
+                    accentColor: ACCENT_GRAY,
                     width: 12,
                     height: 12,
                   }}
@@ -676,15 +863,18 @@ export default function SidebarFiltros() {
     return (
       <FilterAccordion
         title="Región"
-        count={selectedRegiones.length}
         expanded={!!openedAccordions['Región']}
         onToggle={() => toggleAccordion('Región')}
+        contentMaxH="280px"
       >
         <VStack align="stretch" spacing={1}>
           {regiones.map((region) => {
             const estadosRegion = estadosPorRegion[region] || [];
-            const selected = selectedRegiones.includes(region);
-            const expanded = !!expandedRegions[region];
+            const selected = estadosRegion.length > 0 &&
+              estadosRegion.every((estado) => selectedEstados.includes(estado));
+            const partiallySelected = !selected &&
+              estadosRegion.some((estado) => selectedEstados.includes(estado));
+            const expanded = expandedRegion === region;
 
             return (
               <Box key={region}>
@@ -693,49 +883,56 @@ export default function SidebarFiltros() {
                   py={1}
                   borderRadius="8px"
                   align="center"
-                  bg={selected ? '#FAFAFA' : 'white'}
-                  boxShadow={selected ? 'inset 0 0 0 1px #D1D5DB' : 'none'}
+                  cursor="pointer"
+                  bg={selected || partiallySelected ? 'var(--cl-surface-muted)' : 'var(--cl-surface)'}
+                  boxShadow={selected || partiallySelected ? 'inset 0 0 0 1px var(--cl-border)' : 'none'}
                   transition="all 180ms ease"
-                  _hover={{ bg: '#FAFAFA' }}
+                  _hover={{ bg: 'var(--cl-surface-muted)' }}
+                  onClick={() => {
+                    setExpandedRegion((prev) =>
+                      prev === region ? null : region
+                    );
+                  }}
                 >
                   <input
                     type="checkbox"
                     checked={selected}
                     readOnly
+                    ref={(input) => {
+                      if (input) {
+                        input.indeterminate = partiallySelected;
+                      }
+                    }}
                     onClick={(event) => {
                       event.stopPropagation();
-                      setSelectedRegiones((prev) =>
-                        prev.includes(region)
-                          ? prev.filter((item) => item !== region)
-                          : [...prev, region]
-                      );
+                      const nextEstados = selected || partiallySelected
+                        ? selectedEstados.filter((estado) => !estadosRegion.includes(estado))
+                        : [
+                            ...selectedEstados,
+                            ...estadosRegion.filter((estado) => !selectedEstados.includes(estado)),
+                          ];
+
+                      setSelectedEstados(nextEstados);
+                      setSelectedRegiones(getRegionesForEstados(nextEstados));
                     }}
                     style={{
                       marginRight: 8,
-                      accentColor: '#202020',
+                      accentColor: ACCENT_GRAY,
                       width: 12,
                       height: 12,
                       cursor: 'pointer',
                     }}
                   />
-                  <Text flex={1} fontSize="13px" color="#202020">
+                  <Text flex={1} fontSize="13px" color={TEXT_PRIMARY}>
                     {region}
                   </Text>
                   <Box
-                    color="#6B7280"
-                    cursor="pointer"
+                    color="var(--cl-text-muted)"
                     fontSize="18px"
                     lineHeight="1"
                     px={1}
                     transform={expanded ? 'rotate(90deg)' : 'rotate(0deg)'}
                     transition="transform 180ms ease"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setExpandedRegions((prev) => ({
-                        ...prev,
-                        [region]: !prev[region],
-                      }));
-                    }}
                   >
                     ›
                   </Box>
@@ -753,17 +950,18 @@ export default function SidebarFiltros() {
                           py={1}
                           borderRadius="8px"
                           align="center"
-                          bg={estadoSeleccionado ? '#FAFAFA' : 'white'}
-                          boxShadow={estadoSeleccionado ? 'inset 0 0 0 1px #D1D5DB' : 'none'}
+                          bg={estadoSeleccionado ? 'var(--cl-surface-muted)' : 'var(--cl-surface)'}
+                          boxShadow={estadoSeleccionado ? 'inset 0 0 0 1px var(--cl-border)' : 'none'}
                           cursor="pointer"
                           transition="all 180ms ease"
-                          _hover={{ bg: '#FAFAFA' }}
+                          _hover={{ bg: 'var(--cl-surface-muted)' }}
                           onClick={() => {
-                            setSelectedEstados((prev) =>
-                              prev.includes(estado)
-                                ? prev.filter((item) => item !== estado)
-                                : [...prev, estado]
-                            );
+                            const nextEstados = estadoSeleccionado
+                              ? selectedEstados.filter((item) => item !== estado)
+                              : [...selectedEstados, estado];
+
+                            setSelectedEstados(nextEstados);
+                            setSelectedRegiones(getRegionesForEstados(nextEstados));
                           }}
                         >
                           <input
@@ -772,12 +970,12 @@ export default function SidebarFiltros() {
                             readOnly
                             style={{
                               marginRight: 8,
-                              accentColor: '#202020',
+                              accentColor: ACCENT_GRAY,
                               width: 12,
                               height: 12,
                             }}
                           />
-                          <Text flex={1} fontSize="12px" color="#374151">
+                          <Text flex={1} fontSize="12px" color="var(--cl-text)">
                             {estado}
                           </Text>
                         </Flex>
@@ -790,6 +988,402 @@ export default function SidebarFiltros() {
           })}
         </VStack>
       </FilterAccordion>
+    );
+  }
+
+  function renderGeneroAccordion() {
+    const generos = ['Vivienda', 'Industrial', 'Edificacion', 'Infraestructura'];
+
+    return (
+      <FilterAccordion
+        title="Género"
+        expanded={!!openedAccordions['Género']}
+        onToggle={() => toggleAccordion('Género')}
+        contentMaxH="320px"
+      >
+        <VStack align="stretch" spacing={1}>
+          {generos.map((genero) => {
+            const subgenerosMap = subgenerosPorGenero[genero] || {};
+            const subgeneros = Object.keys(subgenerosMap);
+            const tiposGenero = subgeneros.flatMap((subgenero) =>
+              subgenerosMap[subgenero] || []
+            );
+            const isSubgeneroComplete = (subgenero) => {
+              const tiposObra = subgenerosMap[subgenero] || [];
+              return selectedSubgeneros.includes(subgenero) ||
+                (tiposObra.length > 0 &&
+                  tiposObra.every((tipo) => selectedTipoObra.includes(tipo)));
+            };
+            const hasSubgeneroSelection = (subgenero) => {
+              const tiposObra = subgenerosMap[subgenero] || [];
+              return isSubgeneroComplete(subgenero) ||
+                tiposObra.some((tipo) => selectedTipoObra.includes(tipo));
+            };
+            const selected = subgeneros.length > 0 &&
+              subgeneros.every((subgenero) => isSubgeneroComplete(subgenero));
+            const partiallySelected = !selected &&
+              subgeneros.some((subgenero) => hasSubgeneroSelection(subgenero));
+            const expanded = expandedGenero === genero;
+
+            return (
+              <Box key={genero}>
+                <Flex
+                  px={2}
+                  py={1}
+                  borderRadius="8px"
+                  align="center"
+                  cursor="pointer"
+                  bg={selected || partiallySelected ? 'var(--cl-surface-muted)' : 'var(--cl-surface)'}
+                  boxShadow={selected || partiallySelected ? 'inset 0 0 0 1px var(--cl-border)' : 'none'}
+                  transition="all 180ms ease"
+                  _hover={{ bg: 'var(--cl-surface-muted)' }}
+                  onClick={() => {
+                    setExpandedGenero((prev) =>
+                      prev === genero ? null : genero
+                    );
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    readOnly
+                    ref={(input) => {
+                      if (input) {
+                        input.indeterminate = partiallySelected;
+                      }
+                    }}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      const nextSubgeneros = selected || partiallySelected
+                        ? selectedSubgeneros.filter((subgenero) => !subgeneros.includes(subgenero))
+                        : [
+                            ...selectedSubgeneros,
+                            ...subgeneros.filter((subgenero) => !selectedSubgeneros.includes(subgenero)),
+                          ];
+                      const nextTiposObra = selected || partiallySelected
+                        ? selectedTipoObra.filter((tipo) => !tiposGenero.includes(tipo))
+                        : [
+                            ...selectedTipoObra,
+                            ...tiposGenero.filter((tipo) => !selectedTipoObra.includes(tipo)),
+                          ];
+
+                      setSelectedSubgeneros(nextSubgeneros);
+                      setSelectedGeneros(getGenerosForSubgeneros(nextSubgeneros));
+                      setSelectedTipoObra(nextTiposObra);
+                    }}
+                    style={{
+                      marginRight: 8,
+                      accentColor: ACCENT_GRAY,
+                      width: 12,
+                      height: 12,
+                      cursor: 'pointer',
+                    }}
+                  />
+                  <Text flex={1} fontSize="13px" color={TEXT_PRIMARY}>
+                    {genero}
+                  </Text>
+                  <Box
+                    color="var(--cl-text-muted)"
+                    fontSize="18px"
+                    lineHeight="1"
+                    px={1}
+                    transform={expanded ? 'rotate(90deg)' : 'rotate(0deg)'}
+                    transition="transform 180ms ease"
+                  >
+                    ›
+                  </Box>
+                </Flex>
+
+                {expanded && (
+                  <VStack align="stretch" spacing={1} mt={1} pl={5}>
+                    {subgeneros.map((subgenero) => {
+                      const tiposObra = subgenerosMap[subgenero] || [];
+                      const selectedSubgenero = selectedSubgeneros.includes(subgenero) ||
+                        (tiposObra.length > 0 &&
+                          tiposObra.every((tipo) => selectedTipoObra.includes(tipo)));
+                      const partiallySelectedSubgenero = !selectedSubgenero &&
+                        tiposObra.some((tipo) => selectedTipoObra.includes(tipo));
+                      const expandedSub = expandedSubgenero === `${genero}-${subgenero}`;
+
+                      return (
+                        <Box key={subgenero}>
+                          <Flex
+                            px={2}
+                            py={1}
+                            borderRadius="8px"
+                            align="center"
+                            cursor="pointer"
+                            bg={selectedSubgenero || partiallySelectedSubgenero ? 'var(--cl-surface-muted)' : 'var(--cl-surface)'}
+                            boxShadow={selectedSubgenero || partiallySelectedSubgenero ? 'inset 0 0 0 1px var(--cl-border)' : 'none'}
+                            transition="all 180ms ease"
+                            _hover={{ bg: 'var(--cl-surface-muted)' }}
+                            onClick={() => {
+                              setExpandedSubgenero((prev) =>
+                                prev === `${genero}-${subgenero}` ? null : `${genero}-${subgenero}`
+                              );
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedSubgenero}
+                              readOnly
+                              ref={(input) => {
+                                if (input) {
+                                  input.indeterminate = partiallySelectedSubgenero;
+                                }
+                              }}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                const nextSubgeneros = selectedSubgenero || partiallySelectedSubgenero
+                                  ? selectedSubgeneros.filter((item) => item !== subgenero)
+                                  : [...selectedSubgeneros, subgenero];
+                                const nextTiposObra = selectedSubgenero || partiallySelectedSubgenero
+                                  ? selectedTipoObra.filter((tipo) => !tiposObra.includes(tipo))
+                                  : [
+                                      ...selectedTipoObra,
+                                      ...tiposObra.filter((tipo) => !selectedTipoObra.includes(tipo)),
+                                    ];
+
+                                setSelectedSubgeneros(nextSubgeneros);
+                                setSelectedGeneros(getGenerosForSubgeneros(nextSubgeneros));
+                                setSelectedTipoObra(nextTiposObra);
+                              }}
+                              style={{
+                                marginRight: 8,
+                                accentColor: ACCENT_GRAY,
+                                width: 12,
+                                height: 12,
+                                cursor: 'pointer',
+                              }}
+                            />
+                            <Text flex={1} fontSize="12px" color="var(--cl-text)">
+                              {subgenero}
+                            </Text>
+                            <Box
+                              color="var(--cl-text-muted)"
+                              fontSize="16px"
+                              lineHeight="1"
+                              px={1}
+                              transform={expandedSub ? 'rotate(90deg)' : 'rotate(0deg)'}
+                              transition="transform 180ms ease"
+                            >
+                              ›
+                            </Box>
+                          </Flex>
+
+                          {expandedSub && (
+                            <VStack align="stretch" spacing={1} mt={1} pl={5}>
+                              {tiposObra.map((tipo) => {
+                                const selectedTipo = selectedTipoObra.includes(tipo);
+
+                                return (
+                                  <Flex
+                                    key={tipo}
+                                    px={2}
+                                    py={1}
+                                    borderRadius="8px"
+                                    align="center"
+                                    bg={selectedTipo ? 'var(--cl-surface-muted)' : 'var(--cl-surface)'}
+                                    boxShadow={selectedTipo ? 'inset 0 0 0 1px var(--cl-border)' : 'none'}
+                                    cursor="pointer"
+                                    transition="all 180ms ease"
+                                    _hover={{ bg: 'var(--cl-surface-muted)' }}
+                                    onClick={() => {
+                                      const nextTiposObra = selectedTipo
+                                        ? selectedTipoObra.filter((item) => item !== tipo)
+                                        : [...selectedTipoObra, tipo];
+                                      const subgeneroCompleto = tiposObra.length > 0 &&
+                                        tiposObra.every((item) => nextTiposObra.includes(item));
+                                      const nextSubgeneros = subgeneroCompleto
+                                        ? selectedSubgeneros.includes(subgenero)
+                                          ? selectedSubgeneros
+                                          : [...selectedSubgeneros, subgenero]
+                                        : selectedSubgeneros.filter((item) => item !== subgenero);
+
+                                      setSelectedTipoObra(nextTiposObra);
+                                      setSelectedSubgeneros(nextSubgeneros);
+                                      setSelectedGeneros(getGenerosForSubgeneros(nextSubgeneros));
+                                    }}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedTipo}
+                                      readOnly
+                                      style={{
+                                        marginRight: 8,
+                                        accentColor: ACCENT_GRAY,
+                                        width: 12,
+                                        height: 12,
+                                      }}
+                                    />
+                                    <Text flex={1} fontSize="12px" color="var(--cl-text)">
+                                      {tipo}
+                                    </Text>
+                                  </Flex>
+                                );
+                              })}
+                            </VStack>
+                          )}
+                        </Box>
+                      );
+                    })}
+                  </VStack>
+                )}
+              </Box>
+            );
+          })}
+        </VStack>
+      </FilterAccordion>
+    );
+  }
+
+  function renderDateField({
+    id,
+    label,
+    value,
+    min,
+    max,
+    onChange,
+  }) {
+    const selectedDate = parseFilterDate(value);
+    const minDate = parseFilterDate(min);
+    const maxDate = parseFilterDate(max);
+    const visibleMonth = selectedDate || minDate || calendarMonth;
+    const monthLabel = new Intl.DateTimeFormat('es-MX', {
+      month: 'long',
+      year: 'numeric',
+    }).format(calendarMonth);
+
+    return (
+      <Box position="relative">
+        <Text fontSize="11px" fontWeight="600" color={TEXT_SECONDARY} mb={1}>
+          {label}
+        </Text>
+
+        <Flex
+          as="button"
+          type="button"
+          w="100%"
+          h="34px"
+          px={2}
+          align="center"
+          justify="space-between"
+          border="1px solid var(--cl-border)"
+          borderRadius="8px"
+          bg="var(--cl-surface)"
+          color={TEXT_PRIMARY}
+          fontSize="12px"
+          transition="all 160ms ease"
+          _hover={{ bg: 'var(--cl-surface-muted)' }}
+          onClick={(event) => {
+            event.stopPropagation();
+            setCalendarMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 1));
+            setOpenDatePicker((current) => (current === id ? null : id));
+          }}
+        >
+          <Text as="span" noOfLines={1}>
+            {formatDateForDisplay(value)}
+          </Text>
+          <Text as="span" color={TEXT_SECONDARY} fontSize="13px">
+            ▾
+          </Text>
+        </Flex>
+
+        {openDatePicker === id && (
+          <Box
+            position="absolute"
+            top="58px"
+            left={id === 'desde' ? 0 : 'auto'}
+            right={id === 'hasta' ? 0 : 'auto'}
+            zIndex={120}
+            w="224px"
+            maxW="calc(100vw - 32px)"
+            p={2}
+            bg="var(--cl-surface)"
+            border="1px solid var(--cl-border)"
+            borderRadius="10px"
+            boxShadow="var(--cl-shadow)"
+            overflow="visible"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <Flex align="center" justify="space-between" mb={2}>
+              <Text fontSize="12px" fontWeight="700" color={TEXT_STRONG} textTransform="capitalize">
+                {monthLabel}
+              </Text>
+
+              <Flex gap={1}>
+                <Box
+                  as="button"
+                  type="button"
+                  w="28px"
+                  h="28px"
+                  borderRadius="8px"
+                  color={TEXT_SECONDARY}
+                  _hover={{ bg: 'var(--cl-surface-muted)' }}
+                  onClick={() => setCalendarMonth((current) => addMonths(current, -1))}
+                >
+                  ‹
+                </Box>
+                <Box
+                  as="button"
+                  type="button"
+                  w="28px"
+                  h="28px"
+                  borderRadius="8px"
+                  color={TEXT_SECONDARY}
+                  _hover={{ bg: 'var(--cl-surface-muted)' }}
+                  onClick={() => setCalendarMonth((current) => addMonths(current, 1))}
+                >
+                  ›
+                </Box>
+              </Flex>
+            </Flex>
+
+            <SimpleGrid columns={7} spacing={1} mb={1}>
+              {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((day) => (
+                <Text key={day} fontSize="10px" fontWeight="700" color={TEXT_SECONDARY} textAlign="center">
+                  {day}
+                </Text>
+              ))}
+            </SimpleGrid>
+
+            <SimpleGrid columns={7} spacing={1}>
+              {getCalendarDays(calendarMonth).map((day, index) => {
+                const dayValue = day ? toDateInputValue(day) : '';
+                const isSelected = dayValue && dayValue === value;
+                const disabled = !day ||
+                  (minDate && day < minDate) ||
+                  (maxDate && day > maxDate);
+
+                return (
+                  <Box
+                    key={dayValue || `empty-${index}`}
+                    as="button"
+                    type="button"
+                    h="28px"
+                    borderRadius="8px"
+                    fontSize="11px"
+                    fontWeight={isSelected ? '700' : '600'}
+                    color={isSelected ? 'white' : disabled ? 'var(--cl-text-muted)' : TEXT_PRIMARY}
+                    opacity={disabled ? 0.35 : 1}
+                    bg={isSelected ? '#FF6600' : 'transparent'}
+                    cursor={disabled ? 'default' : 'pointer'}
+                    _hover={disabled ? {} : { bg: isSelected ? '#FF6600' : 'var(--cl-surface-muted)' }}
+                    onClick={() => {
+                      if (disabled) return;
+
+                      onChange(dayValue);
+                      setOpenDatePicker(null);
+                    }}
+                  >
+                    {day ? day.getDate() : ''}
+                  </Box>
+                );
+              })}
+            </SimpleGrid>
+          </Box>
+        )}
+      </Box>
     );
   }
 
@@ -813,26 +1407,28 @@ export default function SidebarFiltros() {
                 borderRadius="8px"
                 cursor="pointer"
                 transition="all 180ms ease"
-                _hover={{ bg: '#FAFAFA' }}
-                bg={selectedValues['Fecha de consulta'] === option ? '#FAFAFA' : 'white'}
-                boxShadow={selectedValues['Fecha de consulta'] === option ? 'inset 0 0 0 1px #D1D5DB' : 'none'}
-                color={selectedValues['Fecha de consulta'] === option ? '#202020' : '#202020'}
+                _hover={{ bg: 'var(--cl-surface-muted)' }}
+                bg={fechaSeleccionada === option ? 'var(--cl-surface-muted)' : 'var(--cl-surface)'}
+                boxShadow={fechaSeleccionada === option ? 'inset 0 0 0 1px var(--cl-border)' : 'none'}
+                color={TEXT_PRIMARY}
                 fontSize="13px"
-                onClick={() =>
+                onClick={() => {
                   setSelectedValues((prev) => ({
                     ...prev,
                     'Fecha de consulta': option,
-                  }))
-                }
+                  }));
+                  setDateRangeStart('');
+                  setDateRangeEnd('');
+                }}
               >
                 <input
                   type="radio"
                   name="fecha-consulta"
-                  checked={selectedValues['Fecha de consulta'] === option}
+                  checked={fechaSeleccionada === option}
                   readOnly
                   style={{
                     marginRight: 8,
-                    accentColor: '#202020',
+                    accentColor: ACCENT_GRAY,
                     width: 12,
                     height: 12,
                   }}
@@ -848,54 +1444,93 @@ export default function SidebarFiltros() {
           count={1}
           expanded={!!openedAccordions['Periodo de consulta']}
           onToggle={() => toggleAccordion('Periodo de consulta')}
+          allowOverflow
         >
           <Box>
-            <Flex justify="space-between" mb={2}>
-              <Text fontSize="13px" fontWeight="600" color="#202020">
-                {periodosConsulta[periodoIndex]}
+            <Box
+              mb={3}
+              px={2}
+              py={2}
+              bg="var(--cl-surface-muted)"
+              border="1px solid var(--cl-border)"
+              borderRadius="8px"
+            >
+              <Text fontSize="10px" color={TEXT_SECONDARY} fontWeight="700" lineHeight="1">
+                Criterio de fecha
               </Text>
-            </Flex>
-            <input
-              type="range"
-              min="0"
-              max={periodosConsulta.length - 1}
-              step="1"
-              value={periodoIndex}
-              onChange={(e) => {
-                const value = Number(e.target.value);
-                setPeriodoIndex(value);
-                setSelectedValues((prev) => ({
-                  ...prev,
-                  'Periodo de consulta': periodosConsulta[value],
-                }));
-              }}
-              style={{
-                width: '100%',
-                accentColor: '#202020',
-                cursor: 'pointer',
-              }}
-            />
-            <Flex justify="space-between" mt={2}>
-              {periodosConsulta.map((_, index) => (
-                <Box
-                  key={index}
-                  w="6px"
-                  h="6px"
-                  borderRadius="full"
-                  bg={index <= periodoIndex ? '#202020' : '#D1D5DB'}
-                />
-              ))}
-            </Flex>
+              <Text fontSize="12px" color={TEXT_STRONG} fontWeight="700" mt={1}>
+                {fechaSeleccionada}
+              </Text>
+            </Box>
+
+            <SimpleGrid columns={2} spacing={2}>
+              {renderDateField({
+                id: 'desde',
+                label: 'Desde',
+                value: dateRangeStart,
+                min: dateBounds.min,
+                max: dateRangeEnd || dateBounds.max,
+                onChange: (value) => {
+                  const clampedValue = value < dateBounds.min
+                    ? dateBounds.min
+                    : value > dateBounds.max
+                    ? dateBounds.max
+                    : value;
+
+                  setDateRangeStart(clampedValue);
+                  if (dateRangeEnd && clampedValue > dateRangeEnd) {
+                    setDateRangeEnd(clampedValue);
+                  }
+                  setPeriodoIndex(-1);
+                  setSelectedValues((prev) => ({
+                    ...prev,
+                    'Periodo de consulta': 'Rango personalizado',
+                  }));
+                },
+              })}
+
+              {renderDateField({
+                id: 'hasta',
+                label: 'Hasta',
+                value: dateRangeEnd,
+                min: dateRangeStart || dateBounds.min,
+                max: dateBounds.max,
+                onChange: (value) => {
+                  const clampedValue = value < dateBounds.min
+                    ? dateBounds.min
+                    : value > dateBounds.max
+                    ? dateBounds.max
+                    : value;
+
+                  setDateRangeEnd(clampedValue);
+                  if (dateRangeStart && clampedValue < dateRangeStart) {
+                    setDateRangeStart(clampedValue);
+                  }
+                  setPeriodoIndex(-1);
+                  setSelectedValues((prev) => ({
+                    ...prev,
+                    'Periodo de consulta': 'Rango personalizado',
+                  }));
+                },
+              })}
+            </SimpleGrid>
+
+            {dateBounds.min && dateBounds.max && (
+              <Text fontSize="11px" color="var(--cl-text-muted)" mt={2}>
+                Disponible: {dateBounds.min} a {dateBounds.max}
+              </Text>
+            )}
+
             <Box
               mt={3}
               p={2}
-              bg="#FAFAFA"
-              border="1px solid #ECECEC"
+              bg="var(--cl-surface-muted)"
+              border="1px solid var(--cl-border)"
               borderRadius="8px"
             >
               <Text
                 fontSize="12px"
-                color="#6B7280"
+                color={TEXT_SECONDARY}
                 fontWeight="500"
                 lineHeight="1.5"
               >
@@ -907,20 +1542,7 @@ export default function SidebarFiltros() {
 
         {renderRegionAccordion()}
 
-        <FilterAccordion
-          title="Género"
-          count={selectedGeneros.length}
-          expanded={!!openedAccordions['Género']}
-          onToggle={() => toggleAccordion('Género')}
-        >
-          {renderOptionsWithSearch(
-            ['Vivienda', 'Industrial', 'Edificacion', 'Infraestructura'],
-            'Género',
-            selectedGeneros,
-            setSelectedGeneros,
-            true
-          )}
-        </FilterAccordion>
+        {renderGeneroAccordion()}
 
         <FilterAccordion
           title="Tipo de proyecto"
@@ -955,185 +1577,31 @@ export default function SidebarFiltros() {
     );
   }
 
-  // Subgénero anidado Género → Subgénero → Tipo de obra
-  function renderSubgeneroAccordion() {
-    return (
-      <FilterAccordion
-        title="Subgénero"
-        count={selectedTipoObra.length || selectedSubgeneros.length}
-        expanded={!!openedAccordions['Subgénero']}
-        onToggle={() => toggleAccordion('Subgénero')}
-      >
-        {selectedGeneros.length === 0 ? (
-          <Text color="#9CA3AF" fontSize="13px" py={2}>
-            Selecciona primero uno o más géneros.
-          </Text>
-        ) : (
-          <Box maxH="360px" overflowY="auto" overflowX="hidden" pr={1}>
-          {selectedGeneros.map((genero) => {
-            const subgeneros = Object.keys(subgenerosPorGenero[genero] || {});
-            const searchValue = searchInputs[`Subgénero-${genero}`] || '';
-            const filteredSubgeneros = searchValue
-              ? subgeneros.filter((sg) => sg.toLowerCase().includes(searchValue.toLowerCase()))
-              : subgeneros;
-            return (
-              <Box key={genero} mb={2}>
-                <Text fontWeight="700" fontSize="13px" color="#202020" mb={1}>
-                  {genero.toUpperCase()} ({subgeneros.length} subgéneros)
-                </Text>
-                {subgeneros.length > 10 && (
-                  <Box mb={1}>
-                    <input
-                      value={searchValue}
-                      onChange={e =>
-                        setSearchInputs((prev) => ({
-                          ...prev,
-                          [`Subgénero-${genero}`]: e.target.value,
-                        }))
-                      }
-                      placeholder="Buscar subgénero..."
-                      style={{
-                        width: '100%',
-                        fontSize: '13px',
-                          padding: '6px 8px',
-                          border: '1px solid #ECECEC',
-                        borderRadius: '8px',
-                        marginBottom: 2,
-                        outline: 'none',
-                        color: '#202020',
-                        background: '#FAFAFA'
-                      }}
-                    />
-                  </Box>
-                )}
-                <VStack align="stretch" spacing={1}>
-                  {filteredSubgeneros.map((subgenero) => {
-                    const tiposObra = subgenerosPorGenero[genero]?.[subgenero] || [];
-                    const seleccionado = selectedSubgeneros.includes(subgenero);
-                    const searchTipo = searchInputs[`TipoObra-${genero}-${subgenero}`] || '';
-                    const filteredTiposObra = searchTipo
-                      ? tiposObra.filter((t) => t.toLowerCase().includes(searchTipo.toLowerCase()))
-                      : tiposObra;
-                    return (
-                      <Box
-                        key={subgenero}
-                        mb={2}
-                        borderRadius="8px"
-                        border="1px solid #ECECEC"
-                        p={2}
-                        bg={seleccionado ? '#FAFAFA' : 'white'}
-                        boxShadow={seleccionado ? 'inset 0 0 0 1px #D1D5DB' : 'none'}
-                      >
-                        <Flex
-                          align="center"
-                          justify="space-between"
-                          cursor="pointer"
-                          onClick={() => {
-                            setSelectedSubgeneros((prev) =>
-                              prev.includes(subgenero)
-                                ? prev.filter((item) => item !== subgenero)
-                                : [...prev, subgenero]
-                            );
-                          }}
-                        >
-                          <Flex align="center">
-                            <input
-                              type="checkbox"
-                              checked={seleccionado}
-                              readOnly
-                              style={{
-                                marginRight: 8,
-                                accentColor: '#202020',
-                                width: 12,
-                                height: 12,
-                              }}
-                            />
-                            <Text fontWeight="600" fontSize="13px" color={seleccionado ? '#202020' : '#202020'}>
-                              {subgenero}
-                            </Text>
-                          </Flex>
-                        </Flex>
-                        {tiposObra.length > 10 && (
-                          <Box mt={2}>
-                            <input
-                              value={searchTipo}
-                              onChange={e =>
-                                setSearchInputs((prev) => ({
-                                  ...prev,
-                                  [`TipoObra-${genero}-${subgenero}`]: e.target.value,
-                                }))
-                              }
-                              placeholder="Buscar tipo de obra..."
-                              style={{
-                                width: '100%',
-                                fontSize: '13px',
-                                  padding: '6px 8px',
-                                  border: '1px solid #ECECEC',
-                                borderRadius: '8px',
-                                marginBottom: 2,
-                                outline: 'none',
-                                color: '#202020',
-                                background: '#FAFAFA'
-                              }}
-                            />
-                          </Box>
-                        )}
-                        <VStack align="stretch" spacing={1} mt={2}>
-                          {filteredTiposObra.map((tipo) => {
-                            const tipoSeleccionado = selectedTipoObra.includes(tipo);
-                            return (
-                              <Flex
-                                key={tipo}
-                                px={2}
-                                py={1}
-                                borderRadius="8px"
-                                cursor="pointer"
-                                align="center"
-                                bg={tipoSeleccionado ? '#FAFAFA' : 'white'}
-                                boxShadow={tipoSeleccionado ? 'inset 0 0 0 1px #D1D5DB' : 'none'}
-                                color={tipoSeleccionado ? '#202020' : '#374151'}
-                                fontSize="12px"
-                                transition="all 180ms ease"
-                                _hover={{ bg: '#FAFAFA' }}
-                                onClick={() => {
-                                  setSelectedTipoObra((prev) =>
-                                    prev.includes(tipo)
-                                      ? prev.filter((item) => item !== tipo)
-                                      : [...prev, tipo]
-                                  );
-                                }}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={tipoSeleccionado}
-                                  readOnly
-                                  style={{
-                                    marginRight: 8,
-                                    accentColor: '#202020',
-                                    width: 12,
-                                    height: 12,
-                                  }}
-                                />
-                                <Text flex={1}>{tipo}</Text>
-                              </Flex>
-                            );
-                          })}
-                        </VStack>
-                      </Box>
-                    );
-                  })}
-                </VStack>
-              </Box>
-            );
-          })}
-          </Box>
-        )}
-      </FilterAccordion>
-    );
-  }
-
   // M2 superficie
   function renderSuperficieAccordion() {
+    const surfaceOptions = [
+      {
+        value: '0 - 1,000',
+        label: 'Compacta',
+        range: '0 - 1,000 m²',
+      },
+      {
+        value: '1,000 - 5,000',
+        label: 'Media',
+        range: '1,000 - 5,000 m²',
+      },
+      {
+        value: '5,000 - 10,000',
+        label: 'Grande',
+        range: '5,000 - 10,000 m²',
+      },
+      {
+        value: '> 10,000',
+        label: 'Macro',
+        range: 'Más de 10,000 m²',
+      },
+    ];
+
     return (
       <FilterAccordion
         title="M² superficie"
@@ -1141,59 +1609,95 @@ export default function SidebarFiltros() {
         expanded={!!openedAccordions['M² superficie']}
         onToggle={() => toggleAccordion('M² superficie')}
       >
-        <SimpleGrid columns={2} spacing={2}>
-          {['0 - 1,000', '1,000 - 5,000', '5,000 - 10,000', '> 10,000'].map((option) => {
-            const selected = (selectedValues['M² superficie'] || []).includes(option);
+        <VStack align="stretch" spacing={2}>
+          {surfaceOptions.map((option) => {
+            const selected = (selectedValues['M² superficie'] || []).includes(option.value);
             return (
-              <Box
-                key={option}
-                px={2}
+              <Flex
+                key={option.value}
+                align="center"
+                gap={2}
+                px={3}
                 py={2}
                 borderRadius="8px"
                 border="1px solid"
-                borderColor={selected ? '#202020' : '#ECECEC'}
-                bg={selected ? '#FAFAFA' : 'white'}
-                boxShadow={selected ? 'inset 0 0 0 1px #D1D5DB' : 'none'}
-                color={selected ? '#202020' : '#202020'}
+                borderColor={selected ? 'var(--cl-text-muted)' : 'var(--cl-border)'}
+                bg={selected ? 'var(--cl-surface-muted)' : 'var(--cl-surface)'}
+                boxShadow={selected ? 'inset 0 0 0 1px var(--cl-border)' : 'none'}
+                color={TEXT_PRIMARY}
                 cursor="pointer"
-                textAlign="center"
-                whiteSpace="nowrap"
-                fontSize="12px"
-                lineHeight="1"
-                fontWeight={selected ? '600' : '500'}
                 transition="all 180ms ease"
-                transform="none"
                 _hover={{
-                  borderColor: '#202020',
-                  bg: '#FAFAFA',
+                  borderColor: 'var(--cl-text-muted)',
+                  bg: 'var(--cl-surface-muted)',
                 }}
                 onClick={() => {
                   setSelectedValues((prev) => {
                     const current = prev['M² superficie'] || [];
                     return {
                       ...prev,
-                      'M² superficie': current.includes(option)
-                        ? current.filter((item) => item !== option)
-                        : [...current, option],
+                      'M² superficie': current.includes(option.value)
+                        ? current.filter((item) => item !== option.value)
+                        : [...current, option.value],
                     };
                   });
                 }}
               >
-                {option}
-              </Box>
+                <input
+                  type="checkbox"
+                  checked={selected}
+                  readOnly
+                  style={{
+                    accentColor: ACCENT_GRAY,
+                    width: 13,
+                    height: 13,
+                  }}
+                />
+                <Box flex={1} minW={0}>
+                  <Text fontSize="12px" fontWeight="700" color={TEXT_STRONG} lineHeight="1.2">
+                    {option.label}
+                  </Text>
+                  <Text fontSize="11px" color={TEXT_SECONDARY} mt={1} lineHeight="1.2">
+                    {option.range}
+                  </Text>
+                </Box>
+              </Flex>
             );
           })}
-        </SimpleGrid>
+        </VStack>
       </FilterAccordion>
     );
   }
 
   // Inversión slider
   function renderInversionAccordion() {
-    const INVESTMENT_MAX = 1000000000;
-    const minPercent = (investmentMin / INVESTMENT_MAX) * 100;
-    const maxPercent = (investmentMax / INVESTMENT_MAX) * 100;
+    const INVESTMENT_MIN = investmentBounds.min;
+    const INVESTMENT_MAX = investmentBounds.max;
+    const investmentSpan = Math.max(INVESTMENT_MAX - INVESTMENT_MIN, 1);
+    const minPercent = Math.max(
+      0,
+      Math.min(((investmentMin - INVESTMENT_MIN) / investmentSpan) * 100, 100)
+    );
+    const maxPercent = Math.max(
+      0,
+      Math.min(((investmentMax - INVESTMENT_MIN) / investmentSpan) * 100, 100)
+    );
     const formatMillions = (value) => `${Math.round(value / 1000000)}M`;
+    const setMinFromMillions = (value) => {
+      const nextValue = Math.max(
+        INVESTMENT_MIN,
+        Math.min(Number(value || 0) * 1000000, investmentMax)
+      );
+      setInvestmentMin(nextValue);
+    };
+    const setMaxFromMillions = (value) => {
+      const nextValue = Math.min(
+        INVESTMENT_MAX,
+        Math.max(Number(value || 0) * 1000000, investmentMin)
+      );
+      setInvestmentMax(nextValue);
+    };
+
     return (
       <FilterAccordion
         title="Inversión"
@@ -1202,22 +1706,81 @@ export default function SidebarFiltros() {
         onToggle={() => toggleAccordion('Inversión')}
       >
         <Box>
-          <Flex align="center" justify="space-between" mb={2}>
-            <Text fontSize="13px" fontWeight="600" color="#202020">
-              Desde: ${formatMillions(investmentMin)}
-            </Text>
-            <Text fontSize="13px" fontWeight="600" color="#202020">
-              Hasta: ${formatMillions(investmentMax)}
-            </Text>
-          </Flex>
-          <Box position="relative" h="32px" mt={2}>
+          <SimpleGrid columns={2} spacing={2} mb={3}>
+            <Box>
+              <Text fontSize="11px" color={TEXT_SECONDARY} fontWeight="700" mb={1}>
+                Desde
+              </Text>
+              <Flex
+                align="center"
+                h="34px"
+                px={2}
+                border="1px solid var(--cl-border)"
+                borderRadius="8px"
+                bg="var(--cl-input-bg)"
+              >
+                <Text fontSize="12px" color={TEXT_SECONDARY} mr={1}>$</Text>
+                <input
+                  type="number"
+                  min={Math.round(INVESTMENT_MIN / 1000000)}
+                  max={Math.round(investmentMax / 1000000)}
+                  value={Math.round(investmentMin / 1000000)}
+                  onChange={(event) => setMinFromMillions(event.target.value)}
+                  style={{
+                    width: '100%',
+                    border: 0,
+                    outline: 'none',
+                    background: 'transparent',
+                    color: 'var(--cl-text)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                  }}
+                />
+                <Text fontSize="11px" color={TEXT_SECONDARY}>M</Text>
+              </Flex>
+            </Box>
+            <Box>
+              <Text fontSize="11px" color={TEXT_SECONDARY} fontWeight="700" mb={1}>
+                Hasta
+              </Text>
+              <Flex
+                align="center"
+                h="34px"
+                px={2}
+                border="1px solid var(--cl-border)"
+                borderRadius="8px"
+                bg="var(--cl-input-bg)"
+              >
+                <Text fontSize="12px" color={TEXT_SECONDARY} mr={1}>$</Text>
+                <input
+                  type="number"
+                  min={Math.round(investmentMin / 1000000)}
+                  max={Math.round(INVESTMENT_MAX / 1000000)}
+                  value={Math.round(investmentMax / 1000000)}
+                  onChange={(event) => setMaxFromMillions(event.target.value)}
+                  style={{
+                    width: '100%',
+                    border: 0,
+                    outline: 'none',
+                    background: 'transparent',
+                    color: 'var(--cl-text)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                  }}
+                />
+                <Text fontSize="11px" color={TEXT_SECONDARY}>M</Text>
+              </Flex>
+            </Box>
+          </SimpleGrid>
+
+          <Box position="relative" h="34px" mt={1}>
             <Box
               position="absolute"
               left="0"
               right="0"
               top="16px"
               h="4px"
-              bg="#ECECEC"
+              bg="var(--cl-border)"
               borderRadius="999px"
               zIndex={0}
               transform="none"
@@ -1227,7 +1790,7 @@ export default function SidebarFiltros() {
               top="16px"
               h="4px"
               borderRadius="2px"
-              bg="#202020"
+              bg={ACCENT_GRAY}
               zIndex={1}
               left={`${minPercent}%`}
               width={`${Math.max(maxPercent - minPercent, 0)}%`}
@@ -1235,7 +1798,7 @@ export default function SidebarFiltros() {
             />
             <input
               type="range"
-              min={0}
+              min={INVESTMENT_MIN}
               max={INVESTMENT_MAX}
               step={1000000}
               value={investmentMin}
@@ -1258,7 +1821,7 @@ export default function SidebarFiltros() {
             />
             <input
               type="range"
-              min={0}
+              min={INVESTMENT_MIN}
               max={INVESTMENT_MAX}
               step={1000000}
               value={investmentMax}
@@ -1288,7 +1851,7 @@ export default function SidebarFiltros() {
                 width:16px;
                 height:16px;
                 border-radius:50%;
-                background:#202020;
+                background:#4B5563;
                 border:2px solid white;
                 box-shadow:0 1px 4px rgba(0,0,0,.16);
                 cursor:pointer;
@@ -1304,7 +1867,7 @@ export default function SidebarFiltros() {
                 width:16px;
                 height:16px;
                 border-radius:50%;
-                background:#202020;
+                background:#4B5563;
                 border:2px solid white;
                 box-shadow:0 1px 4px rgba(0,0,0,.16);
                 cursor:pointer;
@@ -1315,7 +1878,7 @@ export default function SidebarFiltros() {
                 width:16px;
                 height:16px;
                 border-radius:50%;
-                background:#202020;
+                background:#4B5563;
                 border:2px solid white;
                 box-shadow:0 1px 4px rgba(0,0,0,.16);
                 cursor:pointer;
@@ -1328,9 +1891,14 @@ export default function SidebarFiltros() {
               `}
             </style>
           </Box>
-          <Text fontSize="11px" color="#9CA3AF" mt={3} textAlign="center">
-            Valores en millones de pesos (M)
-          </Text>
+          <Flex align="center" justify="space-between" mt={1}>
+            <Text fontSize="11px" color="var(--cl-text-muted)">
+              ${formatMillions(investmentMin)}
+            </Text>
+            <Text fontSize="11px" color="var(--cl-text-muted)">
+              ${formatMillions(investmentMax)}
+            </Text>
+          </Flex>
         </Box>
       </FilterAccordion>
     );
@@ -1361,10 +1929,10 @@ export default function SidebarFiltros() {
       gap={2}
     >
       <Box
-        bg="white"
+        bg="var(--cl-surface)"
         p={3}
         borderRadius="12px"
-        border="1px solid #ECECEC"
+        border="1px solid var(--cl-border)"
         h="100%"
         display="flex"
         flexDirection="column"
@@ -1377,19 +1945,19 @@ export default function SidebarFiltros() {
         >
           <Heading
             size="sm"
-            color="#202020"
+            color={TEXT_STRONG}
             fontSize="16px"
           >
             Busqueda
           </Heading>
 
           <Text
-            color="#202020"
+            color={TEXT_STRONG}
             fontSize="12px"
             fontWeight="600"
             cursor="pointer"
             transition="all 180ms ease"
-            _hover={{ color: '#000000' }}
+            _hover={{ color: TEXT_PRIMARY }}
             onClick={() => {
               setSelectedValues({});
               setSelectedRegiones([]);
@@ -1402,65 +1970,17 @@ export default function SidebarFiltros() {
               setSelectedDesarrollos([]);
               setSelectedTipoObra([]);
               setSelectedTiposProyecto([]);
-              setInvestmentMin(0);
-              setInvestmentMax(1000000000);
+              setInvestmentMin(investmentBounds.min);
+              setInvestmentMax(investmentBounds.max);
+              setDateRangeStart('');
+              setDateRangeEnd('');
               localStorage.removeItem('construleads-filtros');
-              setOpenedAccordions(getDefaultAccordion(activeFilterTab));
+              setOpenedAccordions(getDefaultAccordion());
               setSearchInputs({});
             }}
           >
             Limpiar filtros
           </Text>
-        </Flex>
-
-<Flex
-  mb={3}
-  bg="white"
-  position="sticky"
-  top={0}
-  zIndex={2}
-  pb={2}
-  borderBottom="1px solid #ECECEC"
->
-          <Button
-            flex={1}
-            size="sm"
-            borderRadius="8px"
-            bg="transparent"
-            color={activeFilterTab === 'principales' ? '#202020' : '#6B7280'}
-            borderBottom={activeFilterTab === 'principales' ? '3px solid #202020' : '3px solid transparent'}
-            boxShadow="none"
-            fontSize="13px"
-            fontWeight="600"
-            transition="all 180ms ease"
-            _hover={{ bg: '#FAFAFA' }}
-            onClick={() => {
-              setActiveFilterTab('principales');
-              setOpenedAccordions(getDefaultAccordion('principales'));
-            }}
-          >
-            Principales
-          </Button>
-
-          <Button
-            flex={1}
-            size="sm"
-            borderRadius="8px"
-            bg="transparent"
-            color={activeFilterTab === 'avanzados' ? '#202020' : '#6B7280'}
-            borderBottom={activeFilterTab === 'avanzados' ? '3px solid #202020' : '3px solid transparent'}
-            boxShadow="none"
-            fontSize="13px"
-            fontWeight="600"
-            transition="all 180ms ease"
-            _hover={{ bg: '#FAFAFA' }}
-            onClick={() => {
-              setActiveFilterTab('avanzados');
-              setOpenedAccordions(getDefaultAccordion('avanzados'));
-            }}
-          >
-            Avanzados
-          </Button>
         </Flex>
 
         <VStack
@@ -1475,43 +1995,38 @@ export default function SidebarFiltros() {
           pr={1}
           pb={2}
         >
-          {activeFilterTab === 'principales' && renderPrincipales()}
-          {activeFilterTab === 'avanzados' && (
-            <>
-              {renderSubgeneroAccordion()}
-              {renderSimpleAccordion(
-                'Etapa',
-                [
-                  'Inicio',
-                  'Obra Negociada',
-                  'Pre-Inicio',
-                  'Plan',
-                  'Proyecto',
-                  'Pre-Plan',
-                ],
-                selectedEtapas,
-                setSelectedEtapas,
-                true
-              )}
-              {renderSimpleAccordion(
-                'Tipo desarrollo',
-                [
-                  'Obra Nueva',
-                  'Ampliacion',
-                  'Rehabilitacion',
-                  'Mantenimiento',
-                  'Remodelacion',
-                  'Adecuacion',
-                  'Terminacion',
-                ],
-                selectedDesarrollos,
-                setSelectedDesarrollos,
-                true
-              )}
-              {renderSuperficieAccordion()}
-              {renderInversionAccordion()}
-            </>
+          {renderPrincipales()}
+          {renderSimpleAccordion(
+            'Etapa',
+            [
+              'Inicio',
+              'Obra Negociada',
+              'Pre-Inicio',
+              'Plan',
+              'Proyecto',
+              'Pre-Plan',
+            ],
+            selectedEtapas,
+            setSelectedEtapas,
+            true
           )}
+          {renderSimpleAccordion(
+            'Tipo desarrollo',
+            [
+              'Obra Nueva',
+              'Ampliacion',
+              'Rehabilitacion',
+              'Mantenimiento',
+              'Remodelacion',
+              'Adecuacion',
+              'Terminacion',
+            ],
+            selectedDesarrollos,
+            setSelectedDesarrollos,
+            true
+          )}
+          {renderSuperficieAccordion()}
+          {renderInversionAccordion()}
         </VStack>
       </Box>
     </Box>

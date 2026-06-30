@@ -8,9 +8,10 @@ import PanelResumen from './PanelResumen';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 
-export default function Mapa({
+function Mapa({
   obras = [],
   filtros = {},
+  isDarkMode = false,
   onFilteredData,
 }) {
   const [filteredObras, setFilteredObras] = useState([]);
@@ -96,22 +97,58 @@ export default function Mapa({
       let resultado = [...obras];
       console.log('TOTAL INICIAL:', resultado.length);
 
-const parseDate = (dateStr) => {
-  if (!dateStr) return null;
+const parseDate = (dateValue) => {
+  if (!dateValue) return null;
 
-  const date = new Date(dateStr);
+  if (dateValue instanceof Date) {
+    return Number.isNaN(dateValue.getTime()) ? null : dateValue;
+  }
 
-  return isNaN(date.getTime())
-    ? null
-    : date;
+  const normalized = String(dateValue).trim();
+  if (!normalized) return null;
+
+  const isoMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const localMatch = normalized.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (localMatch) {
+    const [, day, month, year] = localMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const getObraDateByFilter = (obra, selectedDateField) => {
+  if (selectedDateField === 'Fecha de inicio probable') {
+    return parseDate(obra.fechaInicioDate) || parseDate(obra.fechaInicio);
+  }
+
+  if (selectedDateField === 'Fecha de término probable') {
+    return parseDate(obra.fechaTerminoDate) || parseDate(obra.fechaTermino);
+  }
+
+  return parseDate(obra.fechaPublicacionDate) || parseDate(obra.fechaPublicacion);
 };
 
       // NUEVA LÓGICA DE FILTRO DE FECHA
       const selectedDateField =
   filtrosActivos.fechaConsulta ||
   filtrosActivos.selectedValues?.['Fecha de consulta'] ||
-  '';
+  'Fecha de publicación';
       const periodIndex = Number(filtrosActivos.periodoIndex ?? -1);
+      const fechaInicioFiltro =
+        filtrosActivos.fechaInicio ||
+        filtrosActivos.fechaRango?.desde ||
+        '';
+      const fechaFinFiltro =
+        filtrosActivos.fechaFin ||
+        filtrosActivos.fechaRango?.hasta ||
+        '';
 
       const diasPorPeriodo = {
         0: 0,
@@ -124,13 +161,111 @@ const parseDate = (dateStr) => {
 
       const diasSeleccionados = diasPorPeriodo[periodIndex];
 
-      console.log('FILTRO FECHA:', selectedDateField);
-      console.log('PERIODO INDEX:', periodIndex);
-      console.log('DIAS SELECCIONADOS:', diasSeleccionados);
+      const fechaStats = resultado.reduce(
+        (acc, obra) => {
+          const fechaObra = getObraDateByFilter(obra, selectedDateField);
 
-// FILTRO FECHAS DESACTIVADO TEMPORALMENTE
-console.log('FILTRO FECHAS DESACTIVADO TEMPORALMENTE');
-console.log('FILTRO FECHAS OMITIDO PARA DEBUG');
+          if (!fechaObra) {
+            acc.invalidas += 1;
+            return acc;
+          }
+
+          acc.validas += 1;
+
+          if (!acc.min || fechaObra < acc.min) acc.min = fechaObra;
+          if (!acc.max || fechaObra > acc.max) acc.max = fechaObra;
+
+          if (acc.muestra.length < 5) {
+            acc.muestra.push({
+              clave: obra.clave,
+              proyecto: obra.proyecto,
+              fecha: fechaObra.toISOString().slice(0, 10),
+              fechaPublicacion: obra.fechaPublicacion,
+              fechaInicio: obra.fechaInicio,
+              fechaTermino: obra.fechaTermino,
+            });
+          }
+
+          return acc;
+        },
+        {
+          validas: 0,
+          invalidas: 0,
+          min: null,
+          max: null,
+          muestra: [],
+        }
+      );
+      const totalAntesFechas = resultado.length;
+
+      console.groupCollapsed('[Construleads][Fechas] Diagnóstico de filtro');
+      console.log('Criterio:', selectedDateField);
+      console.log('Rango solicitado:', {
+        desde: fechaInicioFiltro,
+        hasta: fechaFinFiltro,
+      });
+      console.log('Periodo legacy:', {
+        periodIndex,
+        diasSeleccionados,
+      });
+      console.log('Dataset antes de fecha:', totalAntesFechas);
+      console.log('Fechas válidas / inválidas:', {
+        validas: fechaStats.validas,
+        invalidas: fechaStats.invalidas,
+      });
+      console.log('Rango real del dataset para criterio:', {
+        min: fechaStats.min ? fechaStats.min.toISOString().slice(0, 10) : null,
+        max: fechaStats.max ? fechaStats.max.toISOString().slice(0, 10) : null,
+      });
+      console.table(fechaStats.muestra);
+
+      if (fechaInicioFiltro && fechaFinFiltro) {
+        const fechaInicio = parseDate(fechaInicioFiltro);
+        const fechaFin = parseDate(fechaFinFiltro);
+
+        if (fechaInicio && fechaFin) {
+          fechaInicio.setHours(0, 0, 0, 0);
+          fechaFin.setHours(23, 59, 59, 999);
+
+          resultado = resultado.filter((obra) => {
+            const fechaObra = getObraDateByFilter(obra, selectedDateField);
+            if (!fechaObra) return false;
+
+            return fechaObra >= fechaInicio && fechaObra <= fechaFin;
+          });
+
+          console.log('POST FECHAS:', resultado.length);
+        }
+      } else if (typeof diasSeleccionados === 'number' && diasSeleccionados >= 0) {
+        const hoy = new Date();
+        const fechaInicio = new Date(hoy);
+        const fechaFin = new Date(hoy);
+
+        if (selectedDateField === 'Fecha de publicación') {
+          fechaInicio.setDate(hoy.getDate() - diasSeleccionados);
+        } else {
+          fechaFin.setDate(hoy.getDate() + diasSeleccionados);
+        }
+
+        fechaInicio.setHours(0, 0, 0, 0);
+        fechaFin.setHours(23, 59, 59, 999);
+
+        resultado = resultado.filter((obra) => {
+          const fechaObra = getObraDateByFilter(obra, selectedDateField);
+          if (!fechaObra) return false;
+
+          return fechaObra >= fechaInicio && fechaObra <= fechaFin;
+        });
+
+        console.log('POST FECHAS LEGACY:', resultado.length);
+      }
+
+      console.log('Resultado fecha:', {
+        antes: totalAntesFechas,
+        despues: resultado.length,
+        removidos: totalAntesFechas - resultado.length,
+      });
+      console.groupEnd();
 
 const regiones =
   filtrosActivos.regiones ||
@@ -286,9 +421,11 @@ const tiposProyecto =
         console.log('POST GENEROS:', resultado.length);
       }
 
-      // Tipo Obra ya se maneja desde el filtro visual de Subgénero
       if (tipoObra.length) {
-        console.log('TIPO OBRA LEGACY IGNORADO:', tipoObra);
+        resultado = resultado.filter((o) =>
+          tipoObra.includes(o.tipoObra)
+        );
+        console.log('POST TIPO OBRA:', resultado.length);
       }
 
       if (desarrollos.length) {
@@ -431,10 +568,7 @@ console.log(
 
       setFilteredObras(resultado);
 
-      if (
-        onFilteredData &&
-        lastPublishedCount.current !== resultado.length
-      ) {
+      if (onFilteredData) {
         lastPublishedCount.current = resultado.length;
         onFilteredData(resultado);
       }
@@ -456,13 +590,7 @@ console.log(
     };
   }, [obras, filtros, onFilteredData]);
 
-useEffect(() => {
-  console.log(
-    'MAPA RECIBIÓ:',
-    filteredObras.length,
-    'OBRAS FILTRADAS'
-  );
-    const apiKey =
+useEffect(() => {    const apiKey =
       import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
       'AIzaSyCIapQrNE18PGaxIYd6nRMpCoAlbYD4xkA';
     if (!apiKey) return;
@@ -479,9 +607,13 @@ useEffect(() => {
 
         if (!mapRef.current) return;
         const map = new Map(mapRef.current, {
-          center: { lat: 23.6345, lng: -102.5528 },
-          zoom: 5,
+          center: { lat: 23.6, lng: -102.0 },
+          zoom: 5.8,
+          mapTypeId: 'satellite',
           mapId: 'bimsa-construleads-map',
+          fullscreenControl: true,
+          mapTypeControl: true,
+          streetViewControl: false,
         });
 
         let activeMarkerElement = null;
@@ -499,56 +631,78 @@ useEffect(() => {
           return `${Math.round(millions)} MDP`;
         };
 
-        const getGenreIcon = (genre) => {
-          switch (genre) {
+        const getGenreMeta = (genre = '') => {
+          const normalizedGenre = genre
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+
+          switch (normalizedGenre) {
             case 'Industrial':
-              return '🏭';
+              return { icon: '🏭', color: '#64748B' };
             case 'Infraestructura':
-              return '🛣️';
-            case 'Edificación':
-              return '🏢';
+              return { icon: '🛣️', color: '#2563EB' };
+            case 'Edificacion':
+              return { icon: '🏢', color: '#7C3AED' };
             case 'Vivienda':
-              return '🏠';
+              return { icon: '🏠', color: '#059669' };
             default:
-              return '📍';
+              return { icon: '•', color: '#6B7280' };
           }
         };
 
-        console.log(
-          'OBRAS A PINTAR EN MAPA:',
-          filteredObras.length
-        );
+        const getGenreIcon = (genre) => {
+          return getGenreMeta(genre).icon;
+        };
+
+        const getGenreColor = (genre) => {
+          return getGenreMeta(genre).color;
+        };
+
+        const hexToRgba = (hex, alpha) => {
+          const cleanHex = hex.replace('#', '');
+          const r = parseInt(cleanHex.slice(0, 2), 16);
+          const g = parseInt(cleanHex.slice(2, 4), 16);
+          const b = parseInt(cleanHex.slice(4, 6), 16);
+
+          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        };
+
+        const getMarkerTheme = (genre) => {
+          const color = getGenreColor(genre);
+          return {
+            color,
+            softColor: '#FFFFFF',
+            borderColor: color,
+          };
+        };
+
         filteredObras.forEach((obra) => {
           const latNum = parseFloat(obra.lat);
           const lonNum = parseFloat(obra.lng);
-          console.log('COORDENADAS:', {
-            proyecto: obra.proyecto,
-            lat: latNum,
-            lng: lonNum,
-          });
 
           if (!isNaN(latNum) && !isNaN(lonNum)) {
+            const markerTheme = getMarkerTheme(obra.genero);
             // Create custom HTML marker
             const markerContent = document.createElement('div');
             markerContent.innerHTML = `
               <div style="
                 display:flex;
                 align-items:center;
-                gap:6px;
-                background:white;
-                border:1px solid #D1D5DB;
-                border-radius:8px;
-                padding:6px 10px;
-                box-shadow:0 4px 12px rgba(0,0,0,.15);
+                justify-content:center;
+                width:34px;
+                height:34px;
+                background:${markerTheme.softColor};
+                border:3px solid ${markerTheme.borderColor};
+                border-radius:10px;
+                box-shadow:0 4px 12px rgba(0,0,0,.16);
                 font-family:Inter,sans-serif;
-                font-size:12px;
-                font-weight:700;
-                color:#202020;
+                font-size:16px;
+                color:${markerTheme.color};
                 cursor:pointer;
-                white-space:nowrap;
+                backdrop-filter:blur(6px);
+                transition:transform 160ms ease, box-shadow 160ms ease;
               ">
                 <span>${getGenreIcon(obra.genero)}</span>
-                <span>${Math.round(obra.inversion / 1000000)}M</span>
               </div>
             `;
 
@@ -599,22 +753,22 @@ new MarkerClusterer({
 
       clusterElement.innerHTML = `
         <div style="
-          min-width:34px;
+          min-width:54px;
           height:30px;
           padding:0 8px;
           border-radius:8px;
-          background:white;
-          border:1px solid #D1D5DB;
+          background:var(--cl-surface);
+          border:1px solid var(--cl-border);
           display:flex;
           align-items:center;
           justify-content:center;
           font-family:Inter,sans-serif;
           font-weight:800;
-          font-size:13px;
-          color:#202020;
+          font-size:12px;
+          color:var(--cl-text-strong);
           box-shadow:0 4px 12px rgba(0,0,0,.16);
         ">
-          ${count}
+          ${count} proy.
         </div>
       `;
 
@@ -639,15 +793,15 @@ new MarkerClusterer({
         console.error('Error cargando Google Maps:', error);
       }
     })();
-  }, [filteredObras]);
+  }, [filteredObras, isDarkMode]);
 
   return (
     <Box
-      bg="white"
+      bg="var(--cl-surface)"
   h="calc(100vh - 96px)"
       borderRadius="12px"
       p={0}
-      border="1px solid #ECECEC"
+      border="1px solid var(--cl-border)"
       overflow="hidden"
     >
       <Box
@@ -665,17 +819,18 @@ new MarkerClusterer({
               position="absolute"
               top="16px"
               left="16px"
-              bg="white"
+              bg="var(--cl-surface)"
               borderRadius="12px"
               p={4}
               w="320px"
-              boxShadow="0 8px 24px rgba(0,0,0,.12)"
+              boxShadow="var(--cl-shadow)"
               zIndex={20}
-              border="1px solid #ECECEC"
+              border="1px solid var(--cl-border)"
+              color="var(--cl-text)"
             >
               <Box
                 display="inline-block"
-                bg="#FAFAFA"
+                bg="var(--cl-surface-muted)"
                 color="#FF6600"
                 px={2}
                 py={1}
@@ -687,20 +842,20 @@ new MarkerClusterer({
                 {selectedProject.genero}
               </Box>
 
-              <Text fontSize="18px" fontWeight="800" mb={3} lineHeight="1.25" color="#202020">
+              <Text fontSize="18px" fontWeight="800" mb={3} lineHeight="1.25" color="var(--cl-text-strong)">
                 {selectedProject.proyecto}
               </Text>
 
               <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2} mb={3}>
-                <Box bg="#FAFAFA" p={2} borderRadius="8px" border="1px solid #ECECEC">
-                  <Text fontSize="11px" color="gray.500">💰 Inversión</Text>
+                <Box bg="var(--cl-surface-muted)" p={2} borderRadius="8px" border="1px solid var(--cl-border)">
+                  <Text fontSize="11px" color="var(--cl-text-muted)">💰 Inversión</Text>
                   <Text fontWeight="800" color="#FF6600">
                     {selectedProject.inversion}
                   </Text>
                 </Box>
 
-                <Box bg="#FAFAFA" p={2} borderRadius="8px" border="1px solid #ECECEC">
-                  <Text fontSize="11px" color="gray.500">📐 Superficie</Text>
+                <Box bg="var(--cl-surface-muted)" p={2} borderRadius="8px" border="1px solid var(--cl-border)">
+                  <Text fontSize="11px" color="var(--cl-text-muted)">📐 Superficie</Text>
                   <Text fontWeight="800">
                     {selectedProject.superficie}
                   </Text>
@@ -708,13 +863,13 @@ new MarkerClusterer({
               </Box>
 
               <Box
-                bg="#FAFAFA"
-                border="1px solid #ECECEC"
+                bg="var(--cl-surface-muted)"
+                border="1px solid var(--cl-border)"
                 borderRadius="8px"
                 p={2}
                 mb={3}
                 fontSize="13px"
-                color="gray.600"
+                color="var(--cl-text-muted)"
               >
                 📍 {selectedProject.estado} · {selectedProject.subgenero}
               </Box>
@@ -734,16 +889,12 @@ new MarkerClusterer({
 
           <Box
             position="absolute"
-            left="16px"
             right="16px"
-            bottom="16px"
+            top="72px"
             zIndex={15}
+            w="176px"
           >
-            <Box
-              p={2}
-            >
-              <PanelResumen obras={filteredObras} />
-            </Box>
+            <PanelResumen obras={filteredObras} variant="map" />
           </Box>
         </Box>
       </Box>
@@ -751,3 +902,5 @@ new MarkerClusterer({
     </Box>
   );
 }
+
+export default React.memo(Mapa);
