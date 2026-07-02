@@ -1921,9 +1921,9 @@ export default function SidebarFiltros({ obras = [] }) {
   return (
     <Box
       w="272px"
-      h="calc(100vh - 96px)"
-      minH="calc(100vh - 96px)"
-      maxH="calc(100vh - 96px)"
+      h="100%"
+      minH="0"
+      maxH="100%"
       display="flex"
       flexDirection="column"
       gap={2}

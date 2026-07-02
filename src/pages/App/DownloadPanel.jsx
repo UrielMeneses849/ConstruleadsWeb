@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
   Button,
@@ -14,9 +14,24 @@ const downloadOptions = [
   { value: 'excel-prospeccion', label: 'Excel - Prospección' },
 ];
 
-export default function DownloadPanel() {
+export default function DownloadPanel({ selectedCount = 0 }) {
   const [selectedOption, setSelectedOption] = useState(downloadOptions[0]);
   const [isOpen, setIsOpen] = useState(false);
+  const hasSelection = selectedCount > 0;
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   return (
     <Flex
@@ -106,14 +121,14 @@ export default function DownloadPanel() {
 
       <Button
         h="36px"
-        minW="112px"
+        minW={hasSelection ? '156px' : '112px'}
         bg="#FF6600"
         color="white"
         borderRadius="8px"
         fontSize="13px"
         _hover={{ bg: '#E65C00' }}
       >
-        Descargar
+        {hasSelection ? 'Descargar selección' : 'Descargar'}
       </Button>
     </Flex>
   );

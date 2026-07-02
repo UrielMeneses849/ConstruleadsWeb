@@ -12,6 +12,7 @@ function Mapa({
   obras = [],
   filtros = {},
   isDarkMode = false,
+  selectedObras = [],
   onFilteredData,
 }) {
   const [filteredObras, setFilteredObras] = useState([]);
@@ -22,6 +23,13 @@ function Mapa({
 
   useEffect(() => {
     const applyFilters = () => {
+      if (Array.isArray(selectedObras) && selectedObras.length > 0) {
+        console.log('MAPA EN MODO SELECCION:', selectedObras.length);
+        setFilteredObras(selectedObras);
+        setSelectedProject(null);
+        return;
+      }
+
       const filtrosActivos = Object.keys(filtros || {}).length
         ? filtros
         : (window.construleadsFilters || {});
@@ -588,9 +596,12 @@ console.log(
         applyFilters
       );
     };
-  }, [obras, filtros, onFilteredData]);
+  }, [obras, filtros, selectedObras, onFilteredData]);
 
-useEffect(() => {    const apiKey =
+useEffect(() => {
+    let cancelled = false;
+
+    const apiKey =
       import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
       'AIzaSyCIapQrNE18PGaxIYd6nRMpCoAlbYD4xkA';
     if (!apiKey) return;
@@ -605,6 +616,7 @@ useEffect(() => {    const apiKey =
         const { Map } = await importLibrary('maps');
         const { AdvancedMarkerElement } = await importLibrary('marker');
 
+        if (cancelled) return;
         if (!mapRef.current) return;
         const map = new Map(mapRef.current, {
           center: { lat: 23.6, lng: -102.0 },
@@ -614,6 +626,14 @@ useEffect(() => {    const apiKey =
           fullscreenControl: true,
           mapTypeControl: true,
           streetViewControl: false,
+        });
+
+        requestAnimationFrame(() => {
+          if (window.google?.maps?.event) {
+            window.google.maps.event.trigger(map, 'resize');
+          }
+
+          map.setCenter({ lat: 23.6, lng: -102.0 });
         });
 
         let activeMarkerElement = null;
@@ -677,6 +697,8 @@ useEffect(() => {    const apiKey =
         };
 
         filteredObras.forEach((obra) => {
+          if (cancelled) return;
+
           const latNum = parseFloat(obra.lat);
           const lonNum = parseFloat(obra.lng);
 
@@ -793,12 +815,17 @@ new MarkerClusterer({
         console.error('Error cargando Google Maps:', error);
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [filteredObras, isDarkMode]);
 
   return (
     <Box
       bg="var(--cl-surface)"
-  h="calc(100vh - 96px)"
+      h="100%"
+      minH="520px"
       borderRadius="12px"
       p={0}
       border="1px solid var(--cl-border)"
@@ -806,13 +833,21 @@ new MarkerClusterer({
     >
       <Box
         h="100%"
+        minH="520px"
         borderRadius="12px"
         overflow="hidden"
         border="0"
         p={0}
       >
-        <Box position="relative" h="100%" minH="640px" w="100%">
-          <Box ref={mapRef} h="100%" minH="640px" w="100%" />
+        <Box position="relative" h="100%" minH="520px" w="100%">
+          <Box
+            ref={mapRef}
+            position="absolute"
+            inset={0}
+            h="100%"
+            minH="520px"
+            w="100%"
+          />
 
           {selectedProject && (
             <Box
@@ -889,10 +924,10 @@ new MarkerClusterer({
 
           <Box
             position="absolute"
-            right="16px"
-            top="72px"
+            left="24px"
+            right="96px"
+            bottom="16px"
             zIndex={15}
-            w="176px"
           >
             <PanelResumen obras={filteredObras} variant="map" />
           </Box>

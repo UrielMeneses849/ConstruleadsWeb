@@ -1,13 +1,18 @@
 import {
   Box,
   Flex,
-  Heading,
   Button,
   Text,
   HStack,
 } from '@chakra-ui/react';
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { FiDownload, FiEye } from 'react-icons/fi';
+import {
+  FiDownload,
+  FiEye,
+  FiChevronUp,
+  FiChevronDown,
+  FiSliders,
+} from 'react-icons/fi';
 
 function parseTableDate(value) {
   if (!value || value === '-') return null;
@@ -29,6 +34,25 @@ function parseTableDate(value) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function getMonthGroupKey(value) {
+  const date = parseTableDate(value);
+  if (!date) return 'Sin fecha';
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function getMonthGroupLabel(value) {
+  if (value === 'Sin fecha') return 'Sin fecha';
+
+  const [year, month] = String(value).split('-');
+  const date = new Date(Number(year), Number(month) - 1, 1);
+
+  return new Intl.DateTimeFormat('es-MX', {
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+}
+
 function getMonthKey(value) {
   const date = parseTableDate(value);
   if (!date) return 'Sin fecha';
@@ -48,12 +72,20 @@ function getDayLabel(value) {
   }).format(date);
 }
 
-function ResultadosView({ obras = [] }) {
+function ResultadosView({
+  obras = [],
+  onSelectionChange,
+  selectionResetToken = 0,
+  onGoToMap,
+}) {
   const [filterMenu, setFilterMenu] = useState(null);
   const [columnFilters, setColumnFilters] = useState({});
   const [filterSearch, setFilterSearch] = useState({});
   const [selectedRows, setSelectedRows] = useState([]);
+  const [sortConfig, setSortConfig] = useState({ field: null, direction: 'asc' });
   const filterMenuRef = useRef(null);
+  const lastSelectionResetToken = useRef(selectionResetToken);
+  const lastSelectionSignature = useRef('');
 
   const [filterPosition, setFilterPosition] = useState({
     top: 0,
@@ -70,6 +102,24 @@ function ResultadosView({ obras = [] }) {
     textMuted: 'var(--cl-text-muted)',
     inputBg: 'var(--cl-input-bg)',
     shadow: 'var(--cl-shadow)',
+  };
+
+  const toggleSort = (field) => {
+    setSortConfig((current) => {
+      if (current.field === field) {
+        return {
+          field,
+          direction: current.direction === 'asc' ? 'desc' : 'asc',
+        };
+      }
+
+      return { field, direction: 'asc' };
+    });
+  };
+
+  const getSortIconColor = (field, direction) => {
+    if (sortConfig.field !== field) return ui.textMuted;
+    return sortConfig.direction === direction ? '#FF6600' : ui.textMuted;
   };
 
   const tableData = useMemo(() => {
@@ -153,10 +203,25 @@ function ResultadosView({ obras = [] }) {
         obra.TipoProyecto ||
         obra.tipoproyecto ||
         '-',
+
+      compania:
+        obra.compania ||
+        obra.Compania ||
+        obra.COMPANIA ||
+        '-',
+
+      source: obra,
     }));
   }, [obras]);
 
   const getRowKey = (row) => String(row.id || row.clave || row.proyecto);
+
+  useEffect(() => {
+    if (lastSelectionResetToken.current === selectionResetToken) return;
+
+    lastSelectionResetToken.current = selectionResetToken;
+    setSelectedRows([]);
+  }, [selectionResetToken]);
 
   useEffect(() => {
     const visibleKeys = new Set(tableData.map(getRowKey));
@@ -164,6 +229,27 @@ function ResultadosView({ obras = [] }) {
   }, [tableData]);
 
   useEffect(() => {
+    if (!onSelectionChange) return;
+
+    const selectionSignature = [...selectedRows].sort().join('|');
+    if (lastSelectionSignature.current === selectionSignature) return;
+    lastSelectionSignature.current = selectionSignature;
+
+    const selectedSet = new Set(selectedRows);
+    const selectedObras = tableData
+      .filter((row) => selectedSet.has(getRowKey(row)))
+      .map((row) => row.source);
+
+    onSelectionChange(selectedObras);
+  }, [selectedRows, tableData, onSelectionChange]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setFilterMenu(null);
+      }
+    };
+
     const handleClickOutside = (event) => {
       if (
         filterMenuRef.current &&
@@ -173,19 +259,59 @@ function ResultadosView({ obras = [] }) {
       }
     };
 
+    document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('mousedown', handleClickOutside);
 
     return () => {
+      document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
 
+  const dateFields = ['inicio', 'fin', 'publicacion'];
+
   const filteredData = useMemo(() => tableData.filter((row) => {
     return Object.entries(columnFilters).every(([field, values]) => {
       if (!values || values.length === 0) return true;
+
+      if (dateFields.includes(field)) {
+        const monthGroup = getMonthGroupKey(row[field]);
+        return values.includes(monthGroup);
+      }
+
       return values.includes(String(row[field] ?? ''));
     });
   }), [tableData, columnFilters]);
+
+  const sortedData = useMemo(() => {
+    if (!sortConfig.field) return filteredData;
+
+    const sorted = [...filteredData];
+    const { field, direction } = sortConfig;
+
+    sorted.sort((a, b) => {
+      const aValue = String(a[field] ?? '').trim();
+      const bValue = String(b[field] ?? '').trim();
+
+      if (dateFields.includes(field)) {
+        const aDate = parseTableDate(aValue);
+        const bDate = parseTableDate(bValue);
+        if (aDate && bDate) {
+          return direction === 'asc'
+            ? aDate.getTime() - bDate.getTime()
+            : bDate.getTime() - aDate.getTime();
+        }
+        if (aDate) return direction === 'asc' ? -1 : 1;
+        if (bDate) return direction === 'asc' ? 1 : -1;
+        return 0;
+      }
+
+      const compareResult = aValue.localeCompare(bValue, 'es', { numeric: true });
+      return direction === 'asc' ? compareResult : -compareResult;
+    });
+
+    return sorted;
+  }, [filteredData, sortConfig]);
 
   const selectedRowsSet = useMemo(
     () => new Set(selectedRows),
@@ -202,6 +328,7 @@ function ResultadosView({ obras = [] }) {
       'fin',
       'publicacion',
       'tipo',
+      'compania',
     ];
 
     return fields.reduce((acc, field) => {
@@ -280,77 +407,119 @@ function ResultadosView({ obras = [] }) {
     });
   };
 
-  const renderFilterButton = (field, label) => (
-    <Button
-      variant="ghost"
-      size="xs"
-      h="28px"
-      px={2}
-      justifyContent="flex-start"
-      color={ui.textMuted}
-      fontWeight="700"
-      borderRadius="8px"
-      _hover={{ bg: ui.hover, color: ui.textStrong }}
-      onClick={(event) => openFilterMenu(field, event.currentTarget)}
-    >
-      <Flex align="center" gap={2}>
-        <span>{label}</span>
-        <span style={{ fontSize: '11px' }}>▾</span>
-      </Flex>
-    </Button>
+  const renderHeaderCell = (field, label) => (
+    <Flex align="center" justify="flex-start" gap={1}>
+      <Text fontSize="13px" fontWeight="700" color={ui.textMuted}>
+        {label}
+      </Text>
+      <HStack spacing={0}>
+        <Button
+          variant="ghost"
+          size="xs"
+          minW="20px"
+          w="20px"
+          h="20px"
+          p={0}
+          borderRadius="6px"
+          _hover={{ bg: ui.hover }}
+          onClick={(event) => {
+            event.stopPropagation();
+            openFilterMenu(field, event.currentTarget);
+          }}
+          aria-label={`Filtrar ${label}`}
+          title={`Filtrar ${label}`}
+        >
+          <FiSliders size={11} color={ui.textMuted} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="xs"
+          minW="20px"
+          w="20px"
+          h="20px"
+          p={0}
+          borderRadius="6px"
+          _hover={{ bg: ui.hover }}
+          onClick={(event) => {
+            event.stopPropagation();
+            toggleSort(field);
+          }}
+          aria-label={`Ordenar ${label}`}
+          title={`Ordenar ${label}`}
+        >
+          <Flex direction="column" align="center" gap={0}>
+            <FiChevronUp size={9} color={getSortIconColor(field, 'asc')} />
+            <FiChevronDown size={9} color={getSortIconColor(field, 'desc')} />
+          </Flex>
+        </Button>
+      </HStack>
+    </Flex>
   );
-
-  const dateFields = ['inicio', 'fin', 'publicacion'];
 
   const renderDateFilter = (field) => {
     const values = getUniqueValues(field).filter((value) => parseTableDate(value));
-    const grouped = values.reduce((acc, value) => {
-      const key = getMonthKey(value);
-      acc[key] = acc[key] || [];
-      acc[key].push(value);
+    const groupedByYear = values.reduce((acc, value) => {
+      const date = parseTableDate(value);
+      const year = date ? String(date.getFullYear()) : 'Sin fecha';
+      const monthKey = getMonthGroupKey(value);
+      const monthLabel = date
+        ? new Intl.DateTimeFormat('es-MX', { month: 'long' }).format(date)
+        : value;
+
+      acc[year] = acc[year] || [];
+      if (!acc[year].some((item) => item.key === monthKey)) {
+        acc[year].push({ key: monthKey, label: monthLabel, date });
+      }
       return acc;
     }, {});
 
+    const yearKeys = Object.keys(groupedByYear).sort((a, b) => {
+      if (a === 'Sin fecha') return 1;
+      if (b === 'Sin fecha') return -1;
+      return Number(b) - Number(a);
+    });
+
     return (
       <Box>
-        <Text fontSize="12px" fontWeight="700" color={ui.textStrong} mb={2}>
-          Fechas disponibles
+        <Text fontSize="12px" fontWeight="700" color={ui.textStrong} mb={3}>
+          Año y meses con información
         </Text>
-        {Object.entries(grouped).map(([month, dates]) => (
-          <Box key={month} mb={3}>
+        {yearKeys.map((year) => (
+          <Box key={year} mb={4}>
             <Text
-              fontSize="11px"
+              fontSize="12px"
               fontWeight="700"
               color={ui.textMuted}
-              textTransform="capitalize"
               mb={2}
             >
-              {month}
+              {year}
             </Text>
-            <Box display="grid" gridTemplateColumns="repeat(7, 1fr)" gap="6px">
-              {dates.map((value) => {
-                const selected = (columnFilters[field] || []).includes(value);
-                return (
-                  <Button
-                    key={value}
-                    size="xs"
-                    h="28px"
-                    minW="0"
-                    borderRadius="8px"
-                    bg={selected ? '#FF6600' : ui.surfaceMuted}
-                    color={selected ? 'white' : ui.text}
-                    border={`1px solid ${selected ? '#FF6600' : ui.border}`}
-                    _hover={{
-                      bg: selected ? '#FF6600' : ui.hover,
-                      borderColor: selected ? '#FF6600' : ui.textMuted,
-                    }}
-                    onClick={() => toggleFilterValue(field, value)}
-                    title={value}
-                  >
-                    {getDayLabel(value)}
-                  </Button>
-                );
-              })}
+            <Box display="grid" gridTemplateColumns="repeat(4, minmax(0, 1fr))" gap="6px">
+              {groupedByYear[year]
+                .sort((a, b) => a.date?.getTime() - b.date?.getTime())
+                .map(({ key, label }) => {
+                  const selected = (columnFilters[field] || []).includes(key);
+                  return (
+                    <Button
+                      key={key}
+                      size="xs"
+                      h="30px"
+                      minW="0"
+                      borderRadius="8px"
+                      bg={selected ? '#FF6600' : ui.surfaceMuted}
+                      color={selected ? 'white' : ui.text}
+                      border={`1px solid ${selected ? '#FF6600' : ui.border}`}
+                      _hover={{
+                        bg: selected ? '#FF6600' : ui.hover,
+                        borderColor: selected ? '#FF6600' : ui.textMuted,
+                      }}
+                      onClick={() => toggleFilterValue(field, key)}
+                      title={label}
+                    >
+                      {label}
+                    </Button>
+                  );
+                })}
             </Box>
           </Box>
         ))}
@@ -360,16 +529,17 @@ function ResultadosView({ obras = [] }) {
 
   const renderOptionFilter = (field) => {
     const search = filterSearch[field] || '';
+    const hasSearchInput = field === 'proyecto' || field === 'compania';
     const values = getUniqueValues(field).filter((value) =>
       String(value).toLowerCase().includes(search.toLowerCase())
     );
-    const visibleValues = field === 'proyecto' && !search
+    const visibleValues = hasSearchInput && !search
       ? values.slice(0, 80)
       : values;
 
     return (
       <Box>
-        {field === 'proyecto' && (
+        {hasSearchInput && (
           <input
             value={search}
             onChange={(event) =>
@@ -378,7 +548,7 @@ function ResultadosView({ obras = [] }) {
                 [field]: event.target.value,
               }))
             }
-            placeholder="Buscar proyecto..."
+            placeholder={field === 'compania' ? 'Buscar compañía...' : 'Buscar proyecto...'}
             style={{
               width: '100%',
               height: '34px',
@@ -394,9 +564,9 @@ function ResultadosView({ obras = [] }) {
           />
         )}
 
-        {field === 'proyecto' && !search && values.length > visibleValues.length && (
+        {hasSearchInput && !search && values.length > visibleValues.length && (
           <Text fontSize="11px" color={ui.textMuted} mb={2}>
-            Escribe para buscar entre {values.length} proyectos.
+            Escribe para buscar entre {values.length} {field === 'compania' ? 'compañías' : 'proyectos'}.
           </Text>
         )}
 
@@ -427,23 +597,51 @@ function ResultadosView({ obras = [] }) {
 
   return (
     <Box
-      height="calc(100vh - 116px)"
-      mt={5}
+      height="100%"
+      minH="0"
+      overflow="hidden"
       display="flex"
       flexDirection="column"
       bg={ui.surface}
-      border={`1px solid ${ui.border}`}
-      borderRadius="12px"
-      p={3}
       color={ui.text}
+      pt={1}
     >
-      <Flex justify="space-between" align="center" mb={3} pr="384px">
-        <Heading size="md" color={ui.textStrong}>Tabla</Heading>
-        <Text fontSize="13px" color={ui.textMuted}>
-          {selectedRows.length > 0
-            ? `${selectedRows.length} seleccionados`
-            : 'Selecciona registros para descarga'}
-        </Text>
+      <Flex justify="flex-end" align="center" mb={2} pr="392px" gap={3} minH="52px">
+        {selectedRows.length > 0 ? (
+          <Flex
+            align="center"
+            gap={3}
+            minH="52px"
+            w="min(560px, 100%)"
+            px={3}
+            py={2}
+            borderRadius="12px"
+            bg="var(--cl-surface-muted)"
+            border={`1px solid ${ui.border}`}
+          >
+            <Text fontSize="13px" color={ui.textMuted} noOfLines={1} flex="1" minW="0">
+              {selectedRows.length} seleccionados. Ve al mapa para ver dónde están.
+            </Text>
+            <Button
+              size="sm"
+              h="30px"
+              px={3}
+              borderRadius="8px"
+              bg="#FF6600"
+              color="white"
+              fontSize="12px"
+              fontWeight="700"
+              _hover={{ bg: '#E65C00' }}
+              onClick={onGoToMap}
+            >
+              Ver en mapa
+            </Button>
+          </Flex>
+        ) : (
+          <Text fontSize="13px" color={ui.textMuted}>
+            Selecciona registros para descarga
+          </Text>
+        )}
       </Flex>
 
       <Box
@@ -455,25 +653,100 @@ function ResultadosView({ obras = [] }) {
         minH="0"
         display="flex"
         flexDirection="column"
-        height="100%"
         position="relative"
       >
-        <table
-          style={{
-            width: '100%',
-            height: '100%',
-            borderCollapse: 'collapse',
-            fontSize: '14px',
-            tableLayout: 'fixed',
-          }}
+        <Box
+          flex="1"
+          minH="0"
+          minW="0"
+          overflow="hidden"
+          overscrollBehavior="contain"
         >
+          <style>
+            {`
+              .resultados-scroll {
+                scrollbar-width: auto;
+                scrollbar-color: var(--cl-text-muted) var(--cl-surface-muted);
+              }
+              .resultados-scroll::-webkit-scrollbar {
+                width: 12px;
+                height: 12px;
+              }
+              .resultados-scroll::-webkit-scrollbar-track {
+                background: var(--cl-surface-muted);
+                border-radius: 999px;
+              }
+              .resultados-scroll::-webkit-scrollbar-thumb {
+                background: var(--cl-text-muted);
+                border: 3px solid var(--cl-surface-muted);
+                border-radius: 999px;
+              }
+              .resultados-scroll::-webkit-scrollbar-thumb:hover {
+                background: var(--cl-text-strong);
+              }
+              .resultados-table thead th {
+                position: sticky;
+                top: 0;
+                z-index: 2;
+                background: var(--cl-surface-muted);
+              }
+              .resultados-table th,
+              .resultados-table td {
+                box-sizing: border-box;
+              }
+              .resultados-table th:last-child {
+                position: sticky;
+                right: 0;
+                z-index: 5;
+                background: var(--cl-surface-muted);
+                box-shadow: -1px 0 0 var(--cl-border);
+              }
+              .resultados-table td:last-child {
+                position: sticky;
+                right: 0;
+                z-index: 3;
+                box-shadow: -1px 0 0 var(--cl-border);
+              }
+            `}
+          </style>
+          <Box
+            className="resultados-scroll"
+            h="100%"
+            minH="0"
+            minW="0"
+            overflowX="auto"
+            overflowY="scroll"
+            overscrollBehavior="contain"
+          >
+          <table
+            className="resultados-table"
+            style={{
+              minWidth: '1740px',
+              width: '100%',
+              borderCollapse: 'collapse',
+              fontSize: '14px',
+              tableLayout: 'fixed',
+            }}
+          >
+          <colgroup>
+            <col style={{ width: '56px' }} />
+            <col style={{ width: '120px' }} />
+            <col style={{ width: '340px' }} />
+            <col style={{ width: '240px' }} />
+            <col style={{ width: '130px' }} />
+            <col style={{ width: '140px' }} />
+            <col style={{ width: '130px' }} />
+            <col style={{ width: '130px' }} />
+            <col style={{ width: '150px' }} />
+            <col style={{ width: '190px' }} />
+            <col style={{ width: '114px' }} />
+          </colgroup>
           <thead style={{ background: ui.surfaceMuted }}>
             <tr>
               <th
                 style={{
                   padding: '12px 10px',
-                  textAlign: 'left',
-                  width: '4%',
+                  textAlign: 'center',
                   borderBottom: `1px solid ${ui.border}`,
                 }}
               >
@@ -487,29 +760,32 @@ function ResultadosView({ obras = [] }) {
                   style={{ accentColor: '#4B5563', width: 14, height: 14 }}
                 />
               </th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', width: '9%', borderBottom: `1px solid ${ui.border}` }}>
-                {renderFilterButton('clave', 'Clave')}
+              <th style={{ padding: '14px 14px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
+                {renderHeaderCell('clave', 'Clave')}
               </th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', width: '23%', borderBottom: `1px solid ${ui.border}` }}>
-                {renderFilterButton('proyecto', 'Proyecto')}
+              <th style={{ padding: '14px 14px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
+                {renderHeaderCell('proyecto', 'Proyecto')}
               </th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', width: '9%', borderBottom: `1px solid ${ui.border}` }}>
-                {renderFilterButton('genero', 'Género')}
+              <th style={{ padding: '14px 14px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
+                {renderHeaderCell('compania', 'Compañía')}
               </th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', width: '10%', borderBottom: `1px solid ${ui.border}` }}>
-                {renderFilterButton('estado', 'Estado')}
+              <th style={{ padding: '14px 14px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
+                {renderHeaderCell('genero', 'Género')}
               </th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', width: '10%', borderBottom: `1px solid ${ui.border}` }}>
-                {renderFilterButton('inicio', 'Inicio')}
+              <th style={{ padding: '14px 14px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
+                {renderHeaderCell('estado', 'Estado')}
               </th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', width: '10%', borderBottom: `1px solid ${ui.border}` }}>
-                {renderFilterButton('fin', 'Fin')}
+              <th style={{ padding: '14px 14px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
+                {renderHeaderCell('inicio', 'Inicio')}
               </th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', width: '11%', borderBottom: `1px solid ${ui.border}` }}>
-                {renderFilterButton('publicacion', 'Publicación')}
+              <th style={{ padding: '14px 14px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
+                {renderHeaderCell('fin', 'Fin')}
               </th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', width: '9%', borderBottom: `1px solid ${ui.border}` }}>
-                {renderFilterButton('tipo', 'Tipo')}
+              <th style={{ padding: '14px 14px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
+                {renderHeaderCell('publicacion', 'Publicación')}
+              </th>
+              <th style={{ padding: '14px 14px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
+                {renderHeaderCell('tipo', 'Tipo')}
               </th>
               <th
                 style={{
@@ -517,7 +793,6 @@ function ResultadosView({ obras = [] }) {
                   textAlign: 'center',
                   fontWeight: 700,
                   color: ui.textMuted,
-                  width: '12%',
                   whiteSpace: 'nowrap',
                   fontSize: '13px',
                   borderBottom: `1px solid ${ui.border}`,
@@ -528,41 +803,23 @@ function ResultadosView({ obras = [] }) {
             </tr>
           </thead>
 
-          <style>
-            {`
-              thead, tbody tr {
-                display: table;
-                width: 100%;
-                table-layout: fixed;
-              }
-            `}
-          </style>
-
-          <tbody
-            key={`tbody-${obras.length}`}
-            style={{
-              display: 'block',
-              overflowY: 'auto',
-              height: 'calc(100vh - 278px)',
-            }}
-          >
-            {filteredData.map((row, index) => {
+          <tbody key={`tbody-${obras.length}`}>
+            {sortedData.map((row, index) => {
               const rowKey = getRowKey(row);
               const selected = selectedRowsSet.has(rowKey);
+
+              const rowBg = selected
+                ? 'var(--cl-selected)'
+                : index % 2 === 0 ? ui.surface : ui.surfaceMuted;
 
               return (
                 <tr
                   key={rowKey}
                   style={{
-                    background: selected
-                      ? 'var(--cl-selected)'
-                      : index % 2 === 0 ? ui.surface : ui.surfaceMuted,
-                    display: 'table',
-                    width: '100%',
-                    tableLayout: 'fixed',
+                    background: rowBg,
                   }}
                 >
-                  <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, width: '4%' }}>
+                  <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, textAlign: 'center' }}>
                     <input
                       type="checkbox"
                       checked={selected}
@@ -570,12 +827,11 @@ function ResultadosView({ obras = [] }) {
                       style={{ accentColor: '#4B5563', width: 14, height: 14 }}
                     />
                   </td>
-                  <td style={{ padding: '12px 8px', borderTop: `1px solid ${ui.border}`, width: '9%', whiteSpace: 'nowrap', fontSize: '13px' }}>{row.clave}</td>
+                  <td style={{ padding: '14px 14px', borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', fontSize: '13px' }}>{row.clave}</td>
                   <td
                     style={{
-                      padding: '12px 8px',
+                      padding: '14px 14px',
                       borderTop: `1px solid ${ui.border}`,
-                      width: '23%',
                       wordBreak: 'break-word',
                       whiteSpace: 'normal',
                       lineHeight: '1.5',
@@ -584,13 +840,16 @@ function ResultadosView({ obras = [] }) {
                   >
                     {row.proyecto}
                   </td>
-                  <td style={{ padding: '12px 8px', borderTop: `1px solid ${ui.border}`, width: '9%', whiteSpace: 'nowrap', fontSize: '13px' }}>{row.genero}</td>
-                  <td style={{ padding: '12px 8px', borderTop: `1px solid ${ui.border}`, width: '10%', whiteSpace: 'nowrap', fontSize: '13px' }}>{row.estado}</td>
-                  <td style={{ padding: '12px 8px', borderTop: `1px solid ${ui.border}`, width: '10%', whiteSpace: 'nowrap', fontSize: '13px' }}>{row.inicio}</td>
-                  <td style={{ padding: '12px 8px', borderTop: `1px solid ${ui.border}`, width: '10%', whiteSpace: 'nowrap', fontSize: '13px' }}>{row.fin}</td>
-                  <td style={{ padding: '12px 8px', borderTop: `1px solid ${ui.border}`, width: '11%', whiteSpace: 'nowrap', fontSize: '13px' }}>{row.publicacion}</td>
-                  <td style={{ padding: '12px 8px', borderTop: `1px solid ${ui.border}`, width: '9%', whiteSpace: 'nowrap', fontSize: '13px' }}>{row.tipo}</td>
-                  <td style={{ padding: '12px 12px', borderTop: `1px solid ${ui.border}`, width: '12%', whiteSpace: 'nowrap', fontSize: '13px', textAlign: 'center' }}>
+                  <td style={{ padding: '14px 14px', borderTop: `1px solid ${ui.border}`, wordBreak: 'break-word', whiteSpace: 'normal', lineHeight: '1.5', fontSize: '13px' }}>
+                    {row.compania}
+                  </td>
+                  <td style={{ padding: '14px 14px', borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', fontSize: '13px' }}>{row.genero}</td>
+                  <td style={{ padding: '14px 14px', borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', fontSize: '13px' }}>{row.estado}</td>
+                  <td style={{ padding: '14px 14px', borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', fontSize: '13px' }}>{row.inicio}</td>
+                  <td style={{ padding: '14px 14px', borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', fontSize: '13px' }}>{row.fin}</td>
+                  <td style={{ padding: '14px 14px', borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', fontSize: '13px' }}>{row.publicacion}</td>
+                  <td style={{ padding: '14px 14px', borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '13px' }}>{row.tipo}</td>
+                  <td style={{ padding: '12px 12px', borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', fontSize: '13px', textAlign: 'center', background: rowBg }}>
                     <HStack spacing={2} justify="center">
                       <Button
                         size="xs"
@@ -631,6 +890,8 @@ function ResultadosView({ obras = [] }) {
             })}
           </tbody>
         </table>
+          </Box>
+        </Box>
 
         {filterMenu && (
           <div
@@ -660,6 +921,7 @@ function ResultadosView({ obras = [] }) {
       </Box>
 
       <Flex
+        flexShrink={0}
         justify="space-between"
         align="center"
         px={3}

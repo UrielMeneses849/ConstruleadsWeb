@@ -10,7 +10,7 @@ import {
 export default function PanelResumen({ obras = [], variant = 'sidebar' }) {
 const numberFormatter = new Intl.NumberFormat('es-MX');
 const compactFormatter = new Intl.NumberFormat('es-MX', {
-  maximumFractionDigits: 2,
+  maximumFractionDigits: 0,
 });
 
 const totalProyectos = obras.length;
@@ -47,7 +47,7 @@ const metricasDinamicas = [
   {
     valor: `$${compactFormatter.format(inversionTotal / 1000000)}`,
     suffix: 'MDP',
-    label: 'Inversión',
+    label: 'Inversión total',
     color: '#FF6600',
   },
   {
@@ -65,16 +65,19 @@ const metricasDinamicas = [
 
 if (variant === 'map') {
   return (
-    <VStack align="stretch" gap={2} w="100%">
+    <Flex align="stretch" gap={2} w="100%">
       {metricasDinamicas.map((item) => (
         <Box
           key={item.label}
+          flex="1 1 0"
+          minW="0"
           bg="var(--cl-surface)"
           border="1px solid var(--cl-border)"
-          borderRadius="12px"
+          borderRadius="10px"
           boxShadow="var(--cl-shadow)"
           color="var(--cl-text)"
-          p={3}
+          px={3}
+          py={2}
           position="relative"
           overflow="hidden"
         >
@@ -87,7 +90,7 @@ if (variant === 'map') {
             bg={item.color}
           />
 
-          <Flex align="center" gap={2} mb={2}>
+          <Flex align="center" gap={2} mb={1}>
             <Box
               w="8px"
               h="8px"
@@ -107,10 +110,11 @@ if (variant === 'map') {
 
           <HStack spacing={1} align="baseline">
             <Text
-              fontSize={item.label === 'Superficie' ? '16px' : '18px'}
-              fontWeight="700"
+              fontSize={item.label === 'Superficie' ? '15px' : '17px'}
+              fontWeight="400"
               lineHeight="1.1"
               color="var(--cl-text-strong)"
+              noOfLines={1}
             >
               {item.valor}
             </Text>
@@ -126,7 +130,7 @@ if (variant === 'map') {
           </HStack>
         </Box>
       ))}
-    </VStack>
+    </Flex>
   );
 }
 
