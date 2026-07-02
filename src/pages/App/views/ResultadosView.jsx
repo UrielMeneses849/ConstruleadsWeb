@@ -7,7 +7,6 @@ import {
 } from '@chakra-ui/react';
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
-  FiDownload,
   FiEye,
   FiChevronUp,
   FiChevronDown,
@@ -866,22 +865,6 @@ function ResultadosView({
                         _hover={{ bg: ui.surfaceMuted, borderColor: '#FF6600', color: '#FF6600' }}
                       >
                         <FiEye size={15} />
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        aria-label="Descargar proyecto"
-                        title="Descargar proyecto"
-                        w="32px"
-                        h="32px"
-                        minW="32px"
-                        p={0}
-                        borderColor={ui.border}
-                        color="#FF6600"
-                        borderRadius="8px"
-                        _hover={{ bg: ui.surfaceMuted, borderColor: '#FF6600' }}
-                      >
-                        <FiDownload size={15} />
                       </Button>
                     </HStack>
                   </td>

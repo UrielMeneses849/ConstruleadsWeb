@@ -391,7 +391,6 @@ export default function Construleads() {
 </Box>
         </HStack>
       </Flex>
-
       <Flex
         gap={3}
         height="calc(100vh - 116px)"

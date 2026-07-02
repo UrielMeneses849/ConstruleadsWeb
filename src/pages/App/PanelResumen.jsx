@@ -65,18 +65,19 @@ const metricasDinamicas = [
 
 if (variant === 'map') {
   return (
-    <Flex align="stretch" gap={2} w="100%">
+    <Flex align="stretch" gap={2} w="100%" flexWrap="wrap">
       {metricasDinamicas.map((item) => (
         <Box
           key={item.label}
-          flex="1 1 0"
-          minW="0"
+          flex="1 1 220px"
+          maxW="240px"
+          minW="180px"
           bg="var(--cl-surface)"
           border="1px solid var(--cl-border)"
           borderRadius="10px"
           boxShadow="var(--cl-shadow)"
           color="var(--cl-text)"
-          px={3}
+          px={2}
           py={2}
           position="relative"
           overflow="hidden"
@@ -111,7 +112,7 @@ if (variant === 'map') {
           <HStack spacing={1} align="baseline">
             <Text
               fontSize={item.label === 'Superficie' ? '15px' : '17px'}
-              fontWeight="400"
+              fontWeight="600"
               lineHeight="1.1"
               color="var(--cl-text-strong)"
               noOfLines={1}

@@ -727,7 +727,6 @@ useEffect(() => {
                 <span>${getGenreIcon(obra.genero)}</span>
               </div>
             `;
-
             // Create the marker using AdvancedMarkerElement with custom content
             const marker = new AdvancedMarkerElement({
               position: {
@@ -876,7 +875,6 @@ new MarkerClusterer({
               >
                 {selectedProject.genero}
               </Box>
-
               <Text fontSize="18px" fontWeight="800" mb={3} lineHeight="1.25" color="var(--cl-text-strong)">
                 {selectedProject.proyecto}
               </Text>
