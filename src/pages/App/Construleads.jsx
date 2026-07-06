@@ -17,6 +17,7 @@ import {
 } from 'react-icons/fi';
 
 import SidebarFiltros from './SidebarFiltros';
+import PanelResumen from './PanelResumen';
 import Mapa from './Mapa';
 import Resultados from './views/ResultadosView';
 import DownloadPanel from './DownloadPanel';
@@ -391,6 +392,18 @@ export default function Construleads() {
 </Box>
         </HStack>
       </Flex>
+      <Box
+        position="fixed"
+        left={`calc(272px + 24px)`}
+        right="96px"
+        bottom="16px"
+        zIndex={40}
+        pointerEvents="none"
+      >
+        <Box pointerEvents="auto">
+          <PanelResumen obras={filteredObras.length ? filteredObras : obras} variant="map" />
+        </Box>
+      </Box>
       <Flex
         gap={3}
         height="calc(100vh - 116px)"
@@ -405,154 +418,40 @@ export default function Construleads() {
             onApplyFilters={setFiltros}
           />
 
-          {selectedResultObras.length > 0 && (
-            <Box
-              position="absolute"
-              inset={0}
-              zIndex={60}
-              bg="rgba(17,17,17,.52)"
-              borderRadius="12px"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              px={3}
-              color="white"
-              pointerEvents="auto"
-            >
-              <Box
-                bg="rgba(17,17,17,.86)"
-                border="1px solid rgba(255,255,255,.12)"
-                borderRadius="10px"
-                px={3}
-                py={2}
-                fontSize="12px"
-                fontWeight="700"
-                textAlign="center"
-                lineHeight="1.35"
-              >
-                Filtros pausados
-                <Text as="span" display="block" fontSize="11px" fontWeight="500" color="rgba(255,255,255,.72)" mt={1}>
-                  Sal del modo selección para editar filtros.
-                </Text>
-              </Box>
-            </Box>
-          )}
         </Box>
 
-        <Box flex="1" minW="0" minH="0" h="100%" position="relative">
-          <Box
-            position="absolute"
-            top={1}
-            right={14}
-            zIndex={30}
-          >
+        <Box
+          flex="1"
+          minW="0"
+          minH="0"
+          h="100%"
+          position="relative"
+          display="flex"
+          flexDirection="column"
+        >
+          <Box position="absolute" top="18px" right="20px" zIndex={30}>
             <DownloadPanel selectedCount={selectedResultObras.length} />
           </Box>
 
-          <Box
-            display={activeView === 'mapa' ? 'block' : 'none'}
-            h="100%"
-            minH="0"
-          >
-            {selectedResultObras.length > 0 && (
-              <Box
-                position="absolute"
-                top="332px"
-                left={4}
-                zIndex={35}
-                w="252px"
-                px={2}
-                py={2}
-                bg="var(--cl-surface)"
-                border="1px solid var(--cl-border)"
-                borderRadius="10px"
-                color="var(--cl-text)"
-                boxShadow="var(--cl-shadow)"
-              >
-                <Flex align="center" justify="space-between" gap={2}>
-                  <Box>
-                    <Text fontSize="12px" fontWeight="800" color="var(--cl-text-strong)">
-                      Modo selección
-                    </Text>
-                    <Text fontSize="11px" color="var(--cl-text-muted)" lineHeight="1.25">
-                      {selectedResultObras.length} obras seleccionadas.
-                    </Text>
-                  </Box>
-                  <Box
-                    px={2}
-                    h="28px"
-                    minW="28px"
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    borderRadius="8px"
-                    bg="var(--cl-surface-muted)"
-                    border="1px solid var(--cl-border)"
-                    color="var(--cl-text-strong)"
-                    fontSize="12px"
-                    fontWeight="800"
-                  >
-                    {selectedResultObras.length}
-                  </Box>
-                </Flex>
-                <Box
-                  display="flex"
-                  gap={2}
-                  mt={2}
-                >
-                  <Box
-                    as="button"
-                    type="button"
-                    px={2}
-                    h="28px"
-                    borderRadius="8px"
-                    bg="#FF6600"
-                    color="white"
-                    fontSize="11px"
-                    fontWeight="700"
-                    onClick={() => setActiveView('resultados')}
-                  >
-                    Ir a Resultados
-                  </Box>
-                  <Box
-                    as="button"
-                    type="button"
-                    px={2}
-                    h="28px"
-                    borderRadius="8px"
-                    bg="var(--cl-surface-muted)"
-                    color="var(--cl-text-strong)"
-                    border="1px solid var(--cl-border)"
-                    fontSize="11px"
-                    fontWeight="700"
-                    onClick={clearResultsSelection}
-                  >
-                    Salir
-                  </Box>
-                </Box>
-              </Box>
-            )}
-            <Mapa
-              obras={obras}
-              filtros={filtros}
-              isDarkMode={isDarkMode}
-              selectedObras={selectedResultObras}
-              onFilteredData={setFilteredObras}
-            />
-          </Box>
+          <Box flex="1" minH="0" position="relative" mt={activeView === 'resultados' ? 0 : 3}>
+            <Box display={activeView === 'mapa' ? 'block' : 'none'} h="100%" minH="0">
+              <Mapa
+                obras={obras}
+                filtros={filtros}
+                isDarkMode={isDarkMode}
+                onFilteredData={setFilteredObras}
+              />
+            </Box>
 
-          <Box
-            display={activeView === 'resultados' ? 'block' : 'none'}
-            h="100%"
-            minH="0"
-          >
-            <Resultados
-              filtros={filtros}
-              obras={filteredObras}
-              onSelectionChange={handleResultsSelectionChange}
-              selectionResetToken={selectionResetToken}
-              onGoToMap={() => setActiveView('mapa')}
-            />
+            <Box display={activeView === 'resultados' ? 'block' : 'none'} h="100%" minH="0" pt="56px">
+              <Resultados
+                filtros={filtros}
+                obras={filteredObras}
+                onSelectionChange={handleResultsSelectionChange}
+                selectionResetToken={selectionResetToken}
+                onGoToMap={() => setActiveView('mapa')}
+              />
+            </Box>
           </Box>
         </Box>
       </Flex>

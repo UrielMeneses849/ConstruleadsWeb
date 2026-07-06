@@ -121,14 +121,14 @@ export default function DownloadPanel({ selectedCount = 0 }) {
 
       <Button
         h="36px"
-        minW={hasSelection ? '156px' : '112px'}
+        minW={hasSelection ? '156px' : '150px'}
         bg="#FF6600"
         color="white"
         borderRadius="8px"
         fontSize="13px"
         _hover={{ bg: '#E65C00' }}
       >
-        {hasSelection ? 'Descargar selección' : 'Descargar'}
+        {hasSelection ? 'Descargar selección' : 'Descargar todos'}
       </Button>
     </Flex>
   );

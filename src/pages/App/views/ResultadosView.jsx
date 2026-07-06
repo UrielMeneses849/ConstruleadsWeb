@@ -71,6 +71,29 @@ function getDayLabel(value) {
   }).format(date);
 }
 
+function parseNumberValue(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const cleaned = String(value).replace(/[^0-9.-]/g, '');
+  const parsed = Number(cleaned);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function formatCurrencyMXN(value) {
+  if (value === null || value === undefined) return '-';
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatNumberMX(value) {
+  if (value === null || value === undefined) return '-';
+  return new Intl.NumberFormat('es-MX', {
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 function ResultadosView({
   obras = [],
   onSelectionChange,
@@ -154,6 +177,71 @@ function ResultadosView({
         obra.GENERO ||
         '-',
 
+      subgenero:
+        obra.subgenero ||
+        obra.Subgenero ||
+        obra.SUBGENERO ||
+        obra.subGenero ||
+        '-',
+
+      inversionRaw:
+        parseNumberValue(
+          obra.inversion ||
+          obra.Inversion ||
+          obra.INVERSION ||
+          obra.inversionTotal ||
+          obra.InversionTotal ||
+          null
+        ),
+      inversion:
+        parseNumberValue(
+          obra.inversion ||
+          obra.Inversion ||
+          obra.INVERSION ||
+          obra.inversionTotal ||
+          null
+        ) !== null
+          ? formatCurrencyMXN(
+              parseNumberValue(
+                obra.inversion ||
+                obra.Inversion ||
+                obra.INVERSION ||
+                obra.inversionTotal ||
+                null
+              )
+            )
+          : '-',
+
+      superficieRaw:
+        parseNumberValue(
+          obra.superficie ||
+          obra.Superficie ||
+          obra.SUPERFICIE ||
+          obra.superficieTotal ||
+          obra.SuperficieTotal ||
+          null
+        ),
+      superficie:
+        parseNumberValue(
+          obra.superficie ||
+          obra.Superficie ||
+          obra.SUPERFICIE ||
+          obra.superficieTotal ||
+          obra.SuperficieTotal ||
+          null
+        ) !== null
+          ? `${formatNumberMX(
+              parseNumberValue(
+                obra.superficie ||
+                obra.Superficie ||
+                obra.SUPERFICIE ||
+                obra.superficieTotal ||
+                obra.SuperficieTotal ||
+                null
+              )
+            )} m²`
+          : '-',
+
       estado:
         obra.estado ||
         obra.Estado_Proyecto ||
@@ -214,6 +302,25 @@ function ResultadosView({
   }, [obras]);
 
   const getRowKey = (row) => String(row.id || row.clave || row.proyecto);
+
+  const cellTextStyle = {
+    display: '-webkit-box',
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'normal',
+    wordBreak: 'break-word',
+    lineHeight: '1.3',
+    maxHeight: '2.6em',
+    minHeight: '2.6em',
+  };
+
+  const renderCellText = (value) => (
+    <div style={cellTextStyle} title={typeof value === 'string' ? value : undefined}>
+      {value ?? '-'}
+    </div>
+  );
 
   useEffect(() => {
     if (lastSelectionResetToken.current === selectionResetToken) return;
@@ -302,6 +409,17 @@ function ResultadosView({
         }
         if (aDate) return direction === 'asc' ? -1 : 1;
         if (bDate) return direction === 'asc' ? 1 : -1;
+        return 0;
+      }
+
+      if (field === 'inversion' || field === 'superficie') {
+        const aNum = Number(a[`${field}Raw`] ?? NaN);
+        const bNum = Number(b[`${field}Raw`] ?? NaN);
+        if (Number.isFinite(aNum) && Number.isFinite(bNum)) {
+          return direction === 'asc' ? aNum - bNum : bNum - aNum;
+        }
+        if (Number.isFinite(aNum)) return direction === 'asc' ? -1 : 1;
+        if (Number.isFinite(bNum)) return direction === 'asc' ? 1 : -1;
         return 0;
       }
 
@@ -408,7 +526,14 @@ function ResultadosView({
 
   const renderHeaderCell = (field, label) => (
     <Flex align="center" justify="flex-start" gap={1}>
-      <Text fontSize="13px" fontWeight="700" color={ui.textMuted}>
+      <Text
+        fontSize="12px"
+        fontWeight="700"
+        color={ui.textMuted}
+        whiteSpace="nowrap"
+        overflow="hidden"
+        textOverflow="ellipsis"
+      >
         {label}
       </Text>
       <HStack spacing={0}>
@@ -605,43 +730,6 @@ function ResultadosView({
       color={ui.text}
       pt={1}
     >
-      <Flex justify="flex-end" align="center" mb={2} pr="392px" gap={3} minH="52px">
-        {selectedRows.length > 0 ? (
-          <Flex
-            align="center"
-            gap={3}
-            minH="52px"
-            w="min(560px, 100%)"
-            px={3}
-            py={2}
-            borderRadius="12px"
-            bg="var(--cl-surface-muted)"
-            border={`1px solid ${ui.border}`}
-          >
-            <Text fontSize="13px" color={ui.textMuted} noOfLines={1} flex="1" minW="0">
-              {selectedRows.length} seleccionados. Ve al mapa para ver dónde están.
-            </Text>
-            <Button
-              size="sm"
-              h="30px"
-              px={3}
-              borderRadius="8px"
-              bg="#FF6600"
-              color="white"
-              fontSize="12px"
-              fontWeight="700"
-              _hover={{ bg: '#E65C00' }}
-              onClick={onGoToMap}
-            >
-              Ver en mapa
-            </Button>
-          </Flex>
-        ) : (
-          <Text fontSize="13px" color={ui.textMuted}>
-            Selecciona registros para descarga
-          </Text>
-        )}
-      </Flex>
 
       <Box
         bg={ui.surface}
@@ -692,6 +780,7 @@ function ResultadosView({
               .resultados-table th,
               .resultados-table td {
                 box-sizing: border-box;
+                vertical-align: top;
               }
               .resultados-table th:last-child {
                 position: sticky;
@@ -720,7 +809,7 @@ function ResultadosView({
           <table
             className="resultados-table"
             style={{
-              minWidth: '1740px',
+              minWidth: '2140px',
               width: '100%',
               borderCollapse: 'collapse',
               fontSize: '14px',
@@ -728,17 +817,20 @@ function ResultadosView({
             }}
           >
           <colgroup>
-            <col style={{ width: '56px' }} />
-            <col style={{ width: '120px' }} />
-            <col style={{ width: '340px' }} />
-            <col style={{ width: '240px' }} />
-            <col style={{ width: '130px' }} />
+            <col style={{ width: '50px' }} />
+            <col style={{ width: '100px' }} />
+            <col style={{ width: '220px' }} />
+            <col style={{ width: '180px' }} />
+            <col style={{ width: '110px' }} />
             <col style={{ width: '140px' }} />
+            <col style={{ width: '110px' }} />
             <col style={{ width: '130px' }} />
             <col style={{ width: '130px' }} />
+            <col style={{ width: '125px' }} />
+            <col style={{ width: '125px' }} />
             <col style={{ width: '150px' }} />
-            <col style={{ width: '190px' }} />
-            <col style={{ width: '114px' }} />
+            <col style={{ width: '110px' }} />
+            <col style={{ width: '70px' }} />
           </colgroup>
           <thead style={{ background: ui.surfaceMuted }}>
             <tr>
@@ -768,27 +860,36 @@ function ResultadosView({
               <th style={{ padding: '14px 14px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
                 {renderHeaderCell('compania', 'Compañía')}
               </th>
-              <th style={{ padding: '14px 14px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
+              <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
                 {renderHeaderCell('genero', 'Género')}
               </th>
-              <th style={{ padding: '14px 14px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
+              <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: `1px solid ${ui.border}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {renderHeaderCell('subgenero', 'Subg.')}
+              </th>
+              <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
                 {renderHeaderCell('estado', 'Estado')}
               </th>
-              <th style={{ padding: '14px 14px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
+              <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
+                {renderHeaderCell('inversion', 'Inversión')}
+              </th>
+              <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: `1px solid ${ui.border}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {renderHeaderCell('superficie', 'Superf.')}
+              </th>
+              <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
                 {renderHeaderCell('inicio', 'Inicio')}
               </th>
-              <th style={{ padding: '14px 14px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
-                {renderHeaderCell('fin', 'Fin')}
+              <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: `1px solid ${ui.border}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {renderHeaderCell('fin', 'Término')}
               </th>
-              <th style={{ padding: '14px 14px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
+              <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
                 {renderHeaderCell('publicacion', 'Publicación')}
               </th>
-              <th style={{ padding: '14px 14px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
+              <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
                 {renderHeaderCell('tipo', 'Tipo')}
               </th>
               <th
                 style={{
-                  padding: '12px 12px',
+                  padding: '12px 6px',
                   textAlign: 'center',
                   fontWeight: 700,
                   color: ui.textMuted,
@@ -826,30 +927,20 @@ function ResultadosView({
                       style={{ accentColor: '#4B5563', width: 14, height: 14 }}
                     />
                   </td>
-                  <td style={{ padding: '14px 14px', borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', fontSize: '13px' }}>{row.clave}</td>
-                  <td
-                    style={{
-                      padding: '14px 14px',
-                      borderTop: `1px solid ${ui.border}`,
-                      wordBreak: 'break-word',
-                      whiteSpace: 'normal',
-                      lineHeight: '1.5',
-                      fontSize: '13px',
-                    }}
-                  >
-                    {row.proyecto}
-                  </td>
-                  <td style={{ padding: '14px 14px', borderTop: `1px solid ${ui.border}`, wordBreak: 'break-word', whiteSpace: 'normal', lineHeight: '1.5', fontSize: '13px' }}>
-                    {row.compania}
-                  </td>
-                  <td style={{ padding: '14px 14px', borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', fontSize: '13px' }}>{row.genero}</td>
-                  <td style={{ padding: '14px 14px', borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', fontSize: '13px' }}>{row.estado}</td>
-                  <td style={{ padding: '14px 14px', borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', fontSize: '13px' }}>{row.inicio}</td>
-                  <td style={{ padding: '14px 14px', borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', fontSize: '13px' }}>{row.fin}</td>
-                  <td style={{ padding: '14px 14px', borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', fontSize: '13px' }}>{row.publicacion}</td>
-                  <td style={{ padding: '14px 14px', borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '13px' }}>{row.tipo}</td>
-                  <td style={{ padding: '12px 12px', borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', fontSize: '13px', textAlign: 'center', background: rowBg }}>
-                    <HStack spacing={2} justify="center">
+                  <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.clave)}</td>
+                  <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.proyecto)}</td>
+                  <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.compania)}</td>
+                  <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.genero)}</td>
+                  <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.subgenero)}</td>
+                  <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.estado)}</td>
+                  <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.inversion)}</td>
+                  <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.superficie)}</td>
+                  <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.inicio)}</td>
+                  <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.fin)}</td>
+                  <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.publicacion)}</td>
+                  <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.tipo)}</td>
+                  <td style={{ padding: '12px 6px', borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', fontSize: '13px', textAlign: 'center', background: rowBg, height: '2.6em', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <HStack spacing={1} justify="center">
                       <Button
                         size="xs"
                         variant="outline"

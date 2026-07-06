@@ -193,6 +193,7 @@ export default function SidebarFiltros({ obras = [] }) {
   const [expandedRegion, setExpandedRegion] = useState(null);
   const [expandedGenero, setExpandedGenero] = useState(null);
   const [expandedSubgenero, setExpandedSubgenero] = useState(null);
+  const [expandedTipoProyecto, setExpandedTipoProyecto] = useState(null);
 
   const periodosConsulta = [
     'Hoy',
@@ -854,7 +855,9 @@ export default function SidebarFiltros({ obras = [] }) {
 
   // Accordion open/close logic
   function toggleAccordion(key) {
-    setOpenedAccordions({ [key]: true });
+    setOpenedAccordions((current) =>
+      current[key] ? {} : { [key]: true }
+    );
   }
 
   function renderRegionAccordion() {
@@ -1389,6 +1392,10 @@ export default function SidebarFiltros({ obras = [] }) {
 
   // Accordions for Principales
   function renderPrincipales() {
+    const etapasPorTipo = {
+      'Proyecto contratado': ['Obra Negociada', 'Pre-Inicio', 'Inicio'],
+      'Proyecto de inversion': ['Pre-Plan', 'Plan', 'Proyecto'],
+    };
     return (
       <>
         <FilterAccordion
@@ -1520,23 +1527,6 @@ export default function SidebarFiltros({ obras = [] }) {
                 Disponible: {dateBounds.min} a {dateBounds.max}
               </Text>
             )}
-
-            <Box
-              mt={3}
-              p={2}
-              bg="var(--cl-surface-muted)"
-              border="1px solid var(--cl-border)"
-              borderRadius="8px"
-            >
-              <Text
-                fontSize="12px"
-                color={TEXT_SECONDARY}
-                fontWeight="500"
-                lineHeight="1.5"
-              >
-                {fechaHint}
-              </Text>
-            </Box>
           </Box>
         </FilterAccordion>
 
@@ -1546,17 +1536,93 @@ export default function SidebarFiltros({ obras = [] }) {
 
         <FilterAccordion
           title="Tipo de proyecto"
-          count={selectedTiposProyecto.length}
+          count={selectedTiposProyecto.length + selectedEtapas.length}
           expanded={!!openedAccordions['Tipo de proyecto']}
           onToggle={() => toggleAccordion('Tipo de proyecto')}
         >
-          {renderOptionsWithSearch(
-            ['Proyecto contratado', 'Proyecto de inversion'],
-            'Tipo de proyecto',
-            selectedTiposProyecto,
-            setSelectedTiposProyecto,
-            true
-          )}
+          <VStack align="stretch" spacing={2}>
+            {['Proyecto contratado', 'Proyecto de inversion'].map((tipo) => {
+              const etapas = etapasPorTipo[tipo] || [];
+              const tipoSelected = selectedTiposProyecto.includes(tipo);
+              const tipoActive = tipoSelected || etapas.some((etapa) => selectedEtapas.includes(etapa));
+              const expanded = expandedTipoProyecto === tipo;
+
+              return (
+                <Box key={tipo}>
+                  <Flex
+                    px={2}
+                    py={1}
+                    borderRadius="8px"
+                    align="center"
+                    cursor="pointer"
+                    bg={tipoActive ? 'var(--cl-surface-muted)' : 'var(--cl-surface)'}
+                    boxShadow={tipoActive ? 'inset 0 0 0 1px var(--cl-border)' : 'none'}
+                    transition="all 180ms ease"
+                    _hover={{ bg: 'var(--cl-surface-muted)' }}
+                    onClick={() => setExpandedTipoProyecto((prev) => (prev === tipo ? null : tipo))}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={tipoActive}
+                      readOnly
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const nextTiposProyecto = tipoActive
+                          ? selectedTiposProyecto.filter((item) => item !== tipo)
+                          : [...selectedTiposProyecto, tipo];
+                        const nextEtapas = tipoActive
+                          ? selectedEtapas.filter((etapa) => !etapas.includes(etapa))
+                          : selectedEtapas;
+
+                        setSelectedTiposProyecto(nextTiposProyecto);
+                        setSelectedEtapas(nextEtapas);
+                      }}
+                      style={{
+                        marginRight: 8,
+                        accentColor: ACCENT_GRAY,
+                        width: 12,
+                        height: 12,
+                        cursor: 'pointer',
+                      }}
+                    />
+                    <Text flex={1} fontSize="13px" color={TEXT_PRIMARY}>
+                      {tipo}
+                    </Text>
+                    <Box
+                      color="var(--cl-text-muted)"
+                      fontSize="18px"
+                      lineHeight="1"
+                      px={1}
+                      transform={expanded ? 'rotate(90deg)' : 'rotate(0deg)'}
+                      transition="transform 180ms ease"
+                    >
+                      ›
+                    </Box>
+                  </Flex>
+
+                  {expanded && (
+                    <Box mt={2} pl={5}>
+                      <Text
+                        fontSize="12px"
+                        color={TEXT_SECONDARY}
+                        fontWeight="700"
+                        mb={2}
+                      >
+                        Etapa
+                      </Text>
+                      {renderOptionsWithSearch(
+                        etapas,
+                        `Etapa - ${tipo}`,
+                        selectedEtapas,
+                        setSelectedEtapas,
+                        true
+                      )}
+                    </Box>
+                  )}
+                </Box>
+              );
+            })}
+          </VStack>
         </FilterAccordion>
 
         <FilterAccordion
@@ -1996,20 +2062,6 @@ export default function SidebarFiltros({ obras = [] }) {
           pb={2}
         >
           {renderPrincipales()}
-          {renderSimpleAccordion(
-            'Etapa',
-            [
-              'Inicio',
-              'Obra Negociada',
-              'Pre-Inicio',
-              'Plan',
-              'Proyecto',
-              'Pre-Plan',
-            ],
-            selectedEtapas,
-            setSelectedEtapas,
-            true
-          )}
           {renderSimpleAccordion(
             'Tipo desarrollo',
             [

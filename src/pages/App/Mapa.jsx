@@ -1,10 +1,9 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   Box,
   Button,
   Text,
 } from '@chakra-ui/react';
-import PanelResumen from './PanelResumen';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 
@@ -12,24 +11,21 @@ function Mapa({
   obras = [],
   filtros = {},
   isDarkMode = false,
-  selectedObras = [],
   onFilteredData,
 }) {
-  const [filteredObras, setFilteredObras] = useState([]);
+  const [externalFilterSignal, setExternalFilterSignal] = useState(0);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [filteredObras, setFilteredObras] = useState([]);
   const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const advancedMarkerRef = useRef(null);
+  const markerClusterRef = useRef(null);
+  const markerElementsRef = useRef([]);
   const lastPublishedCount = useRef(-1);
 
 
   useEffect(() => {
     const applyFilters = () => {
-      if (Array.isArray(selectedObras) && selectedObras.length > 0) {
-        console.log('MAPA EN MODO SELECCION:', selectedObras.length);
-        setFilteredObras(selectedObras);
-        setSelectedProject(null);
-        return;
-      }
-
       const filtrosActivos = Object.keys(filtros || {}).length
         ? filtros
         : (window.construleadsFilters || {});
@@ -596,7 +592,7 @@ console.log(
         applyFilters
       );
     };
-  }, [obras, filtros, selectedObras, onFilteredData]);
+  }, [obras, filtros, onFilteredData]);
 
 useEffect(() => {
     let cancelled = false;
@@ -606,190 +602,118 @@ useEffect(() => {
       'AIzaSyCIapQrNE18PGaxIYd6nRMpCoAlbYD4xkA';
     if (!apiKey) return;
 
-    (async () => {
-      try {
-        setOptions({
-          apiKey,
-          version: 'weekly',
+    const formatInvestment = (value) => {
+      if (!value) return '0 MDP';
+
+      const millions = value / 1000000;
+
+      if (millions >= 1000) {
+        return `${(millions / 1000).toFixed(1)} BDP`;
+      }
+
+      return `${Math.round(millions)} MDP`;
+    };
+
+    const getGenreIcon = () => '•';
+
+    const getMarkerTheme = () => ({
+      color: '#FF6600',
+      softColor: '#FFF5EB',
+      borderColor: '#FF6600',
+    });
+
+    let activeMarkerElement = null;
+
+    const cleanupMarkers = () => {
+      if (markerClusterRef.current) {
+        markerClusterRef.current.clearMarkers();
+      }
+
+      markerElementsRef.current.forEach((marker) => {
+        if (marker?.setMap) marker.setMap(null);
+      });
+      markerElementsRef.current = [];
+    };
+
+    const buildMarker = (AdvancedMarkerElement, obra) => {
+      const latNum = parseFloat(obra.lat);
+      const lonNum = parseFloat(obra.lng);
+      if (Number.isNaN(latNum) || Number.isNaN(lonNum)) return null;
+
+      const markerTheme = getMarkerTheme(obra.genero);
+      const markerContent = document.createElement('div');
+      markerContent.innerHTML = `
+        <div style="
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          width:34px;
+          height:34px;
+          background:${markerTheme.softColor};
+          border:3px solid ${markerTheme.borderColor};
+          border-radius:50%;
+          box-shadow:0 4px 12px rgba(0,0,0,.16);
+          font-family:Inter,sans-serif;
+          font-size:16px;
+          color:${markerTheme.color};
+          cursor:pointer;
+          backdrop-filter:blur(6px);
+          transition:transform 160ms ease, box-shadow 160ms ease;
+        ">
+          <span>${getGenreIcon(obra.genero)}</span>
+        </div>
+      `;
+
+      const marker = new AdvancedMarkerElement({
+        position: { lat: latNum, lng: lonNum },
+        title: obra.proyecto,
+        content: markerContent,
+      });
+
+      markerContent.addEventListener('click', (e) => {
+        e.stopPropagation();
+
+        if (activeMarkerElement) {
+          activeMarkerElement.style.transform = 'scale(1)';
+          activeMarkerElement.style.zIndex = '1';
+        }
+
+        markerContent.firstElementChild.style.transform = 'scale(1.12)';
+        markerContent.firstElementChild.style.zIndex = '999';
+        activeMarkerElement = markerContent.firstElementChild;
+
+        setSelectedProject({
+          proyecto: obra.proyecto,
+          inversion: formatInvestment(obra.inversion),
+          superficie: `${obra.superficie.toLocaleString()} m²`,
+          genero: obra.genero,
+          estado: obra.estado,
+          subgenero: obra.subgenero,
         });
+      });
 
-        const { Map } = await importLibrary('maps');
-        const { AdvancedMarkerElement } = await importLibrary('marker');
+      return marker;
+    };
 
-        if (cancelled) return;
-        if (!mapRef.current) return;
-        const map = new Map(mapRef.current, {
-          center: { lat: 23.6, lng: -102.0 },
-          zoom: 5.8,
-          mapTypeId: 'satellite',
-          mapId: 'bimsa-construleads-map',
-          fullscreenControl: true,
-          mapTypeControl: true,
-          streetViewControl: false,
-        });
-
-        requestAnimationFrame(() => {
-          if (window.google?.maps?.event) {
-            window.google.maps.event.trigger(map, 'resize');
-          }
-
-          map.setCenter({ lat: 23.6, lng: -102.0 });
-        });
-
-        let activeMarkerElement = null;
-        const markers = [];
-
-        const formatInvestment = (value) => {
-          if (!value) return '0 MDP';
-
-          const millions = value / 1000000;
-
-          if (millions >= 1000) {
-            return `${(millions / 1000).toFixed(1)} BDP`;
-          }
-
-          return `${Math.round(millions)} MDP`;
-        };
-
-        const getGenreMeta = (genre = '') => {
-          const normalizedGenre = genre
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '');
-
-          switch (normalizedGenre) {
-            case 'Industrial':
-              return { icon: '🏭', color: '#64748B' };
-            case 'Infraestructura':
-              return { icon: '🛣️', color: '#2563EB' };
-            case 'Edificacion':
-              return { icon: '🏢', color: '#7C3AED' };
-            case 'Vivienda':
-              return { icon: '🏠', color: '#059669' };
-            default:
-              return { icon: '•', color: '#6B7280' };
-          }
-        };
-
-        const getGenreIcon = (genre) => {
-          return getGenreMeta(genre).icon;
-        };
-
-        const getGenreColor = (genre) => {
-          return getGenreMeta(genre).color;
-        };
-
-        const hexToRgba = (hex, alpha) => {
-          const cleanHex = hex.replace('#', '');
-          const r = parseInt(cleanHex.slice(0, 2), 16);
-          const g = parseInt(cleanHex.slice(2, 4), 16);
-          const b = parseInt(cleanHex.slice(4, 6), 16);
-
-          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        };
-
-        const getMarkerTheme = (genre) => {
-          const color = getGenreColor(genre);
-          return {
-            color,
-            softColor: '#FFFFFF',
-            borderColor: color,
-          };
-        };
-
-        filteredObras.forEach((obra) => {
-          if (cancelled) return;
-
-          const latNum = parseFloat(obra.lat);
-          const lonNum = parseFloat(obra.lng);
-
-          if (!isNaN(latNum) && !isNaN(lonNum)) {
-            const markerTheme = getMarkerTheme(obra.genero);
-            // Create custom HTML marker
-            const markerContent = document.createElement('div');
-            markerContent.innerHTML = `
-              <div style="
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                width:34px;
-                height:34px;
-                background:${markerTheme.softColor};
-                border:3px solid ${markerTheme.borderColor};
-                border-radius:10px;
-                box-shadow:0 4px 12px rgba(0,0,0,.16);
-                font-family:Inter,sans-serif;
-                font-size:16px;
-                color:${markerTheme.color};
-                cursor:pointer;
-                backdrop-filter:blur(6px);
-                transition:transform 160ms ease, box-shadow 160ms ease;
-              ">
-                <span>${getGenreIcon(obra.genero)}</span>
-              </div>
-            `;
-            // Create the marker using AdvancedMarkerElement with custom content
-            const marker = new AdvancedMarkerElement({
-              position: {
-                lat: latNum,
-                lng: lonNum,
-              },
-              title: obra.proyecto,
-              content: markerContent,
-            });
-
-            markers.push(marker);
-
-            markerContent.addEventListener('click', (e) => {
-              e.stopPropagation();
-
-              if (activeMarkerElement) {
-                activeMarkerElement.style.transform = 'scale(1)';
-                activeMarkerElement.style.zIndex = '1';
-              }
-
-              markerContent.firstElementChild.style.transform = 'scale(1.12)';
-              markerContent.firstElementChild.style.zIndex = '999';
-
-              activeMarkerElement = markerContent.firstElementChild;
-
-              setSelectedProject({
-                proyecto: obra.proyecto,
-                inversion: formatInvestment(obra.inversion),
-                superficie: `${obra.superficie.toLocaleString()} m²`,
-                genero: obra.genero,
-                estado: obra.estado,
-                subgenero: obra.subgenero,
-              });
-            });
-          }
-        });
-
-new MarkerClusterer({
-  map,
-  markers,
-
-  renderer: {
-    render({ count, position }) {
+    const renderCluster = ({ count, position }) => {
       const clusterElement = document.createElement('div');
-
       clusterElement.innerHTML = `
         <div style="
           min-width:54px;
           height:30px;
           padding:0 8px;
           border-radius:8px;
-          background:var(--cl-surface);
-          border:1px solid var(--cl-border);
+          background:#F3F4F6;
+          border:1px solid #D1D5DB;
           display:flex;
           align-items:center;
           justify-content:center;
           font-family:Inter,sans-serif;
           font-weight:800;
           font-size:12px;
-          color:var(--cl-text-strong);
-          box-shadow:0 4px 12px rgba(0,0,0,.16);
+          color:#374151;
         ">
-          ${count} proy.
+          ${count}
         </div>
       `;
 
@@ -797,19 +721,75 @@ new MarkerClusterer({
         position,
         content: clusterElement,
       });
-    },
-  },
-});
+    };
 
-        map.addListener('click', () => {
-          if (activeMarkerElement) {
-            activeMarkerElement.style.transform = 'scale(1)';
-            activeMarkerElement.style.zIndex = '1';
-            activeMarkerElement = null;
-          }
+    const createMap = async () => {
+      if (mapInstanceRef.current) return;
+      setOptions({ apiKey, version: 'weekly' });
 
-          setSelectedProject(null);
-        });
+      const { Map } = await importLibrary('maps');
+      const { AdvancedMarkerElement } = await importLibrary('marker');
+      advancedMarkerRef.current = AdvancedMarkerElement;
+
+      if (cancelled || !mapRef.current) return;
+
+      const map = new Map(mapRef.current, {
+        center: { lat: 23.6, lng: -102.0 },
+        zoom: 5.8,
+        mapTypeId: 'satellite',
+        mapId: 'bimsa-construleads-map',
+        fullscreenControl: true,
+        mapTypeControl: true,
+        streetViewControl: false,
+      });
+
+      mapInstanceRef.current = map;
+      markerClusterRef.current = new MarkerClusterer({
+        map,
+        markers: [],
+        renderer: {
+          render: renderCluster,
+        },
+      });
+
+      requestAnimationFrame(() => {
+        if (window.google?.maps?.event) {
+          window.google.maps.event.trigger(map, 'resize');
+        }
+        map.setCenter({ lat: 23.6, lng: -102.0 });
+      });
+
+      map.addListener('click', () => {
+        if (activeMarkerElement) {
+          activeMarkerElement.style.transform = 'scale(1)';
+          activeMarkerElement.style.zIndex = '1';
+          activeMarkerElement = null;
+        }
+        setSelectedProject(null);
+      });
+    };
+
+    const updateMarkers = () => {
+      if (!mapInstanceRef.current || !advancedMarkerRef.current) return;
+      cleanupMarkers();
+
+      if (!filteredObras.length) return;
+
+      const markers = filteredObras
+        .map((obra) => buildMarker(advancedMarkerRef.current, obra))
+        .filter(Boolean);
+
+      markerElementsRef.current = markers;
+      if (markerClusterRef.current) {
+        markerClusterRef.current.addMarkers(markers);
+      }
+    };
+
+    (async () => {
+      try {
+        await createMap();
+        if (cancelled) return;
+        updateMarkers();
       } catch (error) {
         console.error('Error cargando Google Maps:', error);
       }
@@ -920,15 +900,6 @@ new MarkerClusterer({
             </Box>
           )}
 
-          <Box
-            position="absolute"
-            left="24px"
-            right="96px"
-            bottom="16px"
-            zIndex={15}
-          >
-            <PanelResumen obras={filteredObras} variant="map" />
-          </Box>
         </Box>
       </Box>
       
