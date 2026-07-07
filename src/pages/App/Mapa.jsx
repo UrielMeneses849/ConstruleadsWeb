@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   Box,
   Button,
+  Spinner,
   Text,
 } from '@chakra-ui/react';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
@@ -16,12 +17,33 @@ function Mapa({
   const [externalFilterSignal, setExternalFilterSignal] = useState(0);
   const [selectedProject, setSelectedProject] = useState(null);
   const [filteredObras, setFilteredObras] = useState([]);
+  const [isMapLoading, setIsMapLoading] = useState(true);
+  const [mapLoadingMessage, setMapLoadingMessage] = useState('Cargando datos del mapa...');
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
-  const advancedMarkerRef = useRef(null);
+  const mapReadyRef = useRef(false);
   const markerClusterRef = useRef(null);
   const markerElementsRef = useRef([]);
+  const markerCacheRef = useRef(new Map());
+  const markerUpdateTokenRef = useRef(0);
+  const markerIconRef = useRef(null);
+  const onFilteredDataRef = useRef(onFilteredData);
   const lastPublishedCount = useRef(-1);
+  const didFitInitialBoundsRef = useRef(false);
+  const DEBUG_MAPA = false;
+  const debugLog = (...args) => {
+    if (DEBUG_MAPA) console.log(...args);
+  };
+  const AUTO_FIT_INITIAL_BOUNDS = false;
+
+  const showMapLoader = isMapLoading || !obras.length;
+  const visibleMapLoadingMessage = !obras.length
+    ? 'Obteniendo obras del servicio y preparando el mapa...'
+    : mapLoadingMessage;
+
+  useEffect(() => {
+    onFilteredDataRef.current = onFilteredData;
+  }, [onFilteredData]);
 
 
   useEffect(() => {
@@ -29,14 +51,14 @@ function Mapa({
       const filtrosActivos = Object.keys(filtros || {}).length
         ? filtros
         : (window.construleadsFilters || {});
-      console.log('==================== DEBUG FILTROS ====================');
-      console.log('FILTROS ACTIVOS:', filtrosActivos);
+      debugLog('==================== DEBUG FILTROS ====================');
+      debugLog('FILTROS ACTIVOS:', filtrosActivos);
 
       if (obras.length) {
-        console.log('PRIMERA OBRA:', obras[0]);
-        console.log('PRIMERA OBRA KEYS:', Object.keys(obras[0]));
+        debugLog('PRIMERA OBRA:', obras[0]);
+        debugLog('PRIMERA OBRA KEYS:', Object.keys(obras[0]));
 
-        console.log('MUESTRA OBRAS:', obras.slice(0, 5).map((o) => ({
+        debugLog('MUESTRA OBRAS:', obras.slice(0, 5).map((o) => ({
           proyecto: o.proyecto,
           region: o.region,
           estado: o.estado,
@@ -50,93 +72,72 @@ function Mapa({
           superficie: o.superficie,
         })));
 
-        console.log(
+        debugLog(
           'REGIONES XML:',
           [...new Set(obras.map((o) => o.region))]
         );
 
-        console.log(
+        debugLog(
           'ESTADOS XML:',
           [...new Set(obras.map((o) => o.estado))]
         );
 
-        console.log(
+        debugLog(
           'GENEROS XML:',
           [...new Set(obras.map((o) => o.genero))]
         );
 
-        console.log(
+        debugLog(
           'SUBGENEROS XML:',
           [...new Set(obras.map((o) => o.subgenero))]
         );
 
-        console.log(
+        debugLog(
   'TIPO OBRA XML:',
   [...new Set(obras.map((o) => o.tipoObra))]
 );
 
-        console.log(
+        debugLog(
           'SECTORES XML:',
           [...new Set(obras.map((o) => o.sector))]
         );
 
-        console.log(
+        debugLog(
           'TIPO PROYECTO XML:',
           [...new Set(obras.map((o) => o.tipoProyecto))]
         );
 
-        console.log(
+        debugLog(
           'TIPO DESARROLLO XML:',
           [...new Set(obras.map((o) => o.tipoDesarrollo))]
         );
 
-        console.log(
+        debugLog(
           'ETAPAS XML:',
           [...new Set(obras.map((o) => o.etapa))]
         );
       }
 
-      if (!obras.length) return;
+      if (!obras.length) {
+        setIsMapLoading(true);
+        setMapLoadingMessage('Obteniendo obras del servicio y preparando el mapa...');
+        return;
+      }
 
       let resultado = [...obras];
-      console.log('TOTAL INICIAL:', resultado.length);
+      debugLog('TOTAL INICIAL:', resultado.length);
 
-const parseDate = (dateValue) => {
-  if (!dateValue) return null;
-
-  if (dateValue instanceof Date) {
-    return Number.isNaN(dateValue.getTime()) ? null : dateValue;
-  }
-
-  const normalized = String(dateValue).trim();
-  if (!normalized) return null;
-
-  const isoMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (isoMatch) {
-    const [, year, month, day] = isoMatch;
-    return new Date(Number(year), Number(month) - 1, Number(day));
-  }
-
-  const localMatch = normalized.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
-  if (localMatch) {
-    const [, day, month, year] = localMatch;
-    return new Date(Number(year), Number(month) - 1, Number(day));
-  }
-
-  const date = new Date(normalized);
-  return Number.isNaN(date.getTime()) ? null : date;
-};
-
-const getObraDateByFilter = (obra, selectedDateField) => {
+// Date parse/filter helpers replaced for timestamp-based logic
+const getObraTimeByFilter = (obra, selectedDateField) => {
   if (selectedDateField === 'Fecha de inicio probable') {
-    return parseDate(obra.fechaInicioDate) || parseDate(obra.fechaInicio);
+    return obra.fechaInicioTime || obra.fechaInicioDate?.getTime?.() || null;
   }
 
   if (selectedDateField === 'Fecha de término probable') {
-    return parseDate(obra.fechaTerminoDate) || parseDate(obra.fechaTermino);
+    return obra.fechaTerminoTime || obra.fechaTerminoDate?.getTime?.() || null;
   }
 
-  return parseDate(obra.fechaPublicacionDate) || parseDate(obra.fechaPublicacion);
+  return obra.fechaPublicacionTime || obra.fechaPublicacionDate?.getTime?.() || null;
 };
 
       // NUEVA LÓGICA DE FILTRO DE FECHA
@@ -165,80 +166,91 @@ const getObraDateByFilter = (obra, selectedDateField) => {
 
       const diasSeleccionados = diasPorPeriodo[periodIndex];
 
-      const fechaStats = resultado.reduce(
-        (acc, obra) => {
-          const fechaObra = getObraDateByFilter(obra, selectedDateField);
+      const fechaStats = DEBUG_MAPA
+        ? resultado.reduce(
+            (acc, obra) => {
+              const fechaObraTime = getObraTimeByFilter(obra, selectedDateField);
+              const fechaObra = fechaObraTime ? new Date(fechaObraTime) : null;
 
-          if (!fechaObra) {
-            acc.invalidas += 1;
-            return acc;
-          }
+              if (!fechaObra) {
+                acc.invalidas += 1;
+                return acc;
+              }
 
-          acc.validas += 1;
+              acc.validas += 1;
 
-          if (!acc.min || fechaObra < acc.min) acc.min = fechaObra;
-          if (!acc.max || fechaObra > acc.max) acc.max = fechaObra;
+              if (!acc.min || fechaObra < acc.min) acc.min = fechaObra;
+              if (!acc.max || fechaObra > acc.max) acc.max = fechaObra;
 
-          if (acc.muestra.length < 5) {
-            acc.muestra.push({
-              clave: obra.clave,
-              proyecto: obra.proyecto,
-              fecha: fechaObra.toISOString().slice(0, 10),
-              fechaPublicacion: obra.fechaPublicacion,
-              fechaInicio: obra.fechaInicio,
-              fechaTermino: obra.fechaTermino,
-            });
-          }
+              if (acc.muestra.length < 5) {
+                acc.muestra.push({
+                  clave: obra.clave,
+                  proyecto: obra.proyecto,
+                  fecha: fechaObra.toISOString().slice(0, 10),
+                  fechaPublicacion: obra.fechaPublicacion,
+                  fechaInicio: obra.fechaInicio,
+                  fechaTermino: obra.fechaTermino,
+                });
+              }
 
-          return acc;
-        },
-        {
-          validas: 0,
-          invalidas: 0,
-          min: null,
-          max: null,
-          muestra: [],
-        }
-      );
+              return acc;
+            },
+            {
+              validas: 0,
+              invalidas: 0,
+              min: null,
+              max: null,
+              muestra: [],
+            }
+          )
+        : {
+            validas: 0,
+            invalidas: 0,
+            min: null,
+            max: null,
+            muestra: [],
+          };
       const totalAntesFechas = resultado.length;
 
-      console.groupCollapsed('[Construleads][Fechas] Diagnóstico de filtro');
-      console.log('Criterio:', selectedDateField);
-      console.log('Rango solicitado:', {
-        desde: fechaInicioFiltro,
-        hasta: fechaFinFiltro,
-      });
-      console.log('Periodo legacy:', {
-        periodIndex,
-        diasSeleccionados,
-      });
-      console.log('Dataset antes de fecha:', totalAntesFechas);
-      console.log('Fechas válidas / inválidas:', {
-        validas: fechaStats.validas,
-        invalidas: fechaStats.invalidas,
-      });
-      console.log('Rango real del dataset para criterio:', {
-        min: fechaStats.min ? fechaStats.min.toISOString().slice(0, 10) : null,
-        max: fechaStats.max ? fechaStats.max.toISOString().slice(0, 10) : null,
-      });
-      console.table(fechaStats.muestra);
+      if (DEBUG_MAPA) {
+        console.groupCollapsed('[Construleads][Fechas] Diagnóstico de filtro');
+        console.log('Criterio:', selectedDateField);
+        console.log('Rango solicitado:', {
+          desde: fechaInicioFiltro,
+          hasta: fechaFinFiltro,
+        });
+        console.log('Periodo legacy:', {
+          periodIndex,
+          diasSeleccionados,
+        });
+        console.log('Dataset antes de fecha:', totalAntesFechas);
+        console.log('Fechas válidas / inválidas:', {
+          validas: fechaStats.validas,
+          invalidas: fechaStats.invalidas,
+        });
+        console.log('Rango real del dataset para criterio:', {
+          min: fechaStats.min ? fechaStats.min.toISOString().slice(0, 10) : null,
+          max: fechaStats.max ? fechaStats.max.toISOString().slice(0, 10) : null,
+        });
+        console.table(fechaStats.muestra);
+      }
 
       if (fechaInicioFiltro && fechaFinFiltro) {
-        const fechaInicio = parseDate(fechaInicioFiltro);
-        const fechaFin = parseDate(fechaFinFiltro);
+        const fechaInicio = new Date(`${fechaInicioFiltro}T00:00:00`);
+        const fechaFin = new Date(`${fechaFinFiltro}T23:59:59`);
 
-        if (fechaInicio && fechaFin) {
-          fechaInicio.setHours(0, 0, 0, 0);
-          fechaFin.setHours(23, 59, 59, 999);
+        if (!Number.isNaN(fechaInicio.getTime()) && !Number.isNaN(fechaFin.getTime())) {
+          const fechaInicioTime = fechaInicio.getTime();
+          const fechaFinTime = fechaFin.getTime();
 
           resultado = resultado.filter((obra) => {
-            const fechaObra = getObraDateByFilter(obra, selectedDateField);
-            if (!fechaObra) return false;
+            const fechaObraTime = getObraTimeByFilter(obra, selectedDateField);
+            if (!fechaObraTime) return false;
 
-            return fechaObra >= fechaInicio && fechaObra <= fechaFin;
+            return fechaObraTime >= fechaInicioTime && fechaObraTime <= fechaFinTime;
           });
 
-          console.log('POST FECHAS:', resultado.length);
+          debugLog('POST FECHAS:', resultado.length);
         }
       } else if (typeof diasSeleccionados === 'number' && diasSeleccionados >= 0) {
         const hoy = new Date();
@@ -253,23 +265,25 @@ const getObraDateByFilter = (obra, selectedDateField) => {
 
         fechaInicio.setHours(0, 0, 0, 0);
         fechaFin.setHours(23, 59, 59, 999);
+        const fechaInicioTime = fechaInicio.getTime();
+        const fechaFinTime = fechaFin.getTime();
 
         resultado = resultado.filter((obra) => {
-          const fechaObra = getObraDateByFilter(obra, selectedDateField);
-          if (!fechaObra) return false;
+          const fechaObraTime = getObraTimeByFilter(obra, selectedDateField);
+          if (!fechaObraTime) return false;
 
-          return fechaObra >= fechaInicio && fechaObra <= fechaFin;
+          return fechaObraTime >= fechaInicioTime && fechaObraTime <= fechaFinTime;
         });
 
-        console.log('POST FECHAS LEGACY:', resultado.length);
+        debugLog('POST FECHAS LEGACY:', resultado.length);
       }
 
-      console.log('Resultado fecha:', {
+      debugLog('Resultado fecha:', {
         antes: totalAntesFechas,
         despues: resultado.length,
         removidos: totalAntesFechas - resultado.length,
       });
-      console.groupEnd();
+      if (DEBUG_MAPA) console.groupEnd();
 
 const regiones =
   filtrosActivos.regiones ||
@@ -397,8 +411,8 @@ const tipoObra =
   filtrosActivos.selectedTipoObra ||
   [];
 
-console.log('FILTRO SUBGENEROS:', subgeneros);
-console.log('FILTRO TIPO OBRA:', tipoObra);
+debugLog('FILTRO SUBGENEROS:', subgeneros);
+debugLog('FILTRO TIPO OBRA:', tipoObra);
 
 const tiposProyecto =
   filtrosActivos.tiposProyecto ||
@@ -408,58 +422,58 @@ const tiposProyecto =
         resultado = resultado.filter((o) =>
           regiones.includes(o.region)
         );
-        console.log('POST REGIONES:', resultado.length);
+        debugLog('POST REGIONES:', resultado.length);
       }
 
       if (estados.length) {
         resultado = resultado.filter((o) =>
           estados.includes(o.estado)
         );
-        console.log('POST ESTADOS:', resultado.length);
+        debugLog('POST ESTADOS:', resultado.length);
       }
 
       if (generos.length) {
         resultado = resultado.filter((o) =>
           generos.includes(o.genero)
         );
-        console.log('POST GENEROS:', resultado.length);
+        debugLog('POST GENEROS:', resultado.length);
       }
 
       if (tipoObra.length) {
         resultado = resultado.filter((o) =>
           tipoObra.includes(o.tipoObra)
         );
-        console.log('POST TIPO OBRA:', resultado.length);
+        debugLog('POST TIPO OBRA:', resultado.length);
       }
 
       if (desarrollos.length) {
         resultado = resultado.filter((o) =>
           desarrollos.includes(o.tipoDesarrollo)
         );
-        console.log('POST DESARROLLOS:', resultado.length);
+        debugLog('POST DESARROLLOS:', resultado.length);
       }
 
       if (etapas.length) {
         resultado = resultado.filter((o) =>
           etapas.includes(o.etapa)
         );
-        console.log('POST ETAPAS:', resultado.length);
+        debugLog('POST ETAPAS:', resultado.length);
       }
 
       if (tiposProyecto.length) {
-        console.log('TIPOS PROYECTO FILTRO:', tiposProyecto);
+        debugLog('TIPOS PROYECTO FILTRO:', tiposProyecto);
 
-        console.log(
+        debugLog(
           'TIPOS PROYECTO EN RESULTADO:',
           [...new Set(resultado.map(o => o.tipoProyecto))]
         );
 
-        console.log(
+        debugLog(
   'TIPOS PROYECTO SELECCIONADOS:',
   filtros.tipoProyecto
 );
 
-console.log(
+debugLog(
   'TIPOS PROYECTO PRIMERAS OBRAS:',
   obras.slice(0,5).map(
     o => o.tipoProyecto
@@ -470,7 +484,7 @@ console.log(
           tiposProyecto.includes(o.tipoProyecto)
         );
 
-        console.log('POST TIPO PROYECTO:', resultado.length);
+        debugLog('POST TIPO PROYECTO:', resultado.length);
       }
 
       if (subgeneros.length) {
@@ -478,12 +492,12 @@ console.log(
     (sub) => tiposObraPorSubgenero[sub] || []
   );
 
-  console.log(
+  debugLog(
     'SUBGENEROS SELECCIONADOS:',
     subgeneros
   );
 
-  console.log(
+  debugLog(
     'TIPOS OBRA RESUELTOS:',
     tiposObraPermitidos
   );
@@ -492,39 +506,43 @@ console.log(
     tiposObraPermitidos.includes(o.tipoObra)
   );
 
-  console.log(
+  debugLog(
     'POST SUBGENEROS:',
     resultado.length
   );
 }
 
-      const investmentMin = Number(filtrosActivos.investmentMin || 0);
-      const investmentMax = Number(filtrosActivos.investmentMax || 0);
+      const investmentMin = Number(filtrosActivos.investmentMin ?? 0);
+      const investmentMax = Number(filtrosActivos.investmentMax ?? 0);
 
       // El slider trabaja en millones y el XML en pesos
       const investmentMinPesos = investmentMin < 1000000 ? investmentMin * 1000000 : investmentMin;
       const investmentMaxPesos = investmentMax < 1000000 ? investmentMax * 1000000 : investmentMax;
+      const hasValidInvestmentRange =
+        Number.isFinite(investmentMinPesos) &&
+        Number.isFinite(investmentMaxPesos) &&
+        investmentMaxPesos > investmentMinPesos;
 
-      if (investmentMinPesos > 0) {
+      if (hasValidInvestmentRange && investmentMinPesos > 0) {
         resultado = resultado.filter(
           (o) => o.inversion >= investmentMinPesos
         );
       }
 
-      if (investmentMaxPesos > 0) {
+      if (hasValidInvestmentRange && investmentMaxPesos > 0) {
         resultado = resultado.filter(
           (o) => o.inversion <= investmentMaxPesos
         );
       }
 
-      console.log('RANGO INVERSION FILTRO:', investmentMinPesos, investmentMaxPesos);
-      console.log('POST INVERSION:', resultado.length);
-      console.log(
+      debugLog('RANGO INVERSION FILTRO:', investmentMinPesos, investmentMaxPesos);
+      debugLog('POST INVERSION:', resultado.length);
+      debugLog(
         'SUPERFICIE FILTRO:',
         filtrosActivos.superficie
       );
 
-      console.log(
+      debugLog(
         'SUPERFICIES RESTANTES:',
         resultado.map((o) => o.superficie)
       );
@@ -551,34 +569,34 @@ console.log(
             return false;
           });
         });
-        console.log('POST SUPERFICIE:', resultado.length);
+        debugLog('POST SUPERFICIE:', resultado.length);
       }
 
       if (sectores.length) {
         resultado = resultado.filter((o) =>
           sectores.includes(o.sector)
         );
-        console.log('POST SECTORES:', resultado.length);
+        debugLog('POST SECTORES:', resultado.length);
       }
 
-      console.log(
+      debugLog(
         'Filtro aplicado:',
         resultado.length,
         'de',
         obras.length
       );
 
-      console.log('RESULTADO FINAL:', resultado.length);
+      debugLog('RESULTADO FINAL:', resultado.length);
 
       setFilteredObras(resultado);
 
-      if (onFilteredData) {
+      if (onFilteredDataRef.current && lastPublishedCount.current !== resultado.length) {
         lastPublishedCount.current = resultado.length;
-        onFilteredData(resultado);
+        onFilteredDataRef.current(resultado);
       }
     };
 
-    console.log('MAPA RECALCULANDO FILTROS');
+    debugLog('MAPA RECALCULANDO FILTROS');
     applyFilters();
 
     window.addEventListener(
@@ -592,7 +610,7 @@ console.log(
         applyFilters
       );
     };
-  }, [obras, filtros, onFilteredData]);
+  }, [obras, filtros, externalFilterSignal]);
 
 useEffect(() => {
     let cancelled = false;
@@ -624,68 +642,78 @@ useEffect(() => {
 
     let activeMarkerElement = null;
 
-    const cleanupMarkers = () => {
+    const cleanupMarkers = ({ clearCache = false } = {}) => {
       if (markerClusterRef.current) {
         markerClusterRef.current.clearMarkers();
       }
 
-      markerElementsRef.current.forEach((marker) => {
-        if (marker?.setMap) marker.setMap(null);
-      });
+      if (clearCache) {
+        markerCacheRef.current.forEach((marker) => {
+          if (marker?.setMap) marker.setMap(null);
+        });
+        markerCacheRef.current.clear();
+      }
+
       markerElementsRef.current = [];
     };
 
-    const buildMarker = (AdvancedMarkerElement, obra) => {
-      const latNum = parseFloat(obra.lat);
-      const lonNum = parseFloat(obra.lng);
-      if (Number.isNaN(latNum) || Number.isNaN(lonNum)) return null;
-
-      const markerTheme = getMarkerTheme(obra.genero);
-      const markerContent = document.createElement('div');
-      markerContent.innerHTML = `
-        <div style="
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          width:34px;
-          height:34px;
-          background:${markerTheme.softColor};
-          border:3px solid ${markerTheme.borderColor};
-          border-radius:50%;
-          box-shadow:0 4px 12px rgba(0,0,0,.16);
-          font-family:Inter,sans-serif;
-          font-size:16px;
-          color:${markerTheme.color};
-          cursor:pointer;
-          backdrop-filter:blur(6px);
-          transition:transform 160ms ease, box-shadow 160ms ease;
-        ">
-          <span>${getGenreIcon(obra.genero)}</span>
-        </div>
+    const createClusterIcon = (count) => {
+      const size = count >= 100 ? 48 : count >= 10 ? 42 : 36;
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+          <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 2}" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="2"/>
+        </svg>
       `;
 
-      const marker = new AdvancedMarkerElement({
+      return {
+        url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+        scaledSize: new window.google.maps.Size(size, size),
+        anchor: new window.google.maps.Point(size / 2, size / 2),
+      };
+    };
+
+    const renderCluster = ({ count, position }) => new window.google.maps.Marker({
+      position,
+      icon: createClusterIcon(count),
+      label: {
+        text: String(count),
+        color: '#374151',
+        fontSize: '12px',
+        fontWeight: '700',
+      },
+      optimized: true,
+      zIndex: Number(window.google.maps.Marker.MAX_ZINDEX) + count,
+    });
+
+    const getObraMarkerKey = (obra, index) => String(
+      obra?.id ||
+      obra?.clave ||
+      obra?.proy_clave ||
+      obra?.proyecto ||
+      `${obra?.lat || obra?.latitud || obra?.Latitud || 'lat'}-${obra?.lng || obra?.longitud || obra?.Longitud || 'lng'}-${index}`
+    );
+
+    const buildMarker = (obra) => {
+      if (obra.hasValidCoordinates === false) return null;
+
+      const latNum = Number(obra.lat);
+      const lonNum = Number(obra.lng);
+
+      if (!Number.isFinite(latNum) || !Number.isFinite(lonNum) || latNum === 0 || lonNum === 0) {
+        return null;
+      }
+
+      const marker = new window.google.maps.Marker({
         position: { lat: latNum, lng: lonNum },
-        title: obra.proyecto,
-        content: markerContent,
+        optimized: true,
+        icon: markerIconRef.current,
       });
 
-      markerContent.addEventListener('click', (e) => {
-        e.stopPropagation();
-
-        if (activeMarkerElement) {
-          activeMarkerElement.style.transform = 'scale(1)';
-          activeMarkerElement.style.zIndex = '1';
-        }
-
-        markerContent.firstElementChild.style.transform = 'scale(1.12)';
-        markerContent.firstElementChild.style.zIndex = '999';
-        activeMarkerElement = markerContent.firstElementChild;
-
+      marker.addListener('click', () => {
         setSelectedProject({
           proyecto: obra.proyecto,
           inversion: formatInvestment(obra.inversion),
-          superficie: `${obra.superficie.toLocaleString()} m²`,
+          superficie: `${Number(obra.superficie || 0).toLocaleString()} m²`,
           genero: obra.genero,
           estado: obra.estado,
           subgenero: obra.subgenero,
@@ -695,41 +723,12 @@ useEffect(() => {
       return marker;
     };
 
-    const renderCluster = ({ count, position }) => {
-      const clusterElement = document.createElement('div');
-      clusterElement.innerHTML = `
-        <div style="
-          min-width:54px;
-          height:30px;
-          padding:0 8px;
-          border-radius:8px;
-          background:#F3F4F6;
-          border:1px solid #D1D5DB;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          font-family:Inter,sans-serif;
-          font-weight:800;
-          font-size:12px;
-          color:#374151;
-        ">
-          ${count}
-        </div>
-      `;
-
-      return new google.maps.marker.AdvancedMarkerElement({
-        position,
-        content: clusterElement,
-      });
-    };
 
     const createMap = async () => {
       if (mapInstanceRef.current) return;
       setOptions({ apiKey, version: 'weekly' });
 
       const { Map } = await importLibrary('maps');
-      const { AdvancedMarkerElement } = await importLibrary('marker');
-      advancedMarkerRef.current = AdvancedMarkerElement;
 
       if (cancelled || !mapRef.current) return;
 
@@ -744,6 +743,14 @@ useEffect(() => {
       });
 
       mapInstanceRef.current = map;
+      markerIconRef.current = {
+        path: window.google.maps.SymbolPath.CIRCLE,
+        scale: 8,
+        fillColor: '#FFF5EB',
+        fillOpacity: 1,
+        strokeColor: '#FF6600',
+        strokeWeight: 3,
+      };
       markerClusterRef.current = new MarkerClusterer({
         map,
         markers: [],
@@ -751,6 +758,7 @@ useEffect(() => {
           render: renderCluster,
         },
       });
+      mapReadyRef.current = true;
 
       requestAnimationFrame(() => {
         if (window.google?.maps?.event) {
@@ -769,36 +777,130 @@ useEffect(() => {
       });
     };
 
-    const updateMarkers = () => {
-      if (!mapInstanceRef.current || !advancedMarkerRef.current) return;
-      cleanupMarkers();
+    const updateMarkers = async () => {
+      if (!mapInstanceRef.current || !mapReadyRef.current) return;
 
-      if (!filteredObras.length) return;
+      setIsMapLoading(true);
+      setMapLoadingMessage(
+        filteredObras.length
+          ? `Preparando ${filteredObras.length.toLocaleString()} obras en el mapa...`
+          : 'Preparando mapa...'
+      );
 
-      const markers = filteredObras
-        .map((obra) => buildMarker(advancedMarkerRef.current, obra))
-        .filter(Boolean);
+      const updateToken = markerUpdateTokenRef.current + 1;
+      markerUpdateTokenRef.current = updateToken;
+
+      if (!filteredObras.length) {
+        cleanupMarkers();
+
+        if (!obras.length) {
+          setMapLoadingMessage('Obteniendo obras del servicio y preparando el mapa...');
+          setIsMapLoading(true);
+          return;
+        }
+
+        setMapLoadingMessage('No hay obras para mostrar con los filtros actuales.');
+        setIsMapLoading(false);
+        return;
+      }
+
+      const startedAt = performance.now();
+      if (markerCacheRef.current.size) {
+        const desiredKeys = new Set(
+          filteredObras.map((obra, index) => getObraMarkerKey(obra, index))
+        );
+
+        markerCacheRef.current.forEach((marker, key) => {
+          if (!desiredKeys.has(key)) {
+            if (marker?.setMap) marker.setMap(null);
+            markerCacheRef.current.delete(key);
+          }
+        });
+      }
+
+      const markers = [];
+      let builtMarkers = 0;
+      const chunkSize = filteredObras.length > 1000 ? 1500 : filteredObras.length;
+
+      for (let index = 0; index < filteredObras.length; index += 1) {
+        if (markerUpdateTokenRef.current !== updateToken) return;
+
+        const obra = filteredObras[index];
+        const key = getObraMarkerKey(obra, index);
+        let marker = markerCacheRef.current.get(key);
+
+        if (!marker) {
+          marker = buildMarker(obra);
+          if (marker) {
+            markerCacheRef.current.set(key, marker);
+            builtMarkers += 1;
+          }
+        }
+
+        if (marker) markers.push(marker);
+
+        if (chunkSize < filteredObras.length && index > 0 && index % chunkSize === 0) {
+          setMapLoadingMessage(
+            `Pintando obras... ${Math.min(index, filteredObras.length).toLocaleString()} de ${filteredObras.length.toLocaleString()}`
+          );
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+        }
+      }
+
+      if (markerUpdateTokenRef.current !== updateToken) return;
+
+      if (markerClusterRef.current) {
+        markerClusterRef.current.clearMarkers(true);
+        markerClusterRef.current.addMarkers(markers, true);
+        markerClusterRef.current.render();
+      }
+
+      if (markerUpdateTokenRef.current === updateToken) {
+        setIsMapLoading(false);
+      }
 
       markerElementsRef.current = markers;
-      if (markerClusterRef.current) {
-        markerClusterRef.current.addMarkers(markers);
+
+      if (AUTO_FIT_INITIAL_BOUNDS && !didFitInitialBoundsRef.current && markers.length && mapInstanceRef.current) {
+        const bounds = new window.google.maps.LatLngBounds();
+        markers.forEach((marker, index) => {
+          if (index % 4 !== 0) return;
+          const position = marker.getPosition?.();
+          if (position) bounds.extend(position);
+        });
+        mapInstanceRef.current.fitBounds(bounds);
+        didFitInitialBoundsRef.current = true;
       }
+
+      debugLog('[Construleads][Mapa] updateMarkers terminado:', {
+        obrasFiltradas: filteredObras.length,
+        markers: markers.length,
+        nuevos: builtMarkers,
+        reutilizados: markers.length - builtMarkers,
+        cache: markerCacheRef.current.size,
+        ms: Math.round(performance.now() - startedAt),
+      });
     };
 
     (async () => {
       try {
+        setIsMapLoading(true);
+        setMapLoadingMessage('Cargando mapa y preparando obras...');
         await createMap();
         if (cancelled) return;
-        updateMarkers();
+        await updateMarkers();
       } catch (error) {
         console.error('Error cargando Google Maps:', error);
+        setMapLoadingMessage('No se pudo cargar el mapa. Intenta recargar la página.');
+        setIsMapLoading(false);
       }
     })();
 
     return () => {
       cancelled = true;
+      markerUpdateTokenRef.current += 1;
     };
-  }, [filteredObras, isDarkMode]);
+  }, [filteredObras, obras.length]);
 
   return (
     <Box
@@ -827,6 +929,40 @@ useEffect(() => {
             minH="520px"
             w="100%"
           />
+
+          {showMapLoader && (
+            <Box
+              position="absolute"
+              inset={0}
+              zIndex={30}
+              bg="rgba(255, 255, 255, 0.82)"
+              backdropFilter="blur(6px)"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              textAlign="center"
+              px={6}
+              pointerEvents="none"
+            >
+              <Box
+                bg="var(--cl-surface)"
+                border="1px solid var(--cl-border)"
+                borderRadius="16px"
+                boxShadow="var(--cl-shadow)"
+                px={6}
+                py={5}
+                maxW="360px"
+              >
+                <Spinner size="lg" color="#FF6600" thickness="4px" mb={4} />
+                <Text fontWeight="800" fontSize="16px" color="var(--cl-text-strong)" mb={1}>
+                  Cargando datos
+                </Text>
+                <Text fontSize="13px" color="var(--cl-text-muted)">
+                  {visibleMapLoadingMessage}
+                </Text>
+              </Box>
+            </Box>
+          )}
 
           {selectedProject && (
             <Box

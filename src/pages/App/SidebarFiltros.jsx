@@ -276,7 +276,7 @@ export default function SidebarFiltros({ obras = [] }) {
     typeof savedFilters.investmentMin === 'number' ? savedFilters.investmentMin : 0
   );
   const [investmentMax, setInvestmentMax] = useState(
-    typeof savedFilters.investmentMax === 'number' ? savedFilters.investmentMax : 0
+    typeof savedFilters.investmentMax === 'number' ? savedFilters.investmentMax : null
   );
 
   const hasLoadedFilters = useRef(true);
@@ -680,21 +680,38 @@ export default function SidebarFiltros({ obras = [] }) {
     if (!investmentBounds.max) return;
 
     setInvestmentMin((current) => {
-      if (!current || current < investmentBounds.min || current > investmentBounds.max) {
+      const value = Number(current);
+
+      if (!Number.isFinite(value) || value < investmentBounds.min || value > investmentBounds.max) {
         return investmentBounds.min;
       }
 
-      return current;
+      return value;
     });
 
     setInvestmentMax((current) => {
-      if (!current || current > investmentBounds.max || current < investmentBounds.min) {
+      const value = Number(current);
+
+      if (
+        current === null ||
+        !Number.isFinite(value) ||
+        value > investmentBounds.max ||
+        value < investmentBounds.min ||
+        (value === investmentBounds.min && investmentBounds.max > investmentBounds.min)
+      ) {
         return investmentBounds.max;
       }
 
-      return current;
+      return value;
     });
   }, [investmentBounds.min, investmentBounds.max]);
+
+  const investmentFiltersReady =
+    investmentMax !== null &&
+    Number.isFinite(Number(investmentMin)) &&
+    Number.isFinite(Number(investmentMax)) &&
+    Number(investmentMax) >= Number(investmentMin) &&
+    !(Number(investmentMax) === Number(investmentMin) && investmentBounds.max > investmentBounds.min);
 
   const fechaHint =
     fechaSeleccionada === 'Fecha de publicación'
@@ -747,6 +764,15 @@ export default function SidebarFiltros({ obras = [] }) {
   };
 
   useEffect(() => {
+    if (!investmentFiltersReady) {
+      console.log('[Construleads][Filtros] Esperando rango de inversión inicial antes de publicar filtros', {
+        investmentMin,
+        investmentMax,
+        investmentBounds,
+      });
+      return;
+    }
+
     console.log('SUPERFICIE NORMALIZADA:', filtrosActivos.superficie);
     console.log('FILTROS PUBLICADOS:', filtrosActivos);
     console.log('TIPOS OBRA PUBLICADOS:', selectedTipoObra);
@@ -773,6 +799,7 @@ export default function SidebarFiltros({ obras = [] }) {
     dateRangeStart,
     dateRangeEnd,
     selectedValues,
+    investmentFiltersReady,
   ]);
 
   // Search helpers for filtering options if > 10

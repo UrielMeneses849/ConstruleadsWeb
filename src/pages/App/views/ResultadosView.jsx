@@ -114,6 +114,16 @@ function ResultadosView({
     left: 0,
   });
 
+useEffect(() => {
+  // Debug temporal. Cambiar a true solo cuando se necesite revisar data en consola.
+  const DEBUG_RESULTADOS = false;
+  if (DEBUG_RESULTADOS) {
+    console.log('[ResultadosView] obras:', obras?.length, obras?.[0]);
+  }
+}, [obras]);
+
+
+
   const ui = {
     surface: 'var(--cl-surface)',
     surfaceMuted: 'var(--cl-surface-muted)',
@@ -300,6 +310,14 @@ function ResultadosView({
       source: obra,
     }));
   }, [obras]);
+
+useEffect(() => {
+  // Debug temporal. Cambiar a true solo cuando se necesite revisar data en consola.
+  const DEBUG_RESULTADOS = false;
+  if (DEBUG_RESULTADOS) {
+    console.log('[ResultadosView] tableData:', tableData.length, tableData[0]);
+  }
+}, [tableData]);
 
   const getRowKey = (row) => String(row.id || row.clave || row.proyecto);
 
@@ -794,6 +812,15 @@ function ResultadosView({
                 right: 0;
                 z-index: 3;
                 box-shadow: -1px 0 0 var(--cl-border);
+                vertical-align: middle;
+              }
+              .resultados-action-cell {
+                height: 100%;
+                min-height: 52px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: inherit;
               }
             `}
           </style>
@@ -809,7 +836,7 @@ function ResultadosView({
           <table
             className="resultados-table"
             style={{
-              minWidth: '2140px',
+              minWidth: '2240px',
               width: '100%',
               borderCollapse: 'collapse',
               fontSize: '14px',
@@ -822,15 +849,15 @@ function ResultadosView({
             <col style={{ width: '220px' }} />
             <col style={{ width: '180px' }} />
             <col style={{ width: '110px' }} />
-            <col style={{ width: '140px' }} />
-            <col style={{ width: '110px' }} />
-            <col style={{ width: '130px' }} />
+            <col style={{ width: '165px' }} />
+            <col style={{ width: '120px' }} />
+            <col style={{ width: '150px' }} />
             <col style={{ width: '130px' }} />
             <col style={{ width: '125px' }} />
             <col style={{ width: '125px' }} />
             <col style={{ width: '150px' }} />
-            <col style={{ width: '110px' }} />
-            <col style={{ width: '70px' }} />
+            <col style={{ width: '135px' }} />
+            <col style={{ width: '92px' }} />
           </colgroup>
           <thead style={{ background: ui.surfaceMuted }}>
             <tr>
@@ -864,7 +891,7 @@ function ResultadosView({
                 {renderHeaderCell('genero', 'Género')}
               </th>
               <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: `1px solid ${ui.border}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {renderHeaderCell('subgenero', 'Subg.')}
+                {renderHeaderCell('subgenero', 'Subgénero')}
               </th>
               <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
                 {renderHeaderCell('estado', 'Estado')}
@@ -873,7 +900,7 @@ function ResultadosView({
                 {renderHeaderCell('inversion', 'Inversión')}
               </th>
               <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: `1px solid ${ui.border}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {renderHeaderCell('superficie', 'Superf.')}
+                {renderHeaderCell('superficie', 'Superficie')}
               </th>
               <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
                 {renderHeaderCell('inicio', 'Inicio')}
@@ -896,6 +923,7 @@ function ResultadosView({
                   whiteSpace: 'nowrap',
                   fontSize: '13px',
                   borderBottom: `1px solid ${ui.border}`,
+                  background: ui.surfaceMuted,
                 }}
               >
                 Acciones
@@ -939,8 +967,8 @@ function ResultadosView({
                   <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.fin)}</td>
                   <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.publicacion)}</td>
                   <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.tipo)}</td>
-                  <td style={{ padding: '12px 6px', borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', fontSize: '13px', textAlign: 'center', background: rowBg, height: '2.6em', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <HStack spacing={1} justify="center">
+                  <td style={{ padding: 0, borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', fontSize: '13px', textAlign: 'center', background: rowBg }}>
+                    <div className="resultados-action-cell">
                       <Button
                         size="xs"
                         variant="outline"
@@ -953,11 +981,12 @@ function ResultadosView({
                         borderColor={ui.border}
                         color={ui.textStrong}
                         borderRadius="8px"
+                        bg={rowBg}
                         _hover={{ bg: ui.surfaceMuted, borderColor: '#FF6600', color: '#FF6600' }}
                       >
                         <FiEye size={15} />
                       </Button>
-                    </HStack>
+                    </div>
                   </td>
                 </tr>
               );
@@ -1015,4 +1044,4 @@ function ResultadosView({
   );
 }
 
-export default React.memo(ResultadosView);
+export default ResultadosView;

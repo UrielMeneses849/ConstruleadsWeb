@@ -429,7 +429,7 @@ export default function Construleads() {
           display="flex"
           flexDirection="column"
         >
-          <Box position="absolute" top="18px" right="20px" zIndex={30}>
+          <Box position="absolute" top="-3px" right="20px" zIndex={30}>
             <DownloadPanel selectedCount={selectedResultObras.length} />
           </Box>
 
