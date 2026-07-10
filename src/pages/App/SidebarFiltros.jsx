@@ -2013,7 +2013,9 @@ export default function SidebarFiltros({ obras = [] }) {
 
   return (
     <Box
-      w="272px"
+      w="var(--cl-sidebar-width)"
+      minW="240px"
+      maxW="272px"
       h="100%"
       minH="0"
       maxH="100%"

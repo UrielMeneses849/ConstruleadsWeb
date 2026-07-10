@@ -68,6 +68,7 @@ export default function Construleads() {
     localStorage.getItem('cl_color_mode') || 'light'
   );
   const isDarkMode = colorMode === 'dark';
+  const sidebarWidth = 'clamp(240px, 18vw, 272px)';
 
   const appColors = isDarkMode
     ? {
@@ -207,6 +208,7 @@ export default function Construleads() {
         '--cl-text-muted': appColors.textMuted,
         '--cl-input-bg': appColors.inputBg,
         '--cl-shadow': appColors.shadow,
+        '--cl-sidebar-width': sidebarWidth,
       }}
     >
       <Flex
@@ -392,18 +394,6 @@ export default function Construleads() {
 </Box>
         </HStack>
       </Flex>
-      <Box
-        position="fixed"
-        left={`calc(272px + 24px)`}
-        right="96px"
-        bottom="16px"
-        zIndex={40}
-        pointerEvents="none"
-      >
-        <Box pointerEvents="auto">
-          <PanelResumen obras={filteredObras.length ? filteredObras : obras} variant="map" />
-        </Box>
-      </Box>
       <Flex
         gap={3}
         height="calc(100vh - 116px)"
@@ -417,7 +407,6 @@ export default function Construleads() {
             obras={obras}
             onApplyFilters={setFiltros}
           />
-
         </Box>
 
         <Box
@@ -429,12 +418,32 @@ export default function Construleads() {
           display="flex"
           flexDirection="column"
         >
-          <Box position="absolute" top="-3px" right="20px" zIndex={30}>
-            <DownloadPanel selectedCount={selectedResultObras.length} />
+          <Box
+            position="fixed"
+            left={`calc(var(--cl-sidebar-width) + 24px)`}
+            right="12px"
+            bottom="12px"
+            zIndex={40}
+            pointerEvents="none"
+          >
+            <Flex
+              pointerEvents="auto"
+              align="end"
+              gap={3}
+              justify="space-between"
+              width="100%"
+            >
+              <Box flex="1" minW="0">
+                <PanelResumen obras={filteredObras.length ? filteredObras : obras} variant="map" />
+              </Box>
+              <Box flexShrink={0}>
+                <DownloadPanel selectedCount={selectedResultObras.length} />
+              </Box>
+            </Flex>
           </Box>
 
           <Box flex="1" minH="0" position="relative" mt={activeView === 'resultados' ? 0 : 3}>
-            <Box display={activeView === 'mapa' ? 'block' : 'none'} h="100%" minH="0">
+            <Box display={activeView === 'mapa' ? 'block' : 'none'} h="100%" minH="0" pb="50px">
               <Mapa
                 obras={obras}
                 filtros={filtros}
@@ -443,7 +452,7 @@ export default function Construleads() {
               />
             </Box>
 
-            <Box display={activeView === 'resultados' ? 'block' : 'none'} h="100%" minH="0" pt="56px">
+            <Box display={activeView === 'resultados' ? 'block' : 'none'} h="100%" minH="0" pb="50px">
               <Resultados
                 filtros={filtros}
                 obras={filteredObras}

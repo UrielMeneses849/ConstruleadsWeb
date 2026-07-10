@@ -5,9 +5,11 @@ import {
   Heading,
   Text,
   Flex,
+  useMediaQuery,
 } from '@chakra-ui/react';
 
 export default function PanelResumen({ obras = [], variant = 'sidebar' }) {
+const [isCompactWidth] = useMediaQuery('(max-width: 1366px)');
 const numberFormatter = new Intl.NumberFormat('es-MX');
 const compactFormatter = new Intl.NumberFormat('es-MX', {
   maximumFractionDigits: 0,
@@ -70,8 +72,8 @@ if (variant === 'map') {
         <Box
           key={item.label}
           flex="1 1 220px"
-          maxW="240px"
-          minW="180px"
+          minW="120px"
+          maxW="150px"
           bg="var(--cl-surface)"
           border="1px solid var(--cl-border)"
           borderRadius="10px"
@@ -93,14 +95,14 @@ if (variant === 'map') {
 
           <Flex align="center" gap={2} mb={1}>
             <Box
-              w="8px"
-              h="8px"
+              w={isCompactWidth ? '7px' : '8px'}
+              h={isCompactWidth ? '7px' : '8px'}
               borderRadius="full"
               bg={item.color}
               flexShrink={0}
             />
             <Text
-              fontSize="11px"
+              fontSize={isCompactWidth ? '10px' : '11px'}
               fontWeight="700"
               color="var(--cl-text-muted)"
               lineHeight="1"
@@ -111,8 +113,8 @@ if (variant === 'map') {
 
           <HStack spacing={1} align="baseline">
             <Text
-              fontSize={item.label === 'Superficie' ? '15px' : '17px'}
-              fontWeight="600"
+              fontSize={isCompactWidth ? (item.label === 'Superficie' ? '13px' : '14px') : (item.label === 'Superficie' ? '15px' : '17px')}
+              fontWeight="500"
               lineHeight="1.1"
               color="var(--cl-text-strong)"
               noOfLines={1}
@@ -121,8 +123,8 @@ if (variant === 'map') {
             </Text>
             {item.suffix && (
               <Text
-                fontSize="11px"
-                fontWeight="700"
+                fontSize={isCompactWidth ? '10px' : '11px'}
+                fontWeight="500"
                 color="var(--cl-text-muted)"
               >
                 {item.suffix}

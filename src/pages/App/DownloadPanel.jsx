@@ -42,7 +42,7 @@ export default function DownloadPanel({ selectedCount = 0 }) {
       gap={2}
       align="center"
       boxShadow="none"
-      w="320px"
+      w="clamp(288px, 24vw, 320px)"
       position="relative"
     >
       <Box flex="1" position="relative">
@@ -121,7 +121,7 @@ export default function DownloadPanel({ selectedCount = 0 }) {
 
       <Button
         h="36px"
-        minW={hasSelection ? '156px' : '150px'}
+        minW={hasSelection ? '140px' : '128px'}
         bg="#FF6600"
         color="white"
         borderRadius="8px"

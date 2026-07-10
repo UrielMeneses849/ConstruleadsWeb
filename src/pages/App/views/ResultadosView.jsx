@@ -746,7 +746,7 @@ useEffect(() => {
       flexDirection="column"
       bg={ui.surface}
       color={ui.text}
-      pt={1}
+      pt={0}
     >
 
       <Box
