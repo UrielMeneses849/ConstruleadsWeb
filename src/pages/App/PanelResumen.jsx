@@ -43,25 +43,21 @@ const maxValor = topEstados[0]?.[1] || 1;
 const metricasDinamicas = [
   {
     valor: numberFormatter.format(totalProyectos),
-    label: 'Proyectos',
-    color: '#3B82F6',
+    label: 'Proyectos'
   },
   {
     valor: `$${compactFormatter.format(inversionTotal / 1000000)}`,
     suffix: 'MDP',
-    label: 'Inversión total',
-    color: '#FF6600',
+    label: 'Inversión total'
   },
   {
     valor: numberFormatter.format(estadosConProyectos),
     label: 'Estados',
-    color: '#2FB15A',
   },
   {
     valor: numberFormatter.format(superficieTotal),
     suffix: 'm²',
     label: 'Superficie',
-    color: '#7C5CFA',
   },
 ];
 
@@ -90,17 +86,9 @@ if (variant === 'map') {
             top={0}
             bottom={0}
             w="3px"
-            bg={item.color}
           />
 
           <Flex align="center" gap={2} mb={1}>
-            <Box
-              w={isCompactWidth ? '7px' : '8px'}
-              h={isCompactWidth ? '7px' : '8px'}
-              borderRadius="full"
-              bg={item.color}
-              flexShrink={0}
-            />
             <Text
               fontSize={isCompactWidth ? '10px' : '11px'}
               fontWeight="700"

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 import {
   Box,
@@ -20,6 +20,7 @@ import SidebarFiltros from './SidebarFiltros';
 import PanelResumen from './PanelResumen';
 import Mapa from './Mapa';
 import Resultados from './views/ResultadosView';
+import GraficasView from './views/GraficasView';
 import DownloadPanel from './DownloadPanel';
 import { obtenerObras } from '../../api/obras';
 import { parseObrasXml } from '../../utils/parseObrasXml';
@@ -51,11 +52,26 @@ function haveSameSelection(previousSelection, nextSelection) {
   return previousKeys === nextKeys;
 }
 
+function getInitials(name = '') {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] || 'U';
+  const second = parts[1]?.[0] || parts[0]?.[1] || 'M';
+  return `${first}${second}`.toUpperCase();
+}
+
 export default function Construleads() {
+  const navigate = useNavigate();
   const isAuthenticated =
     localStorage.getItem(
       'cl_authenticated'
     ) === 'true';
+  let user = {};
+
+  try {
+    user = JSON.parse(localStorage.getItem('construleadsUser') || '{}');
+  } catch {
+    user = {};
+  }
 
   const [filtros, setFiltros] = useState({});
   const [obras, setObras] = useState([]);
@@ -288,11 +304,11 @@ export default function Construleads() {
             color="white"
             cursor="pointer"
             fontSize="14px"
-            fontWeight="500"
-            borderRadius="8px"
-            borderBottom="3px solid transparent"
+            fontWeight={activeView === 'graficas' ? '600' : '500'}
+            borderBottom={activeView === 'graficas' ? '3px solid white' : '3px solid transparent'}
             transition="all 180ms ease"
             _hover={{ bg: 'rgba(255,255,255,.14)' }}
+            onClick={() => setActiveView('graficas')}
           >
             Gráficas
           </Box>
@@ -365,33 +381,41 @@ export default function Construleads() {
             _hover={{ color: 'rgba(255,255,255,.82)' }}
           />
 
-                   <Box position="relative">
-  <Box
-    w="32px"
-    h="32px"
-    borderRadius="full"
-    bg="white"
-    display="flex"
-    alignItems="center"
-    justifyContent="center"
-    fontWeight="600"
-    fontSize="12px"
-    color="#FF6600"
-  >
-    UM
-  </Box>
+          <Box position="relative">
+            <Box
+              as="button"
+              type="button"
+              w="32px"
+              h="32px"
+              borderRadius="full"
+              bg="white"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              fontWeight="600"
+              fontSize="12px"
+              color="#FF6600"
+              cursor="pointer"
+              transition="transform 160ms ease, box-shadow 160ms ease"
+              _hover={{ transform: 'translateY(-1px)' }}
+              onClick={() => navigate('/construleads/perfil')}
+              aria-label="Abrir perfil"
+              title="Abrir perfil"
+            >
+              {getInitials(user.nombreUsuario)}
+            </Box>
 
-  <Box
-    position="absolute"
-    bottom="1px"
-    right="-1px"
-    w="8px"
-    h="8px"
-    borderRadius="full"
-    bg="#35B56A"
-    border="1px solid white"
-  />
-</Box>
+            <Box
+              position="absolute"
+              bottom="1px"
+              right="-1px"
+              w="8px"
+              h="8px"
+              borderRadius="full"
+              bg="#35B56A"
+              border="1px solid white"
+            />
+          </Box>
         </HStack>
       </Flex>
       <Flex
@@ -459,6 +483,13 @@ export default function Construleads() {
                 onSelectionChange={handleResultsSelectionChange}
                 selectionResetToken={selectionResetToken}
                 onGoToMap={() => setActiveView('mapa')}
+              />
+            </Box>
+
+            <Box display={activeView === 'graficas' ? 'block' : 'none'} h="100%" minH="0" pb="50px">
+              <GraficasView
+                obras={obras}
+                filtros={filtros}
               />
             </Box>
           </Box>

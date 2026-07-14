@@ -8,6 +8,34 @@ import {
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 
+function normalizeText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function matchesTextList(value, list = []) {
+  if (!list.length) return false;
+  const normalizedValue = normalizeText(value);
+  return list.some((item) => normalizeText(item) === normalizedValue);
+}
+
+function normalizeLegacyMoneyValue(value, fallback = null) {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+
+  if (numeric > 0 && numeric < 1000000) {
+    return numeric * 1000000;
+  }
+
+  return numeric;
+}
+
 function Mapa({
   obras = [],
   filtros = {},
@@ -420,42 +448,42 @@ const tiposProyecto =
   [];
       if (regiones.length) {
         resultado = resultado.filter((o) =>
-          regiones.includes(o.region)
+          matchesTextList(o.region, regiones)
         );
         debugLog('POST REGIONES:', resultado.length);
       }
 
       if (estados.length) {
         resultado = resultado.filter((o) =>
-          estados.includes(o.estado)
+          matchesTextList(o.estado, estados)
         );
         debugLog('POST ESTADOS:', resultado.length);
       }
 
       if (generos.length) {
         resultado = resultado.filter((o) =>
-          generos.includes(o.genero)
+          matchesTextList(o.genero, generos)
         );
         debugLog('POST GENEROS:', resultado.length);
       }
 
       if (tipoObra.length) {
         resultado = resultado.filter((o) =>
-          tipoObra.includes(o.tipoObra)
+          matchesTextList(o.tipoObra, tipoObra)
         );
         debugLog('POST TIPO OBRA:', resultado.length);
       }
 
       if (desarrollos.length) {
         resultado = resultado.filter((o) =>
-          desarrollos.includes(o.tipoDesarrollo)
+          matchesTextList(o.tipoDesarrollo, desarrollos)
         );
         debugLog('POST DESARROLLOS:', resultado.length);
       }
 
       if (etapas.length) {
         resultado = resultado.filter((o) =>
-          etapas.includes(o.etapa)
+          matchesTextList(o.etapa, etapas)
         );
         debugLog('POST ETAPAS:', resultado.length);
       }
@@ -481,7 +509,7 @@ debugLog(
 );
 
         resultado = resultado.filter((o) =>
-          tiposProyecto.includes(o.tipoProyecto)
+          matchesTextList(o.tipoProyecto, tiposProyecto)
         );
 
         debugLog('POST TIPO PROYECTO:', resultado.length);
@@ -503,7 +531,7 @@ debugLog(
   );
 
   resultado = resultado.filter((o) =>
-    tiposObraPermitidos.includes(o.tipoObra)
+    matchesTextList(o.tipoObra, tiposObraPermitidos)
   );
 
   debugLog(
@@ -512,16 +540,18 @@ debugLog(
   );
 }
 
-      const investmentMin = Number(filtrosActivos.investmentMin ?? 0);
-      const investmentMax = Number(filtrosActivos.investmentMax ?? 0);
-
-      // El slider trabaja en millones y el XML en pesos
-      const investmentMinPesos = investmentMin < 1000000 ? investmentMin * 1000000 : investmentMin;
-      const investmentMaxPesos = investmentMax < 1000000 ? investmentMax * 1000000 : investmentMax;
+      const investmentMinPesos = normalizeLegacyMoneyValue(
+        filtrosActivos.investmentMin ?? filtrosActivos.inversionMin,
+        0
+      );
+      const investmentMaxPesos = normalizeLegacyMoneyValue(
+        filtrosActivos.investmentMax ?? filtrosActivos.inversionMax,
+        null
+      );
       const hasValidInvestmentRange =
         Number.isFinite(investmentMinPesos) &&
         Number.isFinite(investmentMaxPesos) &&
-        investmentMaxPesos > investmentMinPesos;
+        investmentMaxPesos >= investmentMinPesos;
 
       if (hasValidInvestmentRange && investmentMinPesos > 0) {
         resultado = resultado.filter(
@@ -547,10 +577,23 @@ debugLog(
         resultado.map((o) => o.superficie)
       );
 
-      if (filtrosActivos.superficie?.length) {
+      const superficieMin = Number(filtrosActivos.superficieMin ?? filtrosActivos.surfaceMin);
+      const superficieMax = Number(filtrosActivos.superficieMax ?? filtrosActivos.surfaceMax);
+      const hasNumericSurfaceRange =
+        Number.isFinite(superficieMin) &&
+        Number.isFinite(superficieMax) &&
+        superficieMax >= superficieMin;
+
+      if (hasNumericSurfaceRange) {
+        resultado = resultado.filter((o) => {
+          const superficie = Number(o.superficie);
+          if (!Number.isFinite(superficie)) return false;
+          return superficie >= superficieMin && superficie <= superficieMax;
+        });
+      } else if (filtrosActivos.superficie?.length) {
         resultado = resultado.filter((o) => {
           return filtrosActivos.superficie.some((rango) => {
-            if (rango.includes('0 - 1,000')) {
+            if (rango.includes('0 - 1,000') || rango.includes('0 - 1000')) {
               return o.superficie <= 1000;
             }
 
@@ -562,7 +605,7 @@ debugLog(
               return o.superficie > 5000 && o.superficie <= 10000;
             }
 
-            if (rango.includes('> 10,000')) {
+            if (rango.includes('> 10,000') || rango.includes('> 10000')) {
               return o.superficie > 10000;
             }
 
@@ -574,7 +617,7 @@ debugLog(
 
       if (sectores.length) {
         resultado = resultado.filter((o) =>
-          sectores.includes(o.sector)
+          matchesTextList(o.sector, sectores)
         );
         debugLog('POST SECTORES:', resultado.length);
       }

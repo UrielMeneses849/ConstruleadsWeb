@@ -185,6 +185,67 @@ function getObraDateByFilter(obra, fechaSeleccionada) {
   return parseFilterDate(obra.fechaPublicacionDate) || parseFilterDate(obra.fechaPublicacion);
 }
 
+function normalizeText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function normalizeMoneyValue(value) {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric)) {
+    return null;
+  }
+
+  return numeric;
+}
+
+function normalizeLegacyMoneyValue(value, fallback = null) {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+
+  if (numeric > 0 && numeric < 1000000) {
+    return numeric * 1000000;
+  }
+
+  return numeric;
+}
+
+function formatMillions(value) {
+  return new Intl.NumberFormat('es-MX', {
+    maximumFractionDigits: 0,
+  }).format(Math.round((Number(value) || 0) / 1000000));
+}
+
+function formatSurfaceNumber(value) {
+  return new Intl.NumberFormat('es-MX', {
+    maximumFractionDigits: 0,
+  }).format(Math.round(Number(value) || 0));
+}
+
+function clampNumber(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function normalizeFilterLabel(value) {
+  return normalizeText(value);
+}
+
+function getSavedRangeValue(savedFiltersValue, fallback = null) {
+  if (savedFiltersValue === null || savedFiltersValue === undefined || savedFiltersValue === '') {
+    return fallback;
+  }
+
+  const numeric = Number(savedFiltersValue);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
 export default function SidebarFiltros({ obras = [] }) {
   // Accordions state
   const [openedAccordions, setOpenedAccordions] = useState(
@@ -271,12 +332,25 @@ export default function SidebarFiltros({ obras = [] }) {
     savedFilters.selectedTiposProyecto || []
   );
 
+  const [surfaceMin, setSurfaceMin] = useState(
+    getSavedRangeValue(savedFilters.surfaceMin ?? savedFilters.superficieMin, null)
+  );
+  const [surfaceMax, setSurfaceMax] = useState(
+    getSavedRangeValue(savedFilters.surfaceMax ?? savedFilters.superficieMax, null)
+  );
+
   // Inversión dual-range slider states
   const [investmentMin, setInvestmentMin] = useState(
-    typeof savedFilters.investmentMin === 'number' ? savedFilters.investmentMin : 0
+    normalizeLegacyMoneyValue(
+      savedFilters.investmentMin,
+      0
+    )
   );
   const [investmentMax, setInvestmentMax] = useState(
-    typeof savedFilters.investmentMax === 'number' ? savedFilters.investmentMax : null
+    normalizeLegacyMoneyValue(
+      savedFilters.investmentMax,
+      null
+    )
   );
 
   const hasLoadedFilters = useRef(true);
@@ -299,67 +373,6 @@ export default function SidebarFiltros({ obras = [] }) {
       window.removeEventListener('click', handleClickOutside);
     };
   }, []);
-
-  useEffect(() => {
-    if (!hasLoadedFilters.current) return;
-
-    console.log('Guardando filtros', {
-      selectedValues,
-      selectedRegiones,
-      selectedEstados,
-      selectedGeneros,
-      selectedSubgeneros,
-      selectedDetalles,
-      selectedSectores,
-      selectedEtapas,
-      selectedDesarrollos,
-      selectedTipoObra,
-      periodoIndex,
-      dateRangeStart,
-      dateRangeEnd,
-      selectedTiposProyecto,
-      investmentMin,
-      investmentMax,
-    });
-    localStorage.setItem(
-      'construleads-filtros',
-      JSON.stringify({
-        selectedValues,
-        selectedRegiones,
-        selectedEstados,
-        selectedGeneros,
-        selectedSubgeneros,
-        selectedDetalles,
-        selectedSectores,
-        selectedEtapas,
-        selectedDesarrollos,
-        selectedTipoObra,
-        periodoIndex,
-        dateRangeStart,
-        dateRangeEnd,
-        selectedTiposProyecto,
-        investmentMin,
-        investmentMax,
-      })
-    );
-  }, [
-    selectedValues,
-    selectedRegiones,
-    selectedEstados,
-    selectedGeneros,
-    selectedSubgeneros,
-    selectedDetalles,
-    selectedSectores,
-    selectedEtapas,
-    selectedDesarrollos,
-    selectedTipoObra,
-    periodoIndex,
-    dateRangeStart,
-    dateRangeEnd,
-    selectedTiposProyecto,
-    investmentMin,
-    investmentMax,
-  ]);
 
   useEffect(() => {
     const estados = selectedRegiones.flatMap(
@@ -532,7 +545,7 @@ export default function SidebarFiltros({ obras = [] }) {
       label: 'Tipo de proyecto',
       options: [
         'Proyecto contratado',
-        'Proyecto de inversion'
+        'Proyecto de inversión'
       ],
       multi: true,
       group: 'principales',
@@ -576,19 +589,14 @@ export default function SidebarFiltros({ obras = [] }) {
       label: 'Tipo desarrollo',
       options: [
         'Obra Nueva',
-        'Ampliacion',
-        'Rehabilitacion',
+        'Ampliación',
+        'Rehabilitación',
         'Mantenimiento',
-        'Remodelacion',
-        'Adecuacion',
-        'Terminacion',
+        'Remodelación',
+        'Adecuación',
+        'Terminación',
       ],
       multi: true,
-      group: 'avanzados',
-    },
-    {
-      label: 'M² superficie',
-      options: ['0 - 1,000', '1,000 - 5,000', '5,000 - 10,000', '> 10,000'],
       group: 'avanzados',
     },
     {
@@ -676,6 +684,28 @@ export default function SidebarFiltros({ obras = [] }) {
     });
   }, [dateBounds.min, dateBounds.max, dateRangeStart, dateRangeEnd]);
 
+  const surfaceBounds = useMemo(() => {
+    const values = (obras || [])
+      .map((obra) => Number(obra.superficie || 0))
+      .filter((value) => Number.isFinite(value) && value > 0)
+      .sort((a, b) => a - b);
+
+    if (!values.length) {
+      return {
+        min: 0,
+        max: 1000,
+      };
+    }
+
+    const min = Math.max(0, Math.floor(values[0]));
+    const max = Math.max(min + 1, Math.ceil(values[values.length - 1]));
+
+    return {
+      min,
+      max,
+    };
+  }, [obras]);
+
   useEffect(() => {
     if (!investmentBounds.max) return;
 
@@ -706,12 +736,132 @@ export default function SidebarFiltros({ obras = [] }) {
     });
   }, [investmentBounds.min, investmentBounds.max]);
 
-  const investmentFiltersReady =
-    investmentMax !== null &&
-    Number.isFinite(Number(investmentMin)) &&
-    Number.isFinite(Number(investmentMax)) &&
-    Number(investmentMax) >= Number(investmentMin) &&
-    !(Number(investmentMax) === Number(investmentMin) && investmentBounds.max > investmentBounds.min);
+  useEffect(() => {
+    if (!surfaceBounds.max) return;
+
+    setSurfaceMin((current) => {
+      const value = Number(current);
+
+      if (
+        current === null ||
+        !Number.isFinite(value) ||
+        value < surfaceBounds.min ||
+        value > surfaceBounds.max
+      ) {
+        return surfaceBounds.min;
+      }
+
+      return value;
+    });
+
+    setSurfaceMax((current) => {
+      const value = Number(current);
+
+      if (
+        current === null ||
+        !Number.isFinite(value) ||
+        value > surfaceBounds.max ||
+        value < surfaceBounds.min ||
+        (value === surfaceBounds.min && surfaceBounds.max > surfaceBounds.min)
+      ) {
+        return surfaceBounds.max;
+      }
+
+      return value;
+    });
+  }, [surfaceBounds.min, surfaceBounds.max]);
+
+  const resolvedInvestmentMin = Math.max(
+    investmentBounds.min,
+    Math.min(
+      Number.isFinite(Number(investmentMin)) ? Number(investmentMin) : investmentBounds.min,
+      investmentBounds.max
+    )
+  );
+  const resolvedInvestmentMax = Math.max(
+    resolvedInvestmentMin,
+    Math.min(
+      Number.isFinite(Number(investmentMax)) ? Number(investmentMax) : investmentBounds.max,
+      investmentBounds.max
+    )
+  );
+  const resolvedSurfaceMin = Math.max(
+    surfaceBounds.min,
+    Math.min(
+      Number.isFinite(Number(surfaceMin)) ? Number(surfaceMin) : surfaceBounds.min,
+      surfaceBounds.max
+    )
+  );
+  const resolvedSurfaceMax = Math.max(
+    resolvedSurfaceMin,
+    Math.min(
+      Number.isFinite(Number(surfaceMax)) ? Number(surfaceMax) : surfaceBounds.max,
+      surfaceBounds.max
+    )
+  );
+
+  const superficieMin = resolvedSurfaceMin;
+  const superficieMax = resolvedSurfaceMax;
+  const inversionMin = resolvedInvestmentMin;
+  const inversionMax = resolvedInvestmentMax;
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        'construleads-filters',
+        JSON.stringify({
+          selectedRegiones,
+          selectedEstados,
+          selectedGeneros,
+          selectedSubgeneros,
+          selectedSectores,
+          selectedEtapas,
+          selectedDesarrollos,
+          selectedTipoObra,
+          selectedTiposProyecto,
+          fechaSeleccionada,
+          periodoIndex,
+          dateRangeStart,
+          dateRangeEnd,
+          surfaceMin: resolvedSurfaceMin,
+          surfaceMax: resolvedSurfaceMax,
+          investmentMin: resolvedInvestmentMin,
+          investmentMax: resolvedInvestmentMax,
+          selectedValues,
+        })
+      );
+    } catch (error) {
+      console.warn('[Construleads][Filtros] No se pudo persistir el estado:', error);
+    }
+  }, [
+    selectedRegiones,
+    selectedEstados,
+    selectedGeneros,
+    selectedSubgeneros,
+    selectedSectores,
+    selectedEtapas,
+    selectedDesarrollos,
+    selectedTipoObra,
+    selectedTiposProyecto,
+    fechaSeleccionada,
+    periodoIndex,
+    dateRangeStart,
+    dateRangeEnd,
+    resolvedSurfaceMin,
+    resolvedSurfaceMax,
+    resolvedInvestmentMin,
+    resolvedInvestmentMax,
+    selectedValues,
+  ]);
+
+  const rangeFiltersReady =
+    Number.isFinite(Number(resolvedInvestmentMin)) &&
+    Number.isFinite(Number(resolvedInvestmentMax)) &&
+    Number(resolvedInvestmentMax) >= Number(resolvedInvestmentMin) &&
+    !(
+      Number(resolvedInvestmentMax) === Number(resolvedInvestmentMin) &&
+      investmentBounds.max > investmentBounds.min
+    );
 
   const fechaHint =
     fechaSeleccionada === 'Fecha de publicación'
@@ -734,8 +884,8 @@ export default function SidebarFiltros({ obras = [] }) {
     tiposObra: selectedTipoObra,
     tiposObraFiltro: selectedTipoObra,
     tiposProyecto: selectedTiposProyecto,
-    investmentMin,
-    investmentMax,
+    investmentMin: resolvedInvestmentMin,
+    investmentMax: resolvedInvestmentMax,
     periodoIndex,
     dateRangeStart,
     dateRangeEnd,
@@ -746,28 +896,16 @@ export default function SidebarFiltros({ obras = [] }) {
       hasta: dateRangeEnd,
     },
     fechaConsulta: fechaSeleccionada,
-    superficie: (() => {
-      const raw = selectedValues['M² superficie'];
-
-      if (!raw) return [];
-
-      const values = Array.isArray(raw) ? raw : [raw];
-
-      return values
-        .map((item) => String(item).trim())
-        .filter(
-          (item) =>
-            item.length > 0 &&
-            ['0 - 1,000', '1,000 - 5,000', '5,000 - 10,000', '> 10,000'].includes(item)
-        );
-    })(),
+    surfaceMin: resolvedSurfaceMin,
+    surfaceMax: resolvedSurfaceMax,
+    superficie: [],
   };
 
   useEffect(() => {
-    if (!investmentFiltersReady) {
+    if (!rangeFiltersReady) {
       console.log('[Construleads][Filtros] Esperando rango de inversión inicial antes de publicar filtros', {
-        investmentMin,
-        investmentMax,
+        investmentMin: resolvedInvestmentMin,
+        investmentMax: resolvedInvestmentMax,
         investmentBounds,
       });
       return;
@@ -793,13 +931,15 @@ export default function SidebarFiltros({ obras = [] }) {
     selectedDesarrollos,
     selectedTipoObra,
     selectedTiposProyecto,
-    investmentMin,
-    investmentMax,
+    resolvedInvestmentMin,
+    resolvedInvestmentMax,
     periodoIndex,
     dateRangeStart,
     dateRangeEnd,
+    resolvedSurfaceMin,
+    resolvedSurfaceMax,
     selectedValues,
-    investmentFiltersReady,
+    rangeFiltersReady,
   ]);
 
   // Search helpers for filtering options if > 10
@@ -807,7 +947,9 @@ export default function SidebarFiltros({ obras = [] }) {
   function renderOptionsWithSearch(options, label, selectedArr, setSelectedArr, multi = true) {
     const searchValue = searchInputs[label] || '';
     const filtered = searchValue
-      ? options.filter((o) => o.toLowerCase().includes(searchValue.toLowerCase()))
+      ? options.filter((o) =>
+          normalizeFilterLabel(o).includes(normalizeFilterLabel(searchValue))
+        )
       : options;
     return (
       <Box>
@@ -1421,7 +1563,7 @@ export default function SidebarFiltros({ obras = [] }) {
   function renderPrincipales() {
     const etapasPorTipo = {
       'Proyecto contratado': ['Obra Negociada', 'Pre-Inicio', 'Inicio'],
-      'Proyecto de inversion': ['Pre-Plan', 'Plan', 'Proyecto'],
+      'Proyecto de inversión': ['Pre-Plan', 'Plan', 'Proyecto'],
     };
     return (
       <>
@@ -1568,7 +1710,7 @@ export default function SidebarFiltros({ obras = [] }) {
           onToggle={() => toggleAccordion('Tipo de proyecto')}
         >
           <VStack align="stretch" spacing={2}>
-            {['Proyecto contratado', 'Proyecto de inversion'].map((tipo) => {
+            {['Proyecto contratado', 'Proyecto de inversión'].map((tipo) => {
               const etapas = etapasPorTipo[tipo] || [];
               const tipoSelected = selectedTiposProyecto.includes(tipo);
               const tipoActive = tipoSelected || etapas.some((etapa) => selectedEtapas.includes(etapa));
@@ -1672,92 +1814,238 @@ export default function SidebarFiltros({ obras = [] }) {
 
   // M2 superficie
   function renderSuperficieAccordion() {
-    const surfaceOptions = [
-      {
-        value: '0 - 1,000',
-        label: 'Compacta',
-        range: '0 - 1,000 m²',
-      },
-      {
-        value: '1,000 - 5,000',
-        label: 'Media',
-        range: '1,000 - 5,000 m²',
-      },
-      {
-        value: '5,000 - 10,000',
-        label: 'Grande',
-        range: '5,000 - 10,000 m²',
-      },
-      {
-        value: '> 10,000',
-        label: 'Macro',
-        range: 'Más de 10,000 m²',
-      },
-    ];
+    const SURFACE_MIN = surfaceBounds.min;
+    const SURFACE_MAX = surfaceBounds.max;
+    const surfaceSpan = Math.max(SURFACE_MAX - SURFACE_MIN, 1);
+    const minPercent = Math.max(
+      0,
+      Math.min(((resolvedSurfaceMin - SURFACE_MIN) / surfaceSpan) * 100, 100)
+    );
+    const maxPercent = Math.max(
+      0,
+      Math.min(((resolvedSurfaceMax - SURFACE_MIN) / surfaceSpan) * 100, 100)
+    );
+
+    const setMinFromSurface = (value) => {
+      const nextValue = clampNumber(
+        Number(value || 0),
+        SURFACE_MIN,
+        resolvedSurfaceMax
+      );
+      setSurfaceMin(nextValue);
+    };
+
+    const setMaxFromSurface = (value) => {
+      const nextValue = clampNumber(
+        Number(value || 0),
+        resolvedSurfaceMin,
+        SURFACE_MAX
+      );
+      setSurfaceMax(nextValue);
+    };
 
     return (
       <FilterAccordion
         title="M² superficie"
-        count={Array.isArray(selectedValues['M² superficie']) ? selectedValues['M² superficie'].length : 0}
+        count={
+          resolvedSurfaceMin !== SURFACE_MIN || resolvedSurfaceMax !== SURFACE_MAX ? 1 : 0
+        }
         expanded={!!openedAccordions['M² superficie']}
         onToggle={() => toggleAccordion('M² superficie')}
       >
-        <VStack align="stretch" spacing={2}>
-          {surfaceOptions.map((option) => {
-            const selected = (selectedValues['M² superficie'] || []).includes(option.value);
-            return (
+        <Box>
+          <SimpleGrid columns={2} spacing={2} mb={3}>
+            <Box>
+              <Text fontSize="11px" color={TEXT_SECONDARY} fontWeight="700" mb={1}>
+                Desde
+              </Text>
               <Flex
-                key={option.value}
                 align="center"
-                gap={2}
-                px={3}
-                py={2}
+                h="34px"
+                px={2}
+                border="1px solid var(--cl-border)"
                 borderRadius="8px"
-                border="1px solid"
-                borderColor={selected ? 'var(--cl-text-muted)' : 'var(--cl-border)'}
-                bg={selected ? 'var(--cl-surface-muted)' : 'var(--cl-surface)'}
-                boxShadow={selected ? 'inset 0 0 0 1px var(--cl-border)' : 'none'}
-                color={TEXT_PRIMARY}
-                cursor="pointer"
-                transition="all 180ms ease"
-                _hover={{
-                  borderColor: 'var(--cl-text-muted)',
-                  bg: 'var(--cl-surface-muted)',
-                }}
-                onClick={() => {
-                  setSelectedValues((prev) => {
-                    const current = prev['M² superficie'] || [];
-                    return {
-                      ...prev,
-                      'M² superficie': current.includes(option.value)
-                        ? current.filter((item) => item !== option.value)
-                        : [...current, option.value],
-                    };
-                  });
-                }}
+                bg="var(--cl-input-bg)"
               >
-                <input
-                  type="checkbox"
-                  checked={selected}
-                  readOnly
+                <Text fontSize="12px" color={TEXT_SECONDARY} mr={1}>m²</Text>
+                  <input
+                  type="number"
+                  min={SURFACE_MIN}
+                  max={resolvedSurfaceMax}
+                  value={Math.round(resolvedSurfaceMin)}
+                  onChange={(event) => setMinFromSurface(event.target.value)}
                   style={{
-                    accentColor: ACCENT_GRAY,
-                    width: 13,
-                    height: 13,
+                    width: '100%',
+                    border: 0,
+                    outline: 'none',
+                    background: 'transparent',
+                    color: 'var(--cl-text)',
+                    fontSize: '12px',
+                    fontWeight: 700,
                   }}
                 />
-                <Box flex={1} minW={0}>
-                  <Text fontSize="12px" fontWeight="700" color={TEXT_STRONG} lineHeight="1.2">
-                    {option.label}
-                  </Text>
-                  <Text fontSize="11px" color={TEXT_SECONDARY} mt={1} lineHeight="1.2">
-                    {option.range}
-                  </Text>
-                </Box>
               </Flex>
-            );
-          })}
-        </VStack>
+            </Box>
+            <Box>
+              <Text fontSize="11px" color={TEXT_SECONDARY} fontWeight="700" mb={1}>
+                Hasta
+              </Text>
+              <Flex
+                align="center"
+                h="34px"
+                px={2}
+                border="1px solid var(--cl-border)"
+                borderRadius="8px"
+                bg="var(--cl-input-bg)"
+              >
+                <Text fontSize="12px" color={TEXT_SECONDARY} mr={1}>m²</Text>
+                  <input
+                  type="number"
+                  min={resolvedSurfaceMin}
+                  max={SURFACE_MAX}
+                  value={Math.round(resolvedSurfaceMax)}
+                  onChange={(event) => setMaxFromSurface(event.target.value)}
+                  style={{
+                    width: '100%',
+                    border: 0,
+                    outline: 'none',
+                    background: 'transparent',
+                    color: 'var(--cl-text)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                  }}
+                />
+              </Flex>
+            </Box>
+          </SimpleGrid>
+
+          <Box position="relative" h="34px" mt={1}>
+            <Box
+              position="absolute"
+              left="0"
+              right="0"
+              top="16px"
+              h="4px"
+              bg="var(--cl-border)"
+              borderRadius="999px"
+              zIndex={0}
+              transform="none"
+            />
+            <Box
+              position="absolute"
+              top="16px"
+              h="4px"
+              borderRadius="2px"
+              bg={ACCENT_GRAY}
+              zIndex={1}
+              left={`${minPercent}%`}
+              width={`${Math.max(maxPercent - minPercent, 0)}%`}
+              transform="none"
+            />
+            <input
+              type="range"
+              min={SURFACE_MIN}
+              max={SURFACE_MAX}
+              step={1}
+              value={resolvedSurfaceMin}
+              onChange={(e) => {
+                let val = Number(e.target.value);
+                if (val > resolvedSurfaceMax) val = resolvedSurfaceMax;
+                setSurfaceMin(val);
+              }}
+              className="surface-min-slider"
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: '-4px',
+                width: '100%',
+                background: 'transparent',
+                pointerEvents: 'none',
+                appearance: 'none',
+                zIndex: 3,
+              }}
+            />
+            <input
+              type="range"
+              min={SURFACE_MIN}
+              max={SURFACE_MAX}
+              step={1}
+              value={resolvedSurfaceMax}
+              onChange={(e) => {
+                let val = Number(e.target.value);
+                if (val < resolvedSurfaceMin) val = resolvedSurfaceMin;
+                setSurfaceMax(val);
+              }}
+              className="surface-max-slider"
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: '-4px',
+                width: '100%',
+                background: 'transparent',
+                pointerEvents: 'none',
+                appearance: 'none',
+                zIndex: 4,
+              }}
+            />
+            <style>
+              {`
+              .surface-min-slider::-webkit-slider-thumb,
+              .surface-max-slider::-webkit-slider-thumb {
+                -webkit-appearance:none;
+                appearance:none;
+                width:16px;
+                height:16px;
+                border-radius:50%;
+                background:#4B5563;
+                border:2px solid white;
+                box-shadow:0 1px 4px rgba(0,0,0,.16);
+                cursor:pointer;
+                pointer-events:auto;
+              }
+              .surface-min-slider::-webkit-slider-runnable-track,
+              .surface-max-slider::-webkit-slider-runnable-track {
+                height:4px;
+                background:transparent;
+              }
+              .surface-min-slider::-moz-range-thumb,
+              .surface-max-slider::-moz-range-thumb {
+                width:16px;
+                height:16px;
+                border-radius:50%;
+                background:#4B5563;
+                border:2px solid white;
+                box-shadow:0 1px 4px rgba(0,0,0,.16);
+                cursor:pointer;
+                pointer-events:auto;
+              }
+              .surface-min-slider::-ms-thumb,
+              .surface-max-slider::-ms-thumb {
+                width:16px;
+                height:16px;
+                border-radius:50%;
+                background:#4B5563;
+                border:2px solid white;
+                box-shadow:0 1px 4px rgba(0,0,0,.16);
+                cursor:pointer;
+                pointer-events:auto;
+              }
+              .surface-min-slider,
+              .surface-max-slider {
+                outline: none;
+              }
+              `}
+            </style>
+          </Box>
+          <Flex align="center" justify="space-between" mt={1}>
+            <Text fontSize="11px" color="var(--cl-text-muted)">
+              {formatSurfaceNumber(resolvedSurfaceMin)} m²
+            </Text>
+            <Text fontSize="11px" color="var(--cl-text-muted)">
+              {formatSurfaceNumber(resolvedSurfaceMax)} m²
+            </Text>
+          </Flex>
+        </Box>
       </FilterAccordion>
     );
   }
@@ -1769,24 +2057,24 @@ export default function SidebarFiltros({ obras = [] }) {
     const investmentSpan = Math.max(INVESTMENT_MAX - INVESTMENT_MIN, 1);
     const minPercent = Math.max(
       0,
-      Math.min(((investmentMin - INVESTMENT_MIN) / investmentSpan) * 100, 100)
+      Math.min(((resolvedInvestmentMin - INVESTMENT_MIN) / investmentSpan) * 100, 100)
     );
     const maxPercent = Math.max(
       0,
-      Math.min(((investmentMax - INVESTMENT_MIN) / investmentSpan) * 100, 100)
+      Math.min(((resolvedInvestmentMax - INVESTMENT_MIN) / investmentSpan) * 100, 100)
     );
     const formatMillions = (value) => `${Math.round(value / 1000000)}M`;
     const setMinFromMillions = (value) => {
       const nextValue = Math.max(
         INVESTMENT_MIN,
-        Math.min(Number(value || 0) * 1000000, investmentMax)
+        Math.min(Number(value || 0) * 1000000, resolvedInvestmentMax)
       );
       setInvestmentMin(nextValue);
     };
     const setMaxFromMillions = (value) => {
       const nextValue = Math.min(
         INVESTMENT_MAX,
-        Math.max(Number(value || 0) * 1000000, investmentMin)
+        Math.max(Number(value || 0) * 1000000, resolvedInvestmentMin)
       );
       setInvestmentMax(nextValue);
     };
@@ -1794,7 +2082,12 @@ export default function SidebarFiltros({ obras = [] }) {
     return (
       <FilterAccordion
         title="Inversión"
-        count={1}
+        count={
+          resolvedInvestmentMin !== investmentBounds.min ||
+          resolvedInvestmentMax !== investmentBounds.max
+            ? 1
+            : 0
+        }
         expanded={!!openedAccordions['Inversión']}
         onToggle={() => toggleAccordion('Inversión')}
       >
@@ -1816,8 +2109,8 @@ export default function SidebarFiltros({ obras = [] }) {
                 <input
                   type="number"
                   min={Math.round(INVESTMENT_MIN / 1000000)}
-                  max={Math.round(investmentMax / 1000000)}
-                  value={Math.round(investmentMin / 1000000)}
+                  max={Math.round(resolvedInvestmentMax / 1000000)}
+                  value={Math.round(resolvedInvestmentMin / 1000000)}
                   onChange={(event) => setMinFromMillions(event.target.value)}
                   style={{
                     width: '100%',
@@ -1847,9 +2140,9 @@ export default function SidebarFiltros({ obras = [] }) {
                 <Text fontSize="12px" color={TEXT_SECONDARY} mr={1}>$</Text>
                 <input
                   type="number"
-                  min={Math.round(investmentMin / 1000000)}
+                  min={Math.round(resolvedInvestmentMin / 1000000)}
                   max={Math.round(INVESTMENT_MAX / 1000000)}
-                  value={Math.round(investmentMax / 1000000)}
+                  value={Math.round(resolvedInvestmentMax / 1000000)}
                   onChange={(event) => setMaxFromMillions(event.target.value)}
                   style={{
                     width: '100%',
@@ -1894,10 +2187,10 @@ export default function SidebarFiltros({ obras = [] }) {
               min={INVESTMENT_MIN}
               max={INVESTMENT_MAX}
               step={1000000}
-              value={investmentMin}
+              value={resolvedInvestmentMin}
               onChange={e => {
                 let val = Number(e.target.value);
-                if (val > investmentMax) val = investmentMax;
+                if (val > resolvedInvestmentMax) val = resolvedInvestmentMax;
                 setInvestmentMin(val);
               }}
               className="investment-min-slider"
@@ -1917,10 +2210,10 @@ export default function SidebarFiltros({ obras = [] }) {
               min={INVESTMENT_MIN}
               max={INVESTMENT_MAX}
               step={1000000}
-              value={investmentMax}
+              value={resolvedInvestmentMax}
               onChange={e => {
                 let val = Number(e.target.value);
-                if (val < investmentMin) val = investmentMin;
+                if (val < resolvedInvestmentMin) val = resolvedInvestmentMin;
                 setInvestmentMax(val);
               }}
               className="investment-max-slider"
@@ -1986,10 +2279,10 @@ export default function SidebarFiltros({ obras = [] }) {
           </Box>
           <Flex align="center" justify="space-between" mt={1}>
             <Text fontSize="11px" color="var(--cl-text-muted)">
-              ${formatMillions(investmentMin)}
+              ${formatMillions(resolvedInvestmentMin)}
             </Text>
             <Text fontSize="11px" color="var(--cl-text-muted)">
-              ${formatMillions(investmentMax)}
+              ${formatMillions(resolvedInvestmentMax)}
             </Text>
           </Flex>
         </Box>
@@ -2067,6 +2360,8 @@ export default function SidebarFiltros({ obras = [] }) {
               setSelectedTiposProyecto([]);
               setInvestmentMin(investmentBounds.min);
               setInvestmentMax(investmentBounds.max);
+              setSurfaceMin(surfaceBounds.min);
+              setSurfaceMax(surfaceBounds.max);
               setDateRangeStart('');
               setDateRangeEnd('');
               localStorage.removeItem('construleads-filtros');
@@ -2095,12 +2390,12 @@ export default function SidebarFiltros({ obras = [] }) {
             'Tipo desarrollo',
             [
               'Obra Nueva',
-              'Ampliacion',
-              'Rehabilitacion',
+              'Ampliación',
+              'Rehabilitación',
               'Mantenimiento',
-              'Remodelacion',
-              'Adecuacion',
-              'Terminacion',
+              'Remodelación',
+              'Adecuación',
+              'Terminación',
             ],
             selectedDesarrollos,
             setSelectedDesarrollos,
