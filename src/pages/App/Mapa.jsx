@@ -655,7 +655,7 @@ useEffect(() => {
 
     const apiKey =
       import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
-      'AIzaSyCIapQrNE18PGaxIYd6nRMpCoAlbYD4xkA';
+      'AIzaSyAEgrLrVP-Cy2cEPyXPvRcfioV87vX1Hls';
     if (!apiKey) return;
 
     const formatInvestment = (value) => {
