@@ -75,10 +75,12 @@ export default function DownloadPanel({ selectedCount = 0 }) {
         {isOpen && (
           <Box
             position="absolute"
-            top="44px"
+            bottom="44px"
             left={0}
-            right={0}
             zIndex={50}
+            w="max-content"
+            minW="220px"
+            maxW="min(280px, calc(100vw - 32px))"
             bg="var(--cl-surface)"
             border="1px solid var(--cl-border)"
             borderRadius="8px"
@@ -99,6 +101,7 @@ export default function DownloadPanel({ selectedCount = 0 }) {
                 color="var(--cl-text)"
                 fontSize="13px"
                 textAlign="left"
+                whiteSpace="nowrap"
                 transition="background 160ms ease"
                 _hover={{ bg: 'var(--cl-hover)' }}
                 onClick={() => {
@@ -108,7 +111,7 @@ export default function DownloadPanel({ selectedCount = 0 }) {
               >
                 <Text
                   as="span"
-                  noOfLines={1}
+                  whiteSpace="nowrap"
                   fontWeight={selectedOption.value === option.value ? '600' : '500'}
                 >
                   {option.label}

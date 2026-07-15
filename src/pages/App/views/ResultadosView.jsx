@@ -33,6 +33,25 @@ function parseTableDate(value) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+const tableDateFormatter = new Intl.DateTimeFormat('es-MX', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+});
+
+function formatTableDateDisplay(value) {
+  if (!value || value === '-') return '-';
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime())
+      ? '-'
+      : tableDateFormatter.format(value);
+  }
+
+  const parsed = parseTableDate(value);
+  return parsed ? tableDateFormatter.format(parsed) : String(value);
+}
+
 function getMonthGroupKey(value) {
   const date = parseTableDate(value);
   if (!date) return 'Sin fecha';
@@ -194,6 +213,15 @@ useEffect(() => {
         obra.subGenero ||
         '-',
 
+        tipoobra:
+        obra.tipoObra ||
+        obra.Tipo_Obra ||
+        obra.TIPO_OBRA ||
+        obra.tipo_obra ||
+        obra.TipoObra ||
+        obra.tipoobra ||
+        '-',
+
       inversionRaw:
         parseNumberValue(
           obra.inversion ||
@@ -262,35 +290,54 @@ useEffect(() => {
         '-',
 
       inicio:
-        obra.fechaInicio ||
-        obra.Fecha_Inicio ||
-        obra.FECHA_INICIO ||
-        obra.fecha_inicio ||
-        obra.FechaInicio ||
-        obra.fechainicio ||
-        '-',
+        formatTableDateDisplay(
+          obra.fechaInicioDate ||
+            obra.fechaInicioTime ||
+            obra.fechaInicio ||
+            obra.Fecha_Inicio ||
+            obra.FECHA_INICIO ||
+            obra.fecha_inicio ||
+            obra.FechaInicio ||
+            obra.fechainicio
+        ),
 
       fin:
-        obra.fechaTermino ||
-        obra.Fecha_Terminacion ||
-        obra.FECHA_TERMINACION ||
-        obra.fecha_terminacion ||
-        obra.FechaTerminacion ||
-        obra.fechaterminacion ||
-        obra.Fecha_Fin ||
-        obra.FECHA_FIN ||
-        obra.fecha_fin ||
-        '-',
+        formatTableDateDisplay(
+          obra.fechaTerminoDate ||
+            obra.fechaTerminoTime ||
+            obra.fechaTerminacionDate ||
+            obra.fechaFinDate ||
+            obra.fechaTermino ||
+            obra.fechaTerminacion ||
+            obra.fechaFin ||
+            obra.Fecha_Terminacion ||
+            obra.Fecha_Termino ||
+            obra.FECHA_TERMINACION ||
+            obra.FECHA_TERMINO ||
+            obra.fecha_terminacion ||
+            obra.fecha_termino ||
+            obra.FechaTerminacion ||
+            obra.FechaTermino ||
+            obra.fechaterminacion ||
+            obra.fechatermino ||
+            obra.Fecha_Fin ||
+            obra.FECHA_FIN ||
+            obra.fecha_fin ||
+            '-'
+        ),
 
       publicacion:
-        obra.fechaPublicacion ||
-        obra.Fecha_publicacion ||
-        obra.FECHA_PUBLICACION ||
-        obra.fecha_publicacion ||
-        obra.FechaPublicacion ||
-        obra.fechapublicacion ||
-        obra.Fecha_Publicacion ||
-        '-',
+        formatTableDateDisplay(
+          obra.fechaPublicacionDate ||
+            obra.fechaPublicacionTime ||
+            obra.fechaPublicacion ||
+            obra.Fecha_publicacion ||
+            obra.FECHA_PUBLICACION ||
+            obra.fecha_publicacion ||
+            obra.FechaPublicacion ||
+            obra.fechapublicacion ||
+            obra.Fecha_Publicacion
+        ),
 
       tipo:
         obra.tipoProyecto ||
@@ -463,6 +510,7 @@ useEffect(() => {
       'fin',
       'publicacion',
       'tipo',
+      'tipoobra',
       'compania',
     ];
 
@@ -836,7 +884,7 @@ useEffect(() => {
           <table
             className="resultados-table"
             style={{
-              minWidth: '2240px',
+              minWidth: '2380px',
               width: '100%',
               borderCollapse: 'collapse',
               fontSize: '14px',
@@ -850,6 +898,7 @@ useEffect(() => {
             <col style={{ width: '180px' }} />
             <col style={{ width: '110px' }} />
             <col style={{ width: '165px' }} />
+            <col style={{ width: '140px' }} />
             <col style={{ width: '120px' }} />
             <col style={{ width: '150px' }} />
             <col style={{ width: '130px' }} />
@@ -892,6 +941,9 @@ useEffect(() => {
               </th>
               <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: `1px solid ${ui.border}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {renderHeaderCell('subgenero', 'Subgénero')}
+              </th>
+              <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
+                {renderHeaderCell('tipoobra', 'Tipo de obra')}
               </th>
               <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
                 {renderHeaderCell('estado', 'Estado')}
@@ -960,6 +1012,7 @@ useEffect(() => {
                   <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.compania)}</td>
                   <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.genero)}</td>
                   <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.subgenero)}</td>
+                  <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.tipoobra)}</td>
                   <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.estado)}</td>
                   <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.inversion)}</td>
                   <td style={{ padding: '12px 10px', borderTop: `1px solid ${ui.border}`, fontSize: '13px', height: '2.6em' }}>{renderCellText(row.superficie)}</td>

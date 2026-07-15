@@ -9,6 +9,8 @@ export function parseObrasXml(xmlText) {
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '');
 
+  const normalizeTagName = (value = '') => normalizeText(value).toLowerCase();
+
   const normalizeDate = (value = '') => String(value).trim();
 
   const parseNumber = (value = 0) => {
@@ -46,8 +48,30 @@ export function parseObrasXml(xmlText) {
   };
 
   const getFirstText = (item, tag) => {
-    const node = item.getElementsByTagName(tag)[0];
-    return node?.textContent?.trim() || '';
+    const exactTags = Array.isArray(tag) ? tag : [tag];
+    const wantedTags = exactTags.map((entry) => normalizeTagName(entry));
+
+    for (let index = 0; index < exactTags.length; index += 1) {
+      const exactMatches = item.getElementsByTagName?.(exactTags[index]) || [];
+      for (let exactIndex = 0; exactIndex < exactMatches.length; exactIndex += 1) {
+        const node = exactMatches[exactIndex];
+        if (node?.textContent?.trim()) {
+          return node.textContent.trim();
+        }
+      }
+    }
+
+    const childNodes = item.getElementsByTagName('*');
+    for (let index = 0; index < childNodes.length; index += 1) {
+      const node = childNodes[index];
+      const nodeName = normalizeTagName(node.localName || node.nodeName);
+
+      if (wantedTags.includes(nodeName) && node.textContent?.trim()) {
+        return node.textContent.trim();
+      }
+    }
+
+    return '';
   };
 
   const getText = (item, tags) => {
@@ -97,9 +121,19 @@ export function parseObrasXml(xmlText) {
     const fechaTermino = getText(item, [
       'Fecha_Terminacion',
       'Fecha_Termino',
+      'Fecha_Terminación',
+      'Fecha_Término',
       'FECHA_TERMINACION',
       'FECHA_TERMINO',
-      'Fecha_Término',
+      'FECHA_TERMINACIÓN',
+      'FECHA_TÉRMINO',
+      'fecha_terminacion',
+      'fecha_termino',
+      'FechaTerminacion',
+      'FechaTermino',
+      'Fecha_Fin',
+      'FECHA_FIN',
+      'fecha_fin',
     ]);
 
     const inversion = parseNumber(inversionRaw);
@@ -128,12 +162,18 @@ export function parseObrasXml(xmlText) {
       fechaPublicacion: normalizeDate(fechaPublicacion),
       fechaInicio: normalizeDate(fechaInicio),
       fechaTermino: normalizeDate(fechaTermino),
+      fechaTerminacion: normalizeDate(fechaTermino),
+      fechaFin: normalizeDate(fechaTermino),
       fechaPublicacionDate,
       fechaInicioDate,
       fechaTerminoDate,
+      fechaTerminacionDate: fechaTerminoDate,
+      fechaFinDate: fechaTerminoDate,
       fechaPublicacionTime: fechaPublicacionDate?.getTime() || null,
       fechaInicioTime: fechaInicioDate?.getTime() || null,
       fechaTerminoTime: fechaTerminoDate?.getTime() || null,
+      fechaTerminacionTime: fechaTerminoDate?.getTime() || null,
+      fechaFinTime: fechaTerminoDate?.getTime() || null,
       lat,
       lng,
       hasValidCoordinates:
@@ -145,6 +185,21 @@ export function parseObrasXml(xmlText) {
       descripcion,
       compania,
     };
+  }
+
+  if (import.meta.env.DEV) {
+    const firstWithTermination = obras.find((obra) => obra.fechaTermino);
+    console.log('[parseObrasXml] Fecha de terminación parseada:', {
+      totalObras: obras.length,
+      obrasConFechaTermino: obras.filter((obra) => Boolean(obra.fechaTermino)).length,
+      ejemplo: firstWithTermination
+        ? {
+            clave: firstWithTermination.clave,
+            fechaTermino: firstWithTermination.fechaTermino,
+            fechaTerminoTime: firstWithTermination.fechaTerminoTime,
+          }
+        : null,
+    });
   }
 
   return obras;

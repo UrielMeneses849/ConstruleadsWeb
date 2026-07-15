@@ -22,18 +22,13 @@ function matchesTextList(value, list = []) {
   return list.some((item) => normalizeText(item) === normalizedValue);
 }
 
-function normalizeLegacyMoneyValue(value, fallback = null) {
-  const numeric = Number(value);
-
-  if (!Number.isFinite(numeric)) {
+function parseFilterNumber(value, fallback = null) {
+  if (value === null || value === undefined || value === '') {
     return fallback;
   }
 
-  if (numeric > 0 && numeric < 1000000) {
-    return numeric * 1000000;
-  }
-
-  return numeric;
+  const numeric = Number(String(value).replace(/,/g, '').trim());
+  return Number.isFinite(numeric) ? numeric : fallback;
 }
 
 function Mapa({
@@ -540,11 +535,11 @@ debugLog(
   );
 }
 
-      const investmentMinPesos = normalizeLegacyMoneyValue(
+      const investmentMinPesos = parseFilterNumber(
         filtrosActivos.investmentMin ?? filtrosActivos.inversionMin,
         0
       );
-      const investmentMaxPesos = normalizeLegacyMoneyValue(
+      const investmentMaxPesos = parseFilterNumber(
         filtrosActivos.investmentMax ?? filtrosActivos.inversionMax,
         null
       );
@@ -780,8 +775,8 @@ useEffect(() => {
         zoom: 5.8,
         mapTypeId: 'satellite',
         mapId: 'bimsa-construleads-map',
-        fullscreenControl: true,
-        mapTypeControl: true,
+        fullscreenControl: false,
+        mapTypeControl: false,
         streetViewControl: false,
       });
 

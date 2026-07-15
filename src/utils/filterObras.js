@@ -121,18 +121,13 @@ function normalizeText(value) {
     .trim();
 }
 
-function normalizeLegacyMoneyValue(value, fallback = null) {
-  const numeric = Number(value);
-
-  if (!Number.isFinite(numeric)) {
+function parseFilterNumber(value, fallback = null) {
+  if (value === null || value === undefined || value === '') {
     return fallback;
   }
 
-  if (numeric > 0 && numeric < 1000000) {
-    return numeric * 1000000;
-  }
-
-  return numeric;
+  const numeric = Number(String(value).replace(/,/g, '').trim());
+  return Number.isFinite(numeric) ? numeric : fallback;
 }
 
 function getNumericRangeFilterValue(filtros, primaryKeys = [], fallbackKeys = [], fallback = null) {
@@ -334,8 +329,8 @@ export function filterObrasByFilters(obras = [], filtros = {}) {
     }
   }
 
-  const investmentMinPesos = normalizeLegacyMoneyValue(filtros.investmentMin ?? filtros.inversionMin, 0);
-  const investmentMaxPesos = normalizeLegacyMoneyValue(filtros.investmentMax ?? filtros.inversionMax, null);
+  const investmentMinPesos = parseFilterNumber(filtros.investmentMin ?? filtros.inversionMin, 0);
+  const investmentMaxPesos = parseFilterNumber(filtros.investmentMax ?? filtros.inversionMax, null);
 
   const hasValidInvestmentRange =
     Number.isFinite(investmentMinPesos) &&

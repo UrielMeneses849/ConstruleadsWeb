@@ -93,7 +93,7 @@ function FilterAccordion({
 }
 
 function getDefaultAccordion() {
-  return { 'Fecha de consulta': true };
+  return { 'Tipo de fecha': true };
 }
 
 const TEXT_PRIMARY = 'var(--cl-text)';
@@ -193,40 +193,22 @@ function normalizeText(value) {
     .trim();
 }
 
-function normalizeMoneyValue(value) {
-  const numeric = Number(value);
-
-  if (!Number.isFinite(numeric)) {
-    return null;
-  }
-
-  return numeric;
-}
-
-function normalizeLegacyMoneyValue(value, fallback = null) {
-  const numeric = Number(value);
-
-  if (!Number.isFinite(numeric)) {
-    return fallback;
-  }
-
-  if (numeric > 0 && numeric < 1000000) {
-    return numeric * 1000000;
-  }
-
-  return numeric;
-}
-
-function formatMillions(value) {
-  return new Intl.NumberFormat('es-MX', {
-    maximumFractionDigits: 0,
-  }).format(Math.round((Number(value) || 0) / 1000000));
-}
-
 function formatSurfaceNumber(value) {
   return new Intl.NumberFormat('es-MX', {
     maximumFractionDigits: 0,
   }).format(Math.round(Number(value) || 0));
+}
+
+function formatInputNumber(value) {
+  return new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: 0,
+  }).format(Math.round(Number(value) || 0));
+}
+
+function parseFormattedNumber(value) {
+  const normalized = String(value || '').replace(/[^0-9.-]/g, '');
+  const numeric = Number(normalized);
+  return Number.isFinite(numeric) ? numeric : 0;
 }
 
 function clampNumber(value, min, max) {
@@ -245,6 +227,14 @@ function getSavedRangeValue(savedFiltersValue, fallback = null) {
   const numeric = Number(savedFiltersValue);
   return Number.isFinite(numeric) ? numeric : fallback;
 }
+
+const estadosPorRegion = {
+  Oeste: ['Jalisco', 'Colima', 'Michoacán', 'Nayarit'],
+  Noroeste: ['Baja California', 'Baja California Sur', 'Sonora', 'Sinaloa', 'Chihuahua', 'Durango'],
+  Centro: ['Ciudad de México', 'Estado de México', 'Hidalgo', 'Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],
+  Sureste: ['Guerrero', 'Oaxaca', 'Veracruz', 'Tabasco', 'Chiapas', 'Campeche', 'Yucatán', 'Quintana Roo'],
+  Noreste: ['Nuevo León', 'Coahuila', 'Tamaulipas', 'San Luis Potosí', 'Zacatecas', 'Aguascalientes']
+};
 
 export default function SidebarFiltros({ obras = [] }) {
   // Accordions state
@@ -341,16 +331,10 @@ export default function SidebarFiltros({ obras = [] }) {
 
   // Inversión dual-range slider states
   const [investmentMin, setInvestmentMin] = useState(
-    normalizeLegacyMoneyValue(
-      savedFilters.investmentMin,
-      0
-    )
+    getSavedRangeValue(savedFilters.investmentMin ?? savedFilters.inversionMin, null)
   );
   const [investmentMax, setInvestmentMax] = useState(
-    normalizeLegacyMoneyValue(
-      savedFilters.investmentMax,
-      null
-    )
+    getSavedRangeValue(savedFilters.investmentMax ?? savedFilters.inversionMax, null)
   );
 
   const hasLoadedFilters = useRef(true);
@@ -386,15 +370,7 @@ export default function SidebarFiltros({ obras = [] }) {
 
       return [...actuales, ...faltantes];
     });
-  }, [selectedRegiones]);
-
-  const estadosPorRegion = {
-    Oeste: ['Jalisco', 'Colima', 'Michoacán', 'Nayarit'],
-    Noroeste: ['Baja California', 'Baja California Sur', 'Sonora', 'Sinaloa', 'Chihuahua', 'Durango'],
-    Centro: ['Ciudad de México', 'Estado de México', 'Hidalgo', 'Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],
-    Sureste: ['Guerrero', 'Oaxaca', 'Veracruz', 'Tabasco', 'Chiapas', 'Campeche', 'Yucatán', 'Quintana Roo'],
-    Noreste: ['Nuevo León', 'Coahuila', 'Tamaulipas', 'San Luis Potosí', 'Zacatecas', 'Aguascalientes']
-  };
+  }, [selectedRegiones, estadosPorRegion]);
 
   function getRegionesForEstados(estados) {
     return Object.entries(estadosPorRegion)
@@ -504,7 +480,7 @@ export default function SidebarFiltros({ obras = [] }) {
 
   const filtros = [
     {
-      label: 'Fecha de consulta',
+      label: 'Tipo de fecha',
       options: [
         'Fecha de publicación',
         'Fecha de inicio probable',
@@ -600,7 +576,7 @@ export default function SidebarFiltros({ obras = [] }) {
       group: 'avanzados',
     },
     {
-      label: 'Inversión',
+      label: 'Inversión (MDP)',
       options: ['$0 - $1M', '$1M - $10M', '$10M - $100M', '$100M+'],
       group: 'avanzados',
     },
@@ -620,7 +596,7 @@ export default function SidebarFiltros({ obras = [] }) {
     : [];
 
   const fechaSeleccionada =
-    selectedValues['Fecha de consulta'] ||
+    selectedValues['Tipo de fecha'] ||
     'Fecha de publicación';
 
   const dateBounds = useMemo(() => {
@@ -655,12 +631,9 @@ export default function SidebarFiltros({ obras = [] }) {
       };
     }
 
-    const min = Math.floor(values[0] / 1000000) * 1000000;
-    const max = Math.ceil(values[values.length - 1] / 1000000) * 1000000;
-
     return {
-      min,
-      max: Math.max(max, min + 1000000),
+      min: Math.max(0, Math.floor(values[0])),
+      max: Math.max(1, Math.ceil(values[values.length - 1])),
     };
   }, [obras]);
 
@@ -697,14 +670,28 @@ export default function SidebarFiltros({ obras = [] }) {
       };
     }
 
-    const min = Math.max(0, Math.floor(values[0]));
-    const max = Math.max(min + 1, Math.ceil(values[values.length - 1]));
-
     return {
-      min,
-      max,
+      min: Math.max(0, Math.floor(values[0])),
+      max: Math.max(1, Math.ceil(values[values.length - 1])),
     };
   }, [obras]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+
+    console.log('[SidebarFiltros][bounds]', {
+      investmentBounds,
+      surfaceBounds,
+      sampleInvestment: (obras || [])
+        .map((obra) => Number(obra.inversion || 0))
+        .filter((value) => Number.isFinite(value) && value > 0)
+        .slice(0, 5),
+      sampleSurface: (obras || [])
+        .map((obra) => Number(obra.superficie || 0))
+        .filter((value) => Number.isFinite(value) && value > 0)
+        .slice(0, 5),
+    });
+  }, [obras, investmentBounds, surfaceBounds]);
 
   useEffect(() => {
     if (!investmentBounds.max) return;
@@ -799,11 +786,8 @@ export default function SidebarFiltros({ obras = [] }) {
       surfaceBounds.max
     )
   );
-
   const superficieMin = resolvedSurfaceMin;
   const superficieMax = resolvedSurfaceMax;
-  const inversionMin = resolvedInvestmentMin;
-  const inversionMax = resolvedInvestmentMax;
 
   useEffect(() => {
     try {
@@ -896,8 +880,8 @@ export default function SidebarFiltros({ obras = [] }) {
       hasta: dateRangeEnd,
     },
     fechaConsulta: fechaSeleccionada,
-    surfaceMin: resolvedSurfaceMin,
-    surfaceMax: resolvedSurfaceMax,
+    surfaceMin: superficieMin,
+    surfaceMax: superficieMax,
     superficie: [],
   };
 
@@ -1568,10 +1552,10 @@ export default function SidebarFiltros({ obras = [] }) {
     return (
       <>
         <FilterAccordion
-          title="Fecha de consulta"
-          count={selectedValues['Fecha de consulta'] ? 1 : 0}
-          expanded={!!openedAccordions['Fecha de consulta']}
-          onToggle={() => toggleAccordion('Fecha de consulta')}
+          title="Tipo de fecha"
+          count={selectedValues['Tipo de fecha'] ? 1 : 0}
+          expanded={!!openedAccordions['Tipo de fecha']}
+          onToggle={() => toggleAccordion('Tipo de fecha')}
         >
           <VStack align="stretch" gap={1}>
             {['Fecha de publicación', 'Fecha de inicio probable', 'Fecha de término probable'].map((option) => (
@@ -1591,7 +1575,7 @@ export default function SidebarFiltros({ obras = [] }) {
                 onClick={() => {
                   setSelectedValues((prev) => ({
                     ...prev,
-                    'Fecha de consulta': option,
+                    'Tipo de fecha': option,
                   }));
                   setDateRangeStart('');
                   setDateRangeEnd('');
@@ -1868,12 +1852,11 @@ export default function SidebarFiltros({ obras = [] }) {
                 bg="var(--cl-input-bg)"
               >
                 <Text fontSize="12px" color={TEXT_SECONDARY} mr={1}>m²</Text>
-                  <input
-                  type="number"
-                  min={SURFACE_MIN}
-                  max={resolvedSurfaceMax}
-                  value={Math.round(resolvedSurfaceMin)}
-                  onChange={(event) => setMinFromSurface(event.target.value)}
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={formatInputNumber(resolvedSurfaceMin)}
+                  onChange={(event) => setMinFromSurface(parseFormattedNumber(event.target.value))}
                   style={{
                     width: '100%',
                     border: 0,
@@ -1899,12 +1882,11 @@ export default function SidebarFiltros({ obras = [] }) {
                 bg="var(--cl-input-bg)"
               >
                 <Text fontSize="12px" color={TEXT_SECONDARY} mr={1}>m²</Text>
-                  <input
-                  type="number"
-                  min={resolvedSurfaceMin}
-                  max={SURFACE_MAX}
-                  value={Math.round(resolvedSurfaceMax)}
-                  onChange={(event) => setMaxFromSurface(event.target.value)}
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={formatInputNumber(resolvedSurfaceMax)}
+                  onChange={(event) => setMaxFromSurface(parseFormattedNumber(event.target.value))}
                   style={{
                     width: '100%',
                     border: 0,
@@ -2037,14 +2019,6 @@ export default function SidebarFiltros({ obras = [] }) {
               `}
             </style>
           </Box>
-          <Flex align="center" justify="space-between" mt={1}>
-            <Text fontSize="11px" color="var(--cl-text-muted)">
-              {formatSurfaceNumber(resolvedSurfaceMin)} m²
-            </Text>
-            <Text fontSize="11px" color="var(--cl-text-muted)">
-              {formatSurfaceNumber(resolvedSurfaceMax)} m²
-            </Text>
-          </Flex>
         </Box>
       </FilterAccordion>
     );
@@ -2081,7 +2055,7 @@ export default function SidebarFiltros({ obras = [] }) {
 
     return (
       <FilterAccordion
-        title="Inversión"
+        title="Inversión (MDP)"
         count={
           resolvedInvestmentMin !== investmentBounds.min ||
           resolvedInvestmentMax !== investmentBounds.max
@@ -2107,11 +2081,10 @@ export default function SidebarFiltros({ obras = [] }) {
               >
                 <Text fontSize="12px" color={TEXT_SECONDARY} mr={1}>$</Text>
                 <input
-                  type="number"
-                  min={Math.round(INVESTMENT_MIN / 1000000)}
-                  max={Math.round(resolvedInvestmentMax / 1000000)}
-                  value={Math.round(resolvedInvestmentMin / 1000000)}
-                  onChange={(event) => setMinFromMillions(event.target.value)}
+                  type="text"
+                  inputMode="numeric"
+                  value={formatInputNumber(resolvedInvestmentMin / 1000000)}
+                  onChange={(event) => setMinFromMillions(parseFormattedNumber(event.target.value))}
                   style={{
                     width: '100%',
                     border: 0,
@@ -2139,11 +2112,10 @@ export default function SidebarFiltros({ obras = [] }) {
               >
                 <Text fontSize="12px" color={TEXT_SECONDARY} mr={1}>$</Text>
                 <input
-                  type="number"
-                  min={Math.round(resolvedInvestmentMin / 1000000)}
-                  max={Math.round(INVESTMENT_MAX / 1000000)}
-                  value={Math.round(resolvedInvestmentMax / 1000000)}
-                  onChange={(event) => setMaxFromMillions(event.target.value)}
+                  type="text"
+                  inputMode="numeric"
+                  value={formatInputNumber(resolvedInvestmentMax / 1000000)}
+                  onChange={(event) => setMaxFromMillions(parseFormattedNumber(event.target.value))}
                   style={{
                     width: '100%',
                     border: 0,
@@ -2277,14 +2249,6 @@ export default function SidebarFiltros({ obras = [] }) {
               `}
             </style>
           </Box>
-          <Flex align="center" justify="space-between" mt={1}>
-            <Text fontSize="11px" color="var(--cl-text-muted)">
-              ${formatMillions(resolvedInvestmentMin)}
-            </Text>
-            <Text fontSize="11px" color="var(--cl-text-muted)">
-              ${formatMillions(resolvedInvestmentMax)}
-            </Text>
-          </Flex>
         </Box>
       </FilterAccordion>
     );
