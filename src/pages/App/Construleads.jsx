@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 
 import {
@@ -7,6 +7,7 @@ import {
   HStack,
   Image,
   Text,
+  useMediaQuery,
 } from '@chakra-ui/react';
 
 import {
@@ -24,6 +25,7 @@ import GraficasView from './views/GraficasView';
 import DownloadPanel from './DownloadPanel';
 import { obtenerObras } from '../../api/obras';
 import { parseObrasXml } from '../../utils/parseObrasXml';
+import { filterObrasByFilters } from '../../utils/filterObras';
 
 function getObraSelectionKey(obra) {
   return String(
@@ -61,6 +63,12 @@ function getInitials(name = '') {
 
 export default function Construleads() {
   const navigate = useNavigate();
+  const [useCompactScale] = useMediaQuery(
+    '(min-width: 1100px) and (max-width: 1366px) and (max-height: 900px)'
+  );
+  const [useMediumGraphScale] = useMediaQuery(
+    '(min-width: 1367px) and (max-width: 1600px) and (max-height: 1000px)'
+  );
   const isAuthenticated =
     localStorage.getItem(
       'cl_authenticated'
@@ -76,10 +84,19 @@ export default function Construleads() {
   const [filtros, setFiltros] = useState({});
   const [obras, setObras] = useState([]);
   const [loadingObras, setLoadingObras] = useState(true);
-  const [filteredObras, setFilteredObras] = useState([]);
+  const filteredObras = useMemo(
+    () => filterObrasByFilters(obras, filtros),
+    [obras, filtros]
+  );
   const [selectedResultObras, setSelectedResultObras] = useState([]);
   const [selectionResetToken, setSelectionResetToken] = useState(0);
   const [activeView, setActiveView] = useState('mapa');
+  const interfaceScale = useCompactScale
+    ? 0.8
+    : (useMediumGraphScale && activeView === 'graficas' ? 0.9 : 1);
+  const usesScaledCanvas = interfaceScale < 1;
+  const canvasSize = `${100 / interfaceScale}%`;
+  const canvasViewportHeight = `${100 / interfaceScale}vh`;
   const [colorMode, setColorMode] = useState(() =>
     localStorage.getItem('cl_color_mode') || 'light'
   );
@@ -123,26 +140,6 @@ export default function Construleads() {
   }, [colorMode]);
 
   useEffect(() => {
-    const syncFilters = () => {
-      setFiltros(window.construleadsFilters || {});
-    };
-
-    syncFilters();
-
-    window.addEventListener(
-      'construleads-filters-changed',
-      syncFilters
-    );
-
-    return () => {
-      window.removeEventListener(
-        'construleads-filters-changed',
-        syncFilters
-      );
-    };
-  }, []);
-
-  useEffect(() => {
     async function cargarObras() {
       try {
         setLoadingObras(true);
@@ -150,18 +147,6 @@ export default function Construleads() {
         const xml = await obtenerObras();
 
         const obrasParseadas = parseObrasXml(xml);
-
-                console.log(
-          'TOTAL OBRAS WS:',
-          obrasParseadas.length
-        );
-
-        console.log(
-          'PRIMERA OBRA:',
-          obrasParseadas[0]
-        );
-
-        console.log('OBRAS WS:', obrasParseadas.length);
 
         setObras(obrasParseadas);
       } catch (error) {
@@ -199,12 +184,6 @@ export default function Construleads() {
     return <Navigate to="/" replace />;
   }
 
-  console.log('CONSTRULEADS STATE =>', {
-    obras: obras.length,
-    filteredObras: filteredObras.length,
-    activeView,
-  });
-
   return (
     <Box
       bg={appColors.pageBg}
@@ -212,7 +191,16 @@ export default function Construleads() {
       p={3}
       color={appColors.text}
       transition="background 180ms ease, color 180ms ease"
+      w={usesScaledCanvas ? canvasSize : '100%'}
+      maxW="none"
+      minH={usesScaledCanvas ? canvasViewportHeight : '100vh'}
+      position={usesScaledCanvas ? 'fixed' : 'relative'}
+      top={usesScaledCanvas ? 0 : 'auto'}
+      left={usesScaledCanvas ? 0 : 'auto'}
+      overflow={usesScaledCanvas ? 'hidden' : 'visible'}
       style={{
+        transform: usesScaledCanvas ? `scale(${interfaceScale})` : 'none',
+        transformOrigin: 'top left',
         '--cl-page-bg': appColors.pageBg,
         '--cl-surface': appColors.surface,
         '--cl-surface-muted': appColors.surfaceMuted,
@@ -420,7 +408,9 @@ export default function Construleads() {
       </Flex>
       <Flex
         gap={3}
-        height="calc(100vh - 116px)"
+        height={usesScaledCanvas
+          ? `calc(${canvasViewportHeight} - 116px)`
+          : 'calc(100vh - 116px)'}
         minH="0"
         overflow="hidden"
         align="stretch"
@@ -458,7 +448,11 @@ export default function Construleads() {
               width="100%"
             >
               <Box flex="1" minW="0">
-                <PanelResumen obras={filteredObras.length ? filteredObras : obras} variant="map" />
+                <PanelResumen
+                  obras={filteredObras}
+                  filtros={filtros}
+                  variant="map"
+                />
               </Box>
               <Box flexShrink={0}>
                 <DownloadPanel selectedCount={selectedResultObras.length} />
@@ -467,16 +461,15 @@ export default function Construleads() {
           </Box>
 
           <Box flex="1" minH="0" position="relative" mt={activeView === 'resultados' ? 0 : 3}>
-            <Box display={activeView === 'mapa' ? 'block' : 'none'} h="100%" minH="0" pb="50px">
+            {activeView === 'mapa' && <Box h="100%" minH="0" pb="50px">
               <Mapa
                 obras={obras}
                 filtros={filtros}
                 isDarkMode={isDarkMode}
-                onFilteredData={setFilteredObras}
               />
-            </Box>
+            </Box>}
 
-            <Box display={activeView === 'resultados' ? 'block' : 'none'} h="100%" minH="0" pb="50px">
+            {activeView === 'resultados' && <Box h="100%" minH="0" pb="50px">
               <Resultados
                 filtros={filtros}
                 obras={filteredObras}
@@ -484,14 +477,14 @@ export default function Construleads() {
                 selectionResetToken={selectionResetToken}
                 onGoToMap={() => setActiveView('mapa')}
               />
-            </Box>
+            </Box>}
 
-            <Box display={activeView === 'graficas' ? 'block' : 'none'} h="100%" minH="0" pb="50px">
+            {activeView === 'graficas' && <Box h="100%" minH="0" pb="50px">
               <GraficasView
                 obras={obras}
                 filtros={filtros}
               />
-            </Box>
+            </Box>}
           </Box>
         </Box>
       </Flex>

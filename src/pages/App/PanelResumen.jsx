@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   Box,
   VStack,
@@ -7,9 +8,17 @@ import {
   Flex,
   useMediaQuery,
 } from '@chakra-ui/react';
+import { getSelectedDateField } from '../../utils/filterObras';
 
-export default function PanelResumen({ obras = [], variant = 'sidebar' }) {
+export default function PanelResumen({ obras = [], filtros = {}, variant = 'sidebar' }) {
 const [isCompactWidth] = useMediaQuery('(max-width: 1366px)');
+const selectedDateField = useMemo(
+  () => getSelectedDateField(filtros),
+  [filtros]
+);
+const selectedDateLabel = selectedDateField
+  .replace('Fecha de inicio probable', 'Fecha inicio')
+  .replace('Fecha de término probable', 'Fecha término');
 const numberFormatter = new Intl.NumberFormat('es-MX');
 const compactFormatter = new Intl.NumberFormat('es-MX', {
   maximumFractionDigits: 0,
@@ -33,12 +42,6 @@ obras.forEach((o) => {
 });
 
 const estadosConProyectos = Object.keys(estadosMap).length;
-
-const topEstados = Object.entries(estadosMap)
-  .sort((a, b) => b[1] - a[1])
-  .slice(0, 5);
-
-const maxValor = topEstados[0]?.[1] || 1;
 
 const metricasDinamicas = [
   {
@@ -121,6 +124,24 @@ if (variant === 'map') {
           </HStack>
         </Box>
       ))}
+      <Box
+        flex="1 1 200px"
+        minW="200px"
+        maxW="220px"
+        bg="var(--cl-surface)"
+        border="1px solid var(--cl-border)"
+        borderRadius="10px"
+        boxShadow="var(--cl-shadow)"
+        px={4}
+        py={2}
+      >
+        <Text fontSize="11px" color="var(--cl-text-muted)" fontWeight="600">
+          Criterio de fecha
+        </Text>
+        <Text fontSize="14px" color="var(--cl-text-strong)" fontWeight="700" noOfLines={1}>
+          {selectedDateLabel}
+        </Text>
+      </Box>
     </Flex>
   );
 }

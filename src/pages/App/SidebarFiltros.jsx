@@ -7,6 +7,7 @@ import {
   Flex,
   SimpleGrid,
 } from '@chakra-ui/react';
+import { filterObrasByFilters } from '../../utils/filterObras';
 
 // Accordion helper
 function FilterAccordion({
@@ -236,7 +237,7 @@ const estadosPorRegion = {
   Noreste: ['Nuevo León', 'Coahuila', 'Tamaulipas', 'San Luis Potosí', 'Zacatecas', 'Aguascalientes']
 };
 
-export default function SidebarFiltros({ obras = [] }) {
+export default function SidebarFiltros({ obras = [], onApplyFilters }) {
   // Accordions state
   const [openedAccordions, setOpenedAccordions] = useState(
     getDefaultAccordion()
@@ -257,9 +258,11 @@ export default function SidebarFiltros({ obras = [] }) {
 
   const savedFilters = (() => {
     try {
-      return JSON.parse(
-        localStorage.getItem('construleads-filtros') || '{}'
-      );
+      const storedFilters =
+        localStorage.getItem('construleads-filters') ||
+        localStorage.getItem('construleads-filtros') ||
+        '{}';
+      return JSON.parse(storedFilters);
     } catch {
       return {};
     }
@@ -618,8 +621,46 @@ export default function SidebarFiltros({ obras = [] }) {
     };
   }, [obras, fechaSeleccionada]);
 
+  const obrasDisponiblesParaInversion = useMemo(
+    () => filterObrasByFilters(obras, {
+      regiones: selectedRegiones,
+      estados: selectedEstados,
+      generos: selectedGeneros,
+      subgeneros: selectedSubgeneros,
+      sectores: selectedSectores,
+      etapas: selectedEtapas,
+      desarrollos: selectedDesarrollos,
+      tipoObra: selectedTipoObra,
+      tiposProyecto: selectedTiposProyecto,
+      periodoIndex,
+      fechaConsulta: fechaSeleccionada,
+      fechaInicio: dateRangeStart,
+      fechaFin: dateRangeEnd,
+      surfaceMin,
+      surfaceMax,
+    }),
+    [
+      obras,
+      selectedRegiones,
+      selectedEstados,
+      selectedGeneros,
+      selectedSubgeneros,
+      selectedSectores,
+      selectedEtapas,
+      selectedDesarrollos,
+      selectedTipoObra,
+      selectedTiposProyecto,
+      periodoIndex,
+      fechaSeleccionada,
+      dateRangeStart,
+      dateRangeEnd,
+      surfaceMin,
+      surfaceMax,
+    ]
+  );
+
   const investmentBounds = useMemo(() => {
-    const values = (obras || [])
+    const values = obrasDisponiblesParaInversion
       .map((obra) => Number(obra.inversion || 0))
       .filter((value) => Number.isFinite(value) && value > 0)
       .sort((a, b) => a - b);
@@ -635,7 +676,7 @@ export default function SidebarFiltros({ obras = [] }) {
       min: Math.max(0, Math.floor(values[0])),
       max: Math.max(1, Math.ceil(values[values.length - 1])),
     };
-  }, [obras]);
+  }, [obrasDisponiblesParaInversion]);
 
   useEffect(() => {
     if (!dateBounds.min || !dateBounds.max) return;
@@ -854,20 +895,29 @@ export default function SidebarFiltros({ obras = [] }) {
       ? 'Consultando proyectos por fecha probable de inicio dentro del rango seleccionado.'
       : 'Consultando proyectos por fecha probable de término dentro del rango seleccionado.';
 
+  const allRegionesCount = Object.keys(estadosPorRegion).length;
+  const allEstadosCount = Object.values(estadosPorRegion).flat().length;
+  const allGenerosCount = Object.keys(subgenerosPorGenero).length;
+  const allSubgenerosCount = Object.values(subgenerosPorGenero)
+    .reduce((total, subgeneros) => total + Object.keys(subgeneros).length, 0);
+  const allTiposObraCount = Object.values(subgenerosPorGenero)
+    .flatMap((subgeneros) => Object.values(subgeneros).flat()).length;
+  const omitWhenAllSelected = (selected, total) =>
+    selected.length === total ? [] : selected;
 
   const filtrosActivos = {
-    regiones: selectedRegiones,
-    estados: selectedEstados,
-    generos: selectedGeneros,
-    subgeneros: selectedSubgeneros,
-    sectores: selectedSectores,
-    etapas: selectedEtapas,
-    desarrollos: selectedDesarrollos,
-    tipoObra: selectedTipoObra,
-    tipoObraSeleccionados: selectedTipoObra,
-    tiposObra: selectedTipoObra,
-    tiposObraFiltro: selectedTipoObra,
-    tiposProyecto: selectedTiposProyecto,
+    regiones: omitWhenAllSelected(selectedRegiones, allRegionesCount),
+    estados: omitWhenAllSelected(selectedEstados, allEstadosCount),
+    generos: omitWhenAllSelected(selectedGeneros, allGenerosCount),
+    subgeneros: omitWhenAllSelected(selectedSubgeneros, allSubgenerosCount),
+    sectores: omitWhenAllSelected(selectedSectores, 2),
+    etapas: omitWhenAllSelected(selectedEtapas, 6),
+    desarrollos: omitWhenAllSelected(selectedDesarrollos, 7),
+    tipoObra: omitWhenAllSelected(selectedTipoObra, allTiposObraCount),
+    tipoObraSeleccionados: omitWhenAllSelected(selectedTipoObra, allTiposObraCount),
+    tiposObra: omitWhenAllSelected(selectedTipoObra, allTiposObraCount),
+    tiposObraFiltro: omitWhenAllSelected(selectedTipoObra, allTiposObraCount),
+    tiposProyecto: omitWhenAllSelected(selectedTiposProyecto, 2),
     investmentMin: resolvedInvestmentMin,
     investmentMax: resolvedInvestmentMax,
     periodoIndex,
@@ -901,10 +951,11 @@ export default function SidebarFiltros({ obras = [] }) {
     console.log('SUBGENEROS PUBLICADOS:', filtrosActivos.subgeneros);
     console.log('TIPOS OBRA FILTRO:', filtrosActivos.tiposObraFiltro);
     window.construleadsFilters = filtrosActivos;
+    const publishTimer = window.setTimeout(() => {
+      onApplyFilters?.(filtrosActivos);
+    }, 140);
 
-    window.dispatchEvent(
-      new Event('construleads-filters-changed')
-    );
+    return () => window.clearTimeout(publishTimer);
   }, [
     selectedRegiones,
     selectedEstados,
@@ -924,6 +975,7 @@ export default function SidebarFiltros({ obras = [] }) {
     resolvedSurfaceMax,
     selectedValues,
     rangeFiltersReady,
+    onApplyFilters,
   ]);
 
   // Search helpers for filtering options if > 10
@@ -1720,12 +1772,16 @@ export default function SidebarFiltros({ obras = [] }) {
                       readOnly
                       onClick={(e) => {
                         e.stopPropagation();
+                        setExpandedTipoProyecto(tipo);
                         const nextTiposProyecto = tipoActive
                           ? selectedTiposProyecto.filter((item) => item !== tipo)
                           : [...selectedTiposProyecto, tipo];
                         const nextEtapas = tipoActive
                           ? selectedEtapas.filter((etapa) => !etapas.includes(etapa))
-                          : selectedEtapas;
+                          : [
+                              ...selectedEtapas,
+                              ...etapas.filter((etapa) => !selectedEtapas.includes(etapa)),
+                            ];
 
                         setSelectedTiposProyecto(nextTiposProyecto);
                         setSelectedEtapas(nextEtapas);
@@ -2311,23 +2367,41 @@ export default function SidebarFiltros({ obras = [] }) {
             transition="all 180ms ease"
             _hover={{ color: TEXT_PRIMARY }}
             onClick={() => {
-              setSelectedValues({});
-              setSelectedRegiones([]);
-              setSelectedEstados([]);
-              setSelectedGeneros([]);
-              setSelectedSubgeneros([]);
+              const allRegiones = Object.keys(estadosPorRegion);
+              const allEstados = Object.values(estadosPorRegion).flat();
+              const allGeneros = Object.keys(subgenerosPorGenero);
+              const allSubgeneros = Object.values(subgenerosPorGenero)
+                .flatMap((subgeneros) => Object.keys(subgeneros));
+              const allTiposObra = Object.values(subgenerosPorGenero)
+                .flatMap((subgeneros) => Object.values(subgeneros).flat());
+
+              setSelectedValues({ 'Tipo de fecha': 'Fecha de publicación' });
+              setSelectedRegiones(allRegiones);
+              setSelectedEstados(allEstados);
+              setSelectedGeneros(allGeneros);
+              setSelectedSubgeneros(allSubgeneros);
               setSelectedDetalles([]);
-              setSelectedSectores([]);
-              setSelectedEtapas([]);
-              setSelectedDesarrollos([]);
-              setSelectedTipoObra([]);
-              setSelectedTiposProyecto([]);
+              setSelectedSectores(['Privado', 'Gobierno']);
+              setSelectedEtapas(['Obra Negociada', 'Pre-Inicio', 'Inicio', 'Pre-Plan', 'Plan', 'Proyecto']);
+              setSelectedDesarrollos([
+                'Obra Nueva',
+                'Ampliación',
+                'Rehabilitación',
+                'Mantenimiento',
+                'Remodelación',
+                'Adecuación',
+                'Terminación',
+              ]);
+              setSelectedTipoObra(allTiposObra);
+              setSelectedTiposProyecto(['Proyecto contratado', 'Proyecto de inversión']);
+              setExpandedTipoProyecto(null);
               setInvestmentMin(investmentBounds.min);
               setInvestmentMax(investmentBounds.max);
               setSurfaceMin(surfaceBounds.min);
               setSurfaceMax(surfaceBounds.max);
               setDateRangeStart('');
               setDateRangeEnd('');
+              localStorage.removeItem('construleads-filters');
               localStorage.removeItem('construleads-filtros');
               setOpenedAccordions(getDefaultAccordion());
               setSearchInputs({});

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Box,
   Button,
@@ -34,10 +34,8 @@ function parseFilterNumber(value, fallback = null) {
 function Mapa({
   obras = [],
   filtros = {},
-  isDarkMode = false,
   onFilteredData,
 }) {
-  const [externalFilterSignal, setExternalFilterSignal] = useState(0);
   const [selectedProject, setSelectedProject] = useState(null);
   const [filteredObras, setFilteredObras] = useState([]);
   const [isMapLoading, setIsMapLoading] = useState(true);
@@ -637,18 +635,7 @@ debugLog(
     debugLog('MAPA RECALCULANDO FILTROS');
     applyFilters();
 
-    window.addEventListener(
-      'construleads-filters-changed',
-      applyFilters
-    );
-
-    return () => {
-      window.removeEventListener(
-        'construleads-filters-changed',
-        applyFilters
-      );
-    };
-  }, [obras, filtros, externalFilterSignal]);
+  }, [obras, filtros]);
 
 useEffect(() => {
     let cancelled = false;
@@ -669,14 +656,6 @@ useEffect(() => {
 
       return `${Math.round(millions)} MDP`;
     };
-
-    const getGenreIcon = () => '•';
-
-    const getMarkerTheme = () => ({
-      color: '#FF6600',
-      softColor: '#FFF5EB',
-      borderColor: '#FF6600',
-    });
 
     let activeMarkerElement = null;
 
@@ -843,22 +822,17 @@ useEffect(() => {
       }
 
       const startedAt = performance.now();
-      if (markerCacheRef.current.size) {
-        const desiredKeys = new Set(
-          filteredObras.map((obra, index) => getObraMarkerKey(obra, index))
-        );
-
-        markerCacheRef.current.forEach((marker, key) => {
-          if (!desiredKeys.has(key)) {
-            if (marker?.setMap) marker.setMap(null);
-            markerCacheRef.current.delete(key);
-          }
-        });
-      }
-
       const markers = [];
       let builtMarkers = 0;
-      const chunkSize = filteredObras.length > 1000 ? 1500 : filteredObras.length;
+      let firstPaintCount = 0;
+      const chunkSize = filteredObras.length > 500 ? 320 : filteredObras.length;
+
+      // En la primera carga evitamos bloquear la vista hasta construir miles de
+      // marcadores. El primer bloque se muestra de inmediato y el resto se
+      // incorpora en segundo plano en el render final del cluster.
+      if (markerClusterRef.current) {
+        markerClusterRef.current.clearMarkers(true);
+      }
 
       for (let index = 0; index < filteredObras.length; index += 1) {
         if (markerUpdateTokenRef.current !== updateToken) return;
@@ -878,6 +852,13 @@ useEffect(() => {
         if (marker) markers.push(marker);
 
         if (chunkSize < filteredObras.length && index > 0 && index % chunkSize === 0) {
+          if (!firstPaintCount && markers.length && markerClusterRef.current) {
+            markerClusterRef.current.addMarkers(markers, true);
+            markerClusterRef.current.render();
+            firstPaintCount = markers.length;
+            setIsMapLoading(false);
+          }
+
           setMapLoadingMessage(
             `Pintando obras... ${Math.min(index, filteredObras.length).toLocaleString()} de ${filteredObras.length.toLocaleString()}`
           );
@@ -888,8 +869,10 @@ useEffect(() => {
       if (markerUpdateTokenRef.current !== updateToken) return;
 
       if (markerClusterRef.current) {
-        markerClusterRef.current.clearMarkers(true);
-        markerClusterRef.current.addMarkers(markers, true);
+        const pendingMarkers = firstPaintCount
+          ? markers.slice(firstPaintCount)
+          : markers;
+        markerClusterRef.current.addMarkers(pendingMarkers, true);
         markerClusterRef.current.render();
       }
 

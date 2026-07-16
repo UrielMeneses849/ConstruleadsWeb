@@ -15,8 +15,6 @@ import {
   filterObrasByFilters,
   formatGraphMetricSuffix,
   formatGraphMetricValue,
-  getMetricLabel,
-  getMetricValueFromObra,
   getMonthKeyFromObra,
   getMonthLabel,
   getSelectedDateField,
@@ -42,17 +40,34 @@ function normalizeText(value) {
   return String(value || '').trim();
 }
 
-function getMetricValue(obra, metric) {
-  return getMetricValueFromObra(obra, metric);
+function buildCrossFilterSources(obras, selections, selectedDateField) {
+  const fieldByKey = {
+    genero: 'genero', subgenero: 'subgenero', region: 'region',
+    estado: 'estado', compania: 'compania',
+  };
+  const keys = Object.keys(selections);
+  const sources = Object.fromEntries(keys.map((key) => [key, []]));
+  const selectedObras = [];
+
+  obras.forEach((obra) => {
+    const matches = {};
+    keys.forEach((key) => {
+      const selectedValue = selections[key];
+      const obraValue = key === 'month'
+        ? getMonthKeyFromObra(obra, selectedDateField)
+        : obra[fieldByKey[key]];
+      matches[key] = !selectedValue || normalizeText(obraValue) === normalizeText(selectedValue);
+    });
+    if (keys.every((key) => matches[key])) selectedObras.push(obra);
+    keys.forEach((excludedKey) => {
+      if (keys.every((key) => key === excludedKey || matches[key])) sources[excludedKey].push(obra);
+    });
+  });
+  return { selectedObras, chartSources: sources };
 }
 
 function getDisplayValue(value, metric) {
   return formatGraphMetricValue(value, metric);
-}
-
-function getPercentage(value, total) {
-  if (!total) return '0%';
-  return `${Math.round((value / total) * 100)}%`;
 }
 
 function MetricToggle({ value, onChange }) {
@@ -99,7 +114,7 @@ function MetricToggle({ value, onChange }) {
 
 function SectionHeader({ title, subtitle, rightSlot }) {
   return (
-    <Flex align="flex-start" justify="space-between" gap={3} mb={4}>
+    <Flex align="flex-start" justify="space-between" gap={3} mb={4} flexWrap="wrap">
       <Box minW="0">
         <HStack spacing={2} align="center">
           <Text
@@ -145,11 +160,13 @@ function ChartShell({ title, subtitle, rightSlot, children, footer }) {
       boxShadow="var(--cl-shadow)"
       position="relative"
       overflow="hidden"
+      h="100%"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '500px' }}
     >
       <Box h="3px" bg="#FF6600" />
-      <Box p={5}>
+      <Box p={5} h="calc(100% - 3px)" display="flex" flexDirection="column">
         <SectionHeader title={title} subtitle={subtitle} rightSlot={rightSlot} />
-        {children}
+        <Box flex="1" minH="0">{children}</Box>
         {footer ? <Box mt={4}>{footer}</Box> : null}
       </Box>
     </Box>
@@ -166,8 +183,10 @@ function BarListChart({
   onSelect,
   rightSlot,
   footerLabel,
+  visibleLimit = 6,
+  bottomAction,
 }) {
-  const visibleItems = items.slice(0, 6);
+  const visibleItems = items.slice(0, visibleLimit);
   const maxValue = visibleItems[0]?.value || 1;
 
   return (
@@ -187,7 +206,12 @@ function BarListChart({
         </Flex>
       )}
     >
-      <VStack align="stretch" spacing={3}>
+      <VStack
+        align="stretch"
+        spacing={3}
+        minH={visibleItems.length < visibleLimit ? "300px" : "auto"}
+        justify={visibleItems.length < visibleLimit ? "space-evenly" : "flex-start"}
+      >
         {visibleItems.length ? visibleItems.map((item, index) => {
           const isSelected = normalizeText(selectedKey) === normalizeText(item.key);
           const widthPercent = `${Math.max(8, Math.round((item.value / maxValue) * 100))}%`;
@@ -207,6 +231,7 @@ function BarListChart({
               border="1px solid"
               borderColor={isSelected ? 'rgba(255,102,0,.16)' : 'transparent'}
               transition="all 160ms ease"
+              cursor="pointer"
               _hover={{ bg: 'var(--cl-hover)' }}
               onClick={() => onSelect(item.key)}
             >
@@ -251,15 +276,6 @@ function BarListChart({
                 {getDisplayValue(item.value, metric)}
               </Text>
 
-              <Text
-                flex="0 0 48px"
-                textAlign="right"
-                fontSize="12px"
-                fontWeight="600"
-                color="var(--cl-text-muted)"
-              >
-                {getPercentage(item.value, totalValue)}
-              </Text>
             </Flex>
           );
         }) : (
@@ -275,6 +291,7 @@ function BarListChart({
           </Box>
         )}
       </VStack>
+      {bottomAction ? <Flex justify="center" mt={3}>{bottomAction}</Flex> : null}
     </ChartShell>
   );
 }
@@ -289,15 +306,45 @@ function RegionTreemap({
   onSelect,
   rightSlot,
 }) {
-  const visibleItems = items.slice(0, 6);
-  const tileSpans = [
-    { colSpan: 3, rowSpan: 4, tall: true },
-    { colSpan: 2, rowSpan: 4, tall: true },
-    { colSpan: 1, rowSpan: 2 },
-    { colSpan: 1, rowSpan: 2 },
-    { colSpan: 1, rowSpan: 2 },
-    { colSpan: 1, rowSpan: 2 },
-  ];
+  const visibleItems = items.slice(0, 5);
+  const weight = (item) => Math.max(1, Math.sqrt(Math.max(0, item?.value || 0)));
+  const rightItems = visibleItems.slice(2);
+  const mainColumns = `${weight(visibleItems[0])}fr ${weight(visibleItems[1])}fr ${weight({
+    value: rightItems.reduce((total, item) => total + item.value, 0),
+  })}fr`;
+
+  const renderTile = (item, index) => {
+    if (!item) return null;
+    const isSelected = normalizeText(selectedKey) === normalizeText(item.key);
+    return (
+      <Box
+        key={item.key}
+        minW="0"
+        h="100%"
+        overflow="hidden"
+        position="relative"
+        cursor="pointer"
+        border="2px solid"
+        borderColor={isSelected ? '#FF6600' : 'var(--cl-surface)'}
+        boxShadow={isSelected ? '0 8px 20px rgba(255,102,0,.18)' : 'none'}
+        transition="transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease"
+        _hover={{ transform: 'translateY(-1px)' }}
+        onClick={() => onSelect(item.key)}
+        bg={CHART_COLORS[index % CHART_COLORS.length]}
+      >
+        <Box position="absolute" inset="0" bg="linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.18))" />
+        <Flex position="absolute" inset="0" p={3} direction="column" justify="space-between" color="white">
+          <Text fontSize="14px" fontWeight="700" noOfLines={2} lineHeight="1.2">{item.label}</Text>
+          <Text fontSize="16px" fontWeight="700" lineHeight="1.15">
+            {getDisplayValue(item.value, metric)}
+            <Text as="span" ml={1} fontSize="11px" fontWeight="500">
+              {formatGraphMetricSuffix(metric) || 'proyectos'}
+            </Text>
+          </Text>
+        </Flex>
+      </Box>
+    );
+  };
 
   return (
     <ChartShell
@@ -317,59 +364,27 @@ function RegionTreemap({
     >
       {visibleItems.length ? (
         <Grid
-          templateColumns="repeat(6, minmax(0, 1fr))"
-          autoRows="58px"
-          gap={2}
-          gridAutoFlow="dense"
+          templateColumns={visibleItems.length >= 3 ? mainColumns : `repeat(${visibleItems.length}, 1fr)`}
+          h="290px"
+          gap="2px"
+          overflow="hidden"
+          borderRadius="4px"
         >
-          {visibleItems.map((item, index) => {
-            const isSelected = normalizeText(selectedKey) === normalizeText(item.key);
-            const span = tileSpans[index] || { colSpan: 1, rowSpan: 2 };
-            return (
-              <Box
-                key={item.key}
-                gridColumn={`span ${span.colSpan}`}
-                gridRow={`span ${span.rowSpan}`}
-                borderRadius="12px"
-                overflow="hidden"
-                position="relative"
-                cursor="pointer"
-                border="1px solid"
-                borderColor={isSelected ? 'rgba(255,102,0,.30)' : 'transparent'}
-                boxShadow={isSelected ? '0 8px 20px rgba(255,102,0,.10)' : 'none'}
-                transition="transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease"
-                _hover={{ transform: 'translateY(-1px)' }}
-                onClick={() => onSelect(item.key)}
-                bg={CHART_COLORS[index % CHART_COLORS.length]}
+          {renderTile(visibleItems[0], 0)}
+          {renderTile(visibleItems[1], 1)}
+          {visibleItems.length >= 3 && (
+            <Grid templateRows="1fr 1fr" minW="0" gap="2px">
+              {renderTile(visibleItems[2], 2)}
+              <Grid
+                templateColumns={visibleItems[4] ? `${weight(visibleItems[3])}fr ${weight(visibleItems[4])}fr` : '1fr'}
+                minW="0"
+                gap="2px"
               >
-                <Box
-                  position="absolute"
-                  inset="0"
-                  bg="linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.18))"
-                />
-                <Flex
-                  position="absolute"
-                  inset="0"
-                  p={3}
-                  direction="column"
-                  justify="space-between"
-                  color="white"
-                >
-                  <Text fontSize="13px" fontWeight="700" noOfLines={2} lineHeight="1.2">
-                    {item.label}
-                  </Text>
-                  <Box>
-                    <Text fontSize="20px" fontWeight="700" lineHeight="1">
-                      {getPercentage(item.value, totalValue)}
-                    </Text>
-                    <Text fontSize="11px" fontWeight="500" opacity={0.92}>
-                      {getDisplayValue(item.value, metric)}
-                    </Text>
-                  </Box>
-                </Flex>
-              </Box>
-            );
-          })}
+                {renderTile(visibleItems[3], 3)}
+                {renderTile(visibleItems[4], 4)}
+              </Grid>
+            </Grid>
+          )}
         </Grid>
       ) : (
         <Box
@@ -383,6 +398,9 @@ function RegionTreemap({
           Sin datos para mostrar.
         </Box>
       )}
+      <Text mt={3} fontSize="11px" color="var(--cl-text-muted)">
+        Haz clic en una región para filtrar todas las gráficas.
+      </Text>
     </ChartShell>
   );
 }
@@ -393,18 +411,33 @@ function LollipopChart({
   items,
   metric,
   totalValue,
+  selectedKey,
+  onSelect,
   rightSlot,
 }) {
   const visibleItems = items.slice(-12);
   const width = 1000;
-  const height = 260;
-  const topPad = 28;
-  const bottomPad = 44;
+  const height = 390;
+  const topPad = 34;
+  const bottomPad = 52;
   const minX = 48;
   const maxX = width - 24;
   const baselineY = height - bottomPad;
   const maxValue = Math.max(1, ...visibleItems.map((item) => item.value));
   const step = visibleItems.length > 1 ? (maxX - minX) / (visibleItems.length - 1) : 0;
+  const points = visibleItems.map((item, index) => ({
+    x: minX + index * step,
+    y: baselineY - ((item.value / maxValue) * (baselineY - topPad - 18)),
+  }));
+  const curvePath = points.reduce((path, point, index) => {
+    if (index === 0) return `M ${point.x} ${point.y}`;
+    const previous = points[index - 1];
+    const controlX = (previous.x + point.x) / 2;
+    return `${path} C ${controlX} ${previous.y}, ${controlX} ${point.y}, ${point.x} ${point.y}`;
+  }, '');
+  const areaPath = points.length
+    ? `${curvePath} L ${points[points.length - 1].x} ${baselineY} L ${points[0].x} ${baselineY} Z`
+    : '';
 
   return (
     <ChartShell
@@ -423,8 +456,14 @@ function LollipopChart({
       )}
     >
       {visibleItems.length ? (
-        <Box w="100%" overflowX="auto">
+        <Box w="100%" h="100%" minH="350px" overflowX="auto" display="flex" alignItems="center">
           <Box as="svg" viewBox={`0 0 ${width} ${height}`} w="100%" minW="760px" display="block">
+            <defs>
+              <linearGradient id="when-area-gradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#FF8A1F" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="#FF6600" stopOpacity="0.025" />
+              </linearGradient>
+            </defs>
             {[0, 1, 2, 3, 4].map((row) => {
               const y = topPad + (row * (baselineY - topPad)) / 4;
               return (
@@ -448,15 +487,20 @@ function LollipopChart({
               strokeWidth="1.2"
             />
 
+            <path d={areaPath} fill="url(#when-area-gradient)" pointerEvents="none" />
+
             {visibleItems.map((item, index) => {
-              const x = minX + index * step;
-              const valueHeight = ((item.value / maxValue) * (baselineY - topPad - 18));
-              const y = baselineY - valueHeight;
+              const { x, y } = points[index];
               const isPeak = item.value === maxValue;
               const color = CHART_COLORS[index % CHART_COLORS.length];
+              const isSelected = normalizeText(selectedKey) === normalizeText(item.key);
 
               return (
-                <g key={item.key}>
+                <g
+                  key={item.key}
+                  onClick={() => onSelect(item.key)}
+                  style={{ cursor: 'pointer', opacity: selectedKey && !isSelected ? 0.45 : 1 }}
+                >
                   <line
                     x1={x}
                     x2={x}
@@ -464,12 +508,12 @@ function LollipopChart({
                     y2={y}
                     stroke={color}
                     strokeWidth="2.2"
-                    opacity="0.95"
+                    opacity="0.48"
                   />
                   <circle
                     cx={x}
                     cy={y}
-                    r={isPeak ? 11 : 8}
+                    r={isSelected ? 12 : (isPeak ? 11 : 8)}
                     fill={color}
                     stroke="white"
                     strokeWidth="3"
@@ -497,6 +541,32 @@ function LollipopChart({
                 </g>
               );
             })}
+            <path
+              d={curvePath}
+              fill="none"
+              stroke="#FF8A1F"
+              strokeWidth="4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              pointerEvents="none"
+            />
+            {visibleItems.map((item, index) => {
+              const { x, y } = points[index];
+              const color = CHART_COLORS[index % CHART_COLORS.length];
+              const isSelected = normalizeText(selectedKey) === normalizeText(item.key);
+              return (
+                <circle
+                  key={`curve-point-${item.key}`}
+                  cx={x}
+                  cy={y}
+                  r={isSelected ? 8 : 5}
+                  fill={color}
+                  stroke="white"
+                  strokeWidth="2"
+                  pointerEvents="none"
+                />
+              );
+            })}
           </Box>
         </Box>
       ) : (
@@ -515,7 +585,8 @@ function LollipopChart({
   );
 }
 
-export default function GraficasView({ obras = [], filtros = {} }) {
+/* eslint-disable react-hooks/set-state-in-effect -- Copia histórica no renderizada; se conserva temporalmente para recuperar el archivo sobrescrito. */
+function LegacyGraficasView({ obras = [], filtros = {} }) {
   const filteredObras = useMemo(
     () => filterObrasByFilters(obras, filtros),
     [obras, filtros]
@@ -695,22 +766,6 @@ export default function GraficasView({ obras = [], filtros = {} }) {
                 proyectos
               </Text>
             </Box>
-
-            <Box
-              bg="var(--cl-surface)"
-              border="1px solid var(--cl-border)"
-              borderRadius="12px"
-              px={4}
-              py={3}
-              minW="200px"
-            >
-              <Text fontSize="11px" color="var(--cl-text-muted)" fontWeight="600">
-                Criterio de fecha
-              </Text>
-              <Text fontSize="14px" color="var(--cl-text-strong)" fontWeight="700" noOfLines={1}>
-                {selectedDateField}
-              </Text>
-            </Box>
           </HStack>
         </Flex>
 
@@ -788,6 +843,126 @@ export default function GraficasView({ obras = [], filtros = {} }) {
           </Box>
         </Grid>
       </Box>
+    </Box>
+  );
+}
+
+void LegacyGraficasView;
+/* eslint-enable react-hooks/set-state-in-effect */
+
+export default function GraficasView({ obras = [], filtros = {} }) {
+  const filteredObras = useMemo(() => filterObrasByFilters(obras, filtros), [obras, filtros]);
+  const selectedDateField = useMemo(() => getSelectedDateField(filtros), [filtros]);
+  const [generoMetric, setGeneroMetric] = useState('proyectos');
+  const [subGeneroMetric, setSubGeneroMetric] = useState('proyectos');
+  const [regionMetric, setRegionMetric] = useState('proyectos');
+  const [estadoMetric, setEstadoMetric] = useState('proyectos');
+  const [monthMetric, setMonthMetric] = useState('proyectos');
+  const [companiaMetric, setCompaniaMetric] = useState('proyectos');
+  const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
+  const [chartSelections, setChartSelections] = useState({
+    genero: '', subgenero: '', region: '', estado: '', month: '', compania: '',
+  });
+
+  const selectChartValue = (key, value) => setChartSelections((current) => ({
+    ...current,
+    [key]: normalizeText(current[key]) === normalizeText(value) ? '' : value,
+  }));
+  const clearChartSelections = () => setChartSelections({
+    genero: '', subgenero: '', region: '', estado: '', month: '', compania: '',
+  });
+  const selectionLabels = {
+    genero: 'Género', subgenero: 'Subgénero', region: 'Región',
+    estado: 'Estado', month: 'Mes', compania: 'Compañía',
+  };
+  const appliedSelections = Object.entries(chartSelections)
+    .filter(([, value]) => Boolean(value))
+    .map(([key, value]) => ({
+      key, value, label: selectionLabels[key],
+      displayValue: key === 'month' ? getMonthLabel(value) : value,
+    }));
+
+  const { selectedObras, chartSources } = useMemo(
+    () => buildCrossFilterSources(filteredObras, chartSelections, selectedDateField),
+    [filteredObras, chartSelections, selectedDateField]
+  );
+  const generoData = useMemo(() => aggregateObrasByMetric(chartSources.genero, 'genero', generoMetric).filter((i) => i.key !== 'Sin dato'), [chartSources.genero, generoMetric]);
+  const subGeneroData = useMemo(() => aggregateObrasByMetric(chartSources.subgenero, 'subgenero', subGeneroMetric).filter((i) => i.key !== 'Sin dato'), [chartSources.subgenero, subGeneroMetric]);
+  const regionData = useMemo(() => aggregateObrasByMetric(chartSources.region, 'region', regionMetric).filter((i) => i.key !== 'Sin dato'), [chartSources.region, regionMetric]);
+  const estadosData = useMemo(() => aggregateObrasByMetric(chartSources.estado, 'estado', estadoMetric).filter((i) => i.key !== 'Sin dato'), [chartSources.estado, estadoMetric]);
+  const monthData = useMemo(() => aggregateObrasByMetric(
+    chartSources.month,
+    (obra) => getMonthKeyFromObra(obra, selectedDateField),
+    monthMetric
+  ).filter((i) => i.key !== 'Sin dato').sort((a, b) => {
+    if (a.key === 'Sin fecha') return 1;
+    if (b.key === 'Sin fecha') return -1;
+    return String(a.key).localeCompare(String(b.key));
+  }), [chartSources.month, monthMetric, selectedDateField]);
+  const companiaData = useMemo(() => aggregateObrasByMetric(chartSources.compania, 'compania', companiaMetric).filter((i) => i.key !== 'Sin dato'), [chartSources.compania, companiaMetric]);
+  const totalProyectos = selectedObras.length;
+
+  const sumValues = (items) => items.reduce((total, item) => total + item.value, 0);
+
+  return (
+    <Box flex="1" minH="0" h="100%" overflowY="auto" overflowX="hidden" pb={{ base: '95px', lg: '72px' }} pr={2}>
+      <Box px={2} pt={2} pb={2}>
+        <Flex align="flex-start" justify="space-between" gap={4} mb={3} wrap="wrap">
+          <Box minW="0">
+            <Text fontSize={{ base: '22px', xl: '26px' }} fontWeight="700" color="var(--cl-text-strong)" lineHeight="1.1">Gráficas</Text>
+            <Text mt={1} fontSize="13px" color="var(--cl-text-muted)" lineHeight="1.2">
+              Resumen visual de proyectos por género, región, fecha y compañía.
+            </Text>
+          </Box>
+          <Box bg="var(--cl-surface)" border="1px solid var(--cl-border)" borderRadius="12px" px={4} py={3} minW="160px">
+            <Text fontSize="11px" color="var(--cl-text-muted)" fontWeight="600">Selección actual</Text>
+            <HStack spacing={1.5} align="baseline">
+              <Text fontSize="22px" fontWeight="400" color="var(--cl-text-strong)" lineHeight="1.1">{totalProyectos}</Text>
+              <Text fontSize="12px" fontWeight="400" color="var(--cl-text-muted)">proyectos</Text>
+            </HStack>
+          </Box>
+        </Flex>
+
+        <Flex h="38px" mb={4} gap={2} align="center" flexWrap="nowrap" overflowX="auto" overflowY="hidden" visibility={appliedSelections.length ? 'visible' : 'hidden'}>
+          {appliedSelections.map((selection) => (
+            <HStack key={selection.key} spacing={1} px={3} py={1.5} flexShrink={0} borderRadius="999px" bg="rgba(255,102,0,.10)" border="1px solid rgba(255,102,0,.28)">
+              <Text fontSize="11px" color="var(--cl-text-muted)">{selection.label}:</Text>
+              <Text fontSize="11px" color="var(--cl-text-strong)" fontWeight="600">{selection.displayValue}</Text>
+              <Button minW="18px" h="18px" p={0} ml={1} border="none" bg="transparent" color="#FF6600" fontSize="15px" onClick={() => selectChartValue(selection.key, selection.value)}>×</Button>
+            </HStack>
+          ))}
+          <Button size="sm" h="30px" px={4} flexShrink={0} borderRadius="999px" bg="#FF6600" color="white" fontSize="12px" _hover={{ bg: '#E85D00' }} onClick={clearChartSelections}>Quitar selección</Button>
+        </Flex>
+
+        <Grid templateColumns={{ base: '1fr', xl: 'repeat(2, minmax(0, 1fr))' }} columnGap={4} rowGap={7} alignItems="stretch">
+          <BarListChart title="¿Qué género?" subtitle="Proyectos por género constructivo" items={generoData} metric={generoMetric} totalValue={sumValues(generoData)} selectedKey={chartSelections.genero} onSelect={(v) => selectChartValue('genero', v)} rightSlot={<MetricToggle value={generoMetric} onChange={setGeneroMetric} />} />
+          <BarListChart title="¿Qué subgénero?" subtitle={`Top subgéneros de ${chartSelections.genero || 'todas las obras'}`} items={subGeneroData} metric={subGeneroMetric} totalValue={sumValues(subGeneroData)} selectedKey={chartSelections.subgenero} onSelect={(v) => selectChartValue('subgenero', v)} rightSlot={<MetricToggle value={subGeneroMetric} onChange={setSubGeneroMetric} />} />
+          <RegionTreemap title="¿Dónde?" subtitle="Proyectos por región" items={regionData} metric={regionMetric} totalValue={sumValues(regionData)} selectedKey={chartSelections.region} onSelect={(v) => selectChartValue('region', v)} rightSlot={<MetricToggle value={regionMetric} onChange={setRegionMetric} />} />
+          <BarListChart title={chartSelections.region ? `Estados de la región ${chartSelections.region}` : 'Estados por región'} subtitle="Top estados por número de proyectos" items={estadosData} metric={estadoMetric} totalValue={sumValues(estadosData)} selectedKey={chartSelections.estado} onSelect={(v) => selectChartValue('estado', v)} rightSlot={<MetricToggle value={estadoMetric} onChange={setEstadoMetric} />} />
+          <Box minW="0"><LollipopChart title="¿Cuándo?" subtitle={`Distribución por ${selectedDateField.toLowerCase()}`} items={monthData} metric={monthMetric} totalValue={sumValues(monthData)} selectedKey={chartSelections.month} onSelect={(v) => selectChartValue('month', v)} rightSlot={<MetricToggle value={monthMetric} onChange={setMonthMetric} />} /></Box>
+          <Box minW="0"><BarListChart title="¿Compañía?" subtitle="Top compañías por proyectos" items={companiaData} metric={companiaMetric} totalValue={sumValues(companiaData)} selectedKey={chartSelections.compania} onSelect={(v) => selectChartValue('compania', v)} rightSlot={<MetricToggle value={companiaMetric} onChange={setCompaniaMetric} />} visibleLimit={5} bottomAction={companiaData.length > 5 ? <Button size="sm" variant="ghost" color="#FF6600" fontSize="12px" cursor="pointer" onClick={() => setIsCompanyModalOpen(true)}>Ver todas las compañías</Button> : null} /></Box>
+        </Grid>
+      </Box>
+
+      {isCompanyModalOpen && (
+        <Flex position="fixed" inset="0" zIndex={100} bg="rgba(0,0,0,.68)" align="center" justify="center" p={6} onClick={() => setIsCompanyModalOpen(false)}>
+          <Box w="min(760px, 100%)" maxH="82vh" bg="var(--cl-surface)" border="1px solid var(--cl-border)" borderRadius="16px" boxShadow="0 24px 70px rgba(0,0,0,.35)" overflow="hidden" onClick={(e) => e.stopPropagation()}>
+            <Flex px={5} py={4} align="center" justify="space-between" borderBottom="1px solid var(--cl-border)">
+              <Box><Text fontSize="20px" fontWeight="700" color="var(--cl-text-strong)">Todas las compañías</Text><Text fontSize="12px" color="var(--cl-text-muted)">{companiaData.length} compañías en la selección actual</Text></Box>
+              <Button minW="34px" h="34px" p={0} borderRadius="full" bg="var(--cl-input-bg)" onClick={() => setIsCompanyModalOpen(false)}>×</Button>
+            </Flex>
+            <VStack align="stretch" spacing={1} p={4} maxH="calc(82vh - 86px)" overflowY="auto">
+              {companiaData.map((item, index) => {
+                const selected = normalizeText(chartSelections.compania) === normalizeText(item.key);
+                return <Flex key={item.key} as="button" type="button" w="100%" align="center" justify="space-between" gap={4} px={4} py={3} borderRadius="10px" border="1px solid" borderColor={selected ? 'rgba(255,102,0,.35)' : 'transparent'} bg={selected ? 'rgba(255,102,0,.08)' : 'transparent'} color="var(--cl-text-strong)" cursor="pointer" _hover={{ bg: 'var(--cl-hover)' }} onClick={() => { selectChartValue('compania', item.key); setIsCompanyModalOpen(false); }}>
+                  <HStack minW="0" spacing={3}><Box w="8px" h="8px" borderRadius="full" bg={CHART_COLORS[index % CHART_COLORS.length]} /><Text fontSize="13px" fontWeight="600" textAlign="left" noOfLines={2}>{item.label}</Text></HStack>
+                  <Text flexShrink={0} fontSize="13px" fontWeight="700">{getDisplayValue(item.value, companiaMetric)} {formatGraphMetricSuffix(companiaMetric)}</Text>
+                </Flex>;
+              })}
+            </VStack>
+          </Box>
+        </Flex>
+      )}
     </Box>
   );
 }
