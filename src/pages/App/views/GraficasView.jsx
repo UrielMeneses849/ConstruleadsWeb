@@ -27,13 +27,13 @@ const METRIC_OPTIONS = [
 ];
 
 const CHART_COLORS = [
-  '#17365E',
-  '#FF6600',
-  '#4F83F1',
-  '#2FB073',
-  '#9B6BEE',
-  '#12B5B5',
+  '#FF653F',
+  '#FF8A70',
+  '#4B5563',
+  '#6B7280',
   '#94A3B8',
+  '#B8BEC7',
+  '#D1D5DB',
 ];
 
 function normalizeText(value) {
@@ -163,7 +163,7 @@ function ChartShell({ title, subtitle, rightSlot, children, footer }) {
       h="100%"
       style={{ contentVisibility: 'auto', containIntrinsicSize: '500px' }}
     >
-      <Box h="3px" bg="#FF6600" />
+      <Box h="3px" bg="#FF653F" />
       <Box p={5} h="calc(100% - 3px)" display="flex" flexDirection="column">
         <SectionHeader title={title} subtitle={subtitle} rightSlot={rightSlot} />
         <Box flex="1" minH="0">{children}</Box>
@@ -296,6 +296,90 @@ function BarListChart({
   );
 }
 
+function PieChart({ title, subtitle, items, metric, totalValue, selectedKey, onSelect, rightSlot }) {
+  const visibleItems = items.slice(0, 6);
+  const chartTotal = Math.max(1, visibleItems.reduce((total, item) => total + item.value, 0));
+  const polarPoint = (angle, radius = 92) => {
+    const radians = ((angle - 90) * Math.PI) / 180;
+    return { x: 115 + radius * Math.cos(radians), y: 115 + radius * Math.sin(radians) };
+  };
+
+  return (
+    <ChartShell
+      title={title}
+      subtitle={subtitle}
+      rightSlot={rightSlot}
+      footer={<Flex justify="space-between" align="center" pt={3} borderTop="1px solid var(--cl-border)"><Text fontSize="12px" fontWeight="600" color="var(--cl-text-muted)">Total</Text><Text fontSize="14px" fontWeight="700" color="var(--cl-text-strong)">{getDisplayValue(totalValue, metric)} {formatGraphMetricSuffix(metric)}</Text></Flex>}
+    >
+      {visibleItems.length ? (
+        <Flex minH="300px" align="center" justify="center" gap={{ base: 4, xl: 8 }} wrap="wrap">
+          <Box as="svg" viewBox="0 0 230 230" w="230px" h="230px" flexShrink={0}>
+            {visibleItems.map((item, index) => {
+              const previousValue = visibleItems.slice(0, index).reduce((total, previous) => total + previous.value, 0);
+              const startAngle = (previousValue / chartTotal) * 360;
+              const endAngle = ((previousValue + item.value) / chartTotal) * 360;
+              const start = polarPoint(startAngle);
+              const end = polarPoint(endAngle);
+              const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+              const isSelected = normalizeText(selectedKey) === normalizeText(item.key);
+              const path = visibleItems.length === 1 ? null : `M 115 115 L ${start.x} ${start.y} A 92 92 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
+              return <g key={item.key} cursor="pointer" opacity={selectedKey && !isSelected ? 0.35 : 1} transform={isSelected ? 'translate(0 -2)' : undefined} onClick={() => onSelect(item.key)}>{path ? <path d={path} fill={CHART_COLORS[index % CHART_COLORS.length]} stroke="var(--cl-surface)" strokeWidth="3" /> : <circle cx="115" cy="115" r="92" fill={CHART_COLORS[0]} />}</g>;
+            })}
+            <circle cx="115" cy="115" r="50" fill="var(--cl-surface)" />
+          </Box>
+          <VStack flex="1" minW="220px" align="stretch" spacing={1.5}>
+            {visibleItems.map((item, index) => {
+              const isSelected = normalizeText(selectedKey) === normalizeText(item.key);
+              return <Flex key={item.key} as="button" type="button" align="center" gap={2.5} px={3} py={2} borderRadius="10px" cursor="pointer" bg={isSelected ? 'rgba(255,102,0,.08)' : 'transparent'} _hover={{ bg: 'var(--cl-hover)' }} onClick={() => onSelect(item.key)}><Box w="20px" h="5px" borderRadius="full" bg={CHART_COLORS[index % CHART_COLORS.length]} /><Text flex="1" noOfLines={1} textAlign="left" fontSize="12px" fontWeight="600" color="var(--cl-text-strong)">{item.label}</Text><Text fontSize="12px" fontWeight="700" color="var(--cl-text-strong)">{getDisplayValue(item.value, metric)}</Text></Flex>;
+            })}
+          </VStack>
+        </Flex>
+      ) : <Box border="1px dashed var(--cl-border)" borderRadius="12px" px={4} py={6} color="var(--cl-text-muted)" fontSize="13px">Sin datos para mostrar.</Box>}
+    </ChartShell>
+  );
+}
+
+function CompanyMarkerChart({ title, subtitle, items, metric, totalValue, selectedKey, onSelect, rightSlot, visibleLimit = 5, bottomAction }) {
+  const visibleItems = items.slice(0, visibleLimit);
+  const maxValue = Math.max(1, ...visibleItems.map((item) => item.value));
+  return (
+    <ChartShell title={title} subtitle={subtitle} rightSlot={rightSlot} footer={<Flex justify="space-between" align="center" pt={3} borderTop="1px solid var(--cl-border)"><Text fontSize="12px" fontWeight="600" color="var(--cl-text-muted)">Total</Text><Text fontSize="14px" fontWeight="700" color="var(--cl-text-strong)">{getDisplayValue(totalValue, metric)} {formatGraphMetricSuffix(metric)}</Text></Flex>}>
+      {visibleItems.length ? <Flex minH="300px" align="stretch" justify="center" gap={2} pt={4}>
+          {visibleItems.map((item) => {
+            const isSelected = normalizeText(selectedKey) === normalizeText(item.key);
+            const markerBottom = Math.max(8, (item.value / maxValue) * 88);
+            return <Flex key={item.key} as="button" type="button" flex="1" minW="0" direction="column" align="center" cursor="pointer" opacity={selectedKey && !isSelected ? 0.38 : 1} transition="opacity 160ms ease" onClick={() => onSelect(item.key)}><Text h="28px" fontSize="11px" fontWeight="700" color="var(--cl-text-strong)">{getDisplayValue(item.value, metric)}</Text><Box flex="1" w="100%" maxW="70px" minH="190px" position="relative" borderRadius="10px" bg={isSelected ? 'rgba(255,101,63,.06)' : 'transparent'} _hover={{ bg: 'var(--cl-hover)' }}><Box position="absolute" top="8px" bottom="8px" left="50%" w="4px" borderRadius="full" bg="rgba(148,163,184,.22)" transform="translateX(-50%)" /><Box position="absolute" left="50%" bottom={`${markerBottom}%`} w={isSelected ? '18px' : '14px'} h={isSelected ? '18px' : '14px'} borderRadius="full" bg="#FF653F" border="3px solid var(--cl-surface)" boxShadow={isSelected ? '0 0 0 4px rgba(255,101,63,.20)' : '0 2px 6px rgba(0,0,0,.18)'} transform="translate(-50%, 50%)" /><Box position="absolute" left="50%" bottom="8px" w="4px" h={`calc(${markerBottom}% - 8px)`} borderRadius="full" bg="#FF653F" transform="translateX(-50%)" opacity={0.72} /></Box><Text h="46px" mt={2} px={1} noOfLines={3} textAlign="center" fontSize="9px" fontWeight="600" lineHeight="1.15" color="var(--cl-text-muted)">{item.label}</Text></Flex>;
+          })}
+      </Flex> : <Box border="1px dashed var(--cl-border)" borderRadius="12px" px={4} py={6} color="var(--cl-text-muted)" fontSize="13px">Sin datos para mostrar.</Box>}
+      {bottomAction ? <Flex justify="center" mt={3}>{bottomAction}</Flex> : null}
+    </ChartShell>
+  );
+}
+
+function ColumnChart({ title, subtitle, items, metric, totalValue, selectedKey, onSelect, rightSlot }) {
+  const visibleItems = items.slice(0, 6);
+  const maxValue = Math.max(1, ...visibleItems.map((item) => item.value));
+
+  return (
+    <ChartShell
+      title={title}
+      subtitle={subtitle}
+      rightSlot={rightSlot}
+      footer={<Flex justify="space-between" align="center" pt={3} borderTop="1px solid var(--cl-border)"><Text fontSize="12px" fontWeight="600" color="var(--cl-text-muted)">Total</Text><Text fontSize="14px" fontWeight="700" color="var(--cl-text-strong)">{getDisplayValue(totalValue, metric)} {formatGraphMetricSuffix(metric)}</Text></Flex>}
+    >
+      {visibleItems.length ? (
+        <Flex minH="300px" h="100%" align="flex-end" gap={2} pt={5} borderBottom="1px solid rgba(148,163,184,.25)">
+          {visibleItems.map((item, index) => {
+            const isSelected = normalizeText(selectedKey) === normalizeText(item.key);
+            const height = `${Math.max(10, (item.value / maxValue) * 100)}%`;
+            return <Flex key={item.key} as="button" type="button" flex="1" minW="0" h="100%" direction="column" justify="flex-end" align="stretch" cursor="pointer" opacity={selectedKey && !isSelected ? 0.45 : 1} onClick={() => onSelect(item.key)}><Text mb={2} textAlign="center" fontSize="11px" fontWeight="700" color="var(--cl-text-strong)">{getDisplayValue(item.value, metric)}</Text><Box h={height} minH="30px" mx="auto" w="clamp(24px, 70%, 64px)" bg={CHART_COLORS[index % CHART_COLORS.length]} borderRadius="8px 8px 2px 2px" border={isSelected ? '3px solid #FFB27F' : '3px solid transparent'} transition="height 180ms ease, opacity 160ms ease" _hover={{ filter: 'brightness(1.08)' }} /><Text h="42px" mt={2} px={1} textAlign="center" fontSize="10px" fontWeight="600" lineHeight="1.2" noOfLines={2} color="var(--cl-text-muted)">{item.label}</Text></Flex>;
+          })}
+        </Flex>
+      ) : <Box border="1px dashed var(--cl-border)" borderRadius="12px" px={4} py={6} color="var(--cl-text-muted)" fontSize="13px">Sin datos para mostrar.</Box>}
+    </ChartShell>
+  );
+}
+
 function RegionTreemap({
   title,
   subtitle,
@@ -325,7 +409,7 @@ function RegionTreemap({
         position="relative"
         cursor="pointer"
         border="2px solid"
-        borderColor={isSelected ? '#FF6600' : 'var(--cl-surface)'}
+        borderColor={isSelected ? '#FF653F' : 'var(--cl-surface)'}
         boxShadow={isSelected ? '0 8px 20px rgba(255,102,0,.18)' : 'none'}
         transition="transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease"
         _hover={{ transform: 'translateY(-1px)' }}
@@ -461,7 +545,7 @@ function LollipopChart({
             <defs>
               <linearGradient id="when-area-gradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#FF8A1F" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#FF6600" stopOpacity="0.025" />
+                <stop offset="100%" stopColor="#FF653F" stopOpacity="0.025" />
               </linearGradient>
             </defs>
             {[0, 1, 2, 3, 4].map((row) => {
@@ -928,19 +1012,19 @@ export default function GraficasView({ obras = [], filtros = {} }) {
             <HStack key={selection.key} spacing={1} px={3} py={1.5} flexShrink={0} borderRadius="999px" bg="rgba(255,102,0,.10)" border="1px solid rgba(255,102,0,.28)">
               <Text fontSize="11px" color="var(--cl-text-muted)">{selection.label}:</Text>
               <Text fontSize="11px" color="var(--cl-text-strong)" fontWeight="600">{selection.displayValue}</Text>
-              <Button minW="18px" h="18px" p={0} ml={1} border="none" bg="transparent" color="#FF6600" fontSize="15px" onClick={() => selectChartValue(selection.key, selection.value)}>×</Button>
+              <Button minW="18px" h="18px" p={0} ml={1} border="none" bg="transparent" color="#FF653F" fontSize="15px" onClick={() => selectChartValue(selection.key, selection.value)}>×</Button>
             </HStack>
           ))}
-          <Button size="sm" h="30px" px={4} flexShrink={0} borderRadius="999px" bg="#FF6600" color="white" fontSize="12px" _hover={{ bg: '#E85D00' }} onClick={clearChartSelections}>Quitar selección</Button>
+          <Button size="sm" h="30px" px={4} flexShrink={0} borderRadius="999px" bg="#FF653F" color="white" fontSize="12px" _hover={{ bg: '#D94E2D' }} onClick={clearChartSelections}>Quitar selección</Button>
         </Flex>
 
         <Grid templateColumns={{ base: '1fr', xl: 'repeat(2, minmax(0, 1fr))' }} columnGap={4} rowGap={7} alignItems="stretch">
-          <BarListChart title="¿Qué género?" subtitle="Proyectos por género constructivo" items={generoData} metric={generoMetric} totalValue={sumValues(generoData)} selectedKey={chartSelections.genero} onSelect={(v) => selectChartValue('genero', v)} rightSlot={<MetricToggle value={generoMetric} onChange={setGeneroMetric} />} />
-          <BarListChart title="¿Qué subgénero?" subtitle={`Top subgéneros de ${chartSelections.genero || 'todas las obras'}`} items={subGeneroData} metric={subGeneroMetric} totalValue={sumValues(subGeneroData)} selectedKey={chartSelections.subgenero} onSelect={(v) => selectChartValue('subgenero', v)} rightSlot={<MetricToggle value={subGeneroMetric} onChange={setSubGeneroMetric} />} />
-          <RegionTreemap title="¿Dónde?" subtitle="Proyectos por región" items={regionData} metric={regionMetric} totalValue={sumValues(regionData)} selectedKey={chartSelections.region} onSelect={(v) => selectChartValue('region', v)} rightSlot={<MetricToggle value={regionMetric} onChange={setRegionMetric} />} />
+          <PieChart title="Género" subtitle="Distribución por género constructivo" items={generoData} metric={generoMetric} totalValue={sumValues(generoData)} selectedKey={chartSelections.genero} onSelect={(v) => selectChartValue('genero', v)} rightSlot={<MetricToggle value={generoMetric} onChange={setGeneroMetric} />} />
+          <ColumnChart title="Subgénero" subtitle={`Principales subgéneros de ${chartSelections.genero || 'todas las obras'}`} items={subGeneroData} metric={subGeneroMetric} totalValue={sumValues(subGeneroData)} selectedKey={chartSelections.subgenero} onSelect={(v) => selectChartValue('subgenero', v)} rightSlot={<MetricToggle value={subGeneroMetric} onChange={setSubGeneroMetric} />} />
+          <RegionTreemap title="Regiones" subtitle="Distribución de proyectos por región" items={regionData} metric={regionMetric} totalValue={sumValues(regionData)} selectedKey={chartSelections.region} onSelect={(v) => selectChartValue('region', v)} rightSlot={<MetricToggle value={regionMetric} onChange={setRegionMetric} />} />
           <BarListChart title={chartSelections.region ? `Estados de la región ${chartSelections.region}` : 'Estados por región'} subtitle="Top estados por número de proyectos" items={estadosData} metric={estadoMetric} totalValue={sumValues(estadosData)} selectedKey={chartSelections.estado} onSelect={(v) => selectChartValue('estado', v)} rightSlot={<MetricToggle value={estadoMetric} onChange={setEstadoMetric} />} />
-          <Box minW="0"><LollipopChart title="¿Cuándo?" subtitle={`Distribución por ${selectedDateField.toLowerCase()}`} items={monthData} metric={monthMetric} totalValue={sumValues(monthData)} selectedKey={chartSelections.month} onSelect={(v) => selectChartValue('month', v)} rightSlot={<MetricToggle value={monthMetric} onChange={setMonthMetric} />} /></Box>
-          <Box minW="0"><BarListChart title="¿Compañía?" subtitle="Top compañías por proyectos" items={companiaData} metric={companiaMetric} totalValue={sumValues(companiaData)} selectedKey={chartSelections.compania} onSelect={(v) => selectChartValue('compania', v)} rightSlot={<MetricToggle value={companiaMetric} onChange={setCompaniaMetric} />} visibleLimit={5} bottomAction={companiaData.length > 5 ? <Button size="sm" variant="ghost" color="#FF6600" fontSize="12px" cursor="pointer" onClick={() => setIsCompanyModalOpen(true)}>Ver todas las compañías</Button> : null} /></Box>
+          <Box minW="0"><LollipopChart title="Distribución temporal" subtitle={`Distribución por ${selectedDateField.toLowerCase()}`} items={monthData} metric={monthMetric} totalValue={sumValues(monthData)} selectedKey={chartSelections.month} onSelect={(v) => selectChartValue('month', v)} rightSlot={<MetricToggle value={monthMetric} onChange={setMonthMetric} />} /></Box>
+          <Box minW="0"><CompanyMarkerChart title="Compañías" subtitle="Principales compañías por proyectos" items={companiaData} metric={companiaMetric} totalValue={sumValues(companiaData)} selectedKey={chartSelections.compania} onSelect={(v) => selectChartValue('compania', v)} rightSlot={<MetricToggle value={companiaMetric} onChange={setCompaniaMetric} />} visibleLimit={5} bottomAction={companiaData.length > 5 ? <Button size="sm" variant="ghost" color="#FF653F" fontSize="12px" cursor="pointer" onClick={() => setIsCompanyModalOpen(true)}>Ver todas las compañías</Button> : null} /></Box>
         </Grid>
       </Box>
 

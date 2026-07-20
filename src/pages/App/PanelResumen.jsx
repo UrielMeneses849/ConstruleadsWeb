@@ -17,8 +17,8 @@ const selectedDateField = useMemo(
   [filtros]
 );
 const selectedDateLabel = selectedDateField
-  .replace('Fecha de inicio probable', 'Fecha inicio')
-  .replace('Fecha de término probable', 'Fecha término');
+  .replace('Fecha de inicio probable', 'Fecha de inicio')
+  .replace('Fecha de término probable', 'Fecha de término');
 const numberFormatter = new Intl.NumberFormat('es-MX');
 const compactFormatter = new Intl.NumberFormat('es-MX', {
   maximumFractionDigits: 0,
@@ -138,7 +138,7 @@ if (variant === 'map') {
         <Text fontSize="11px" color="var(--cl-text-muted)" fontWeight="600">
           Criterio de fecha
         </Text>
-        <Text fontSize="14px" color="var(--cl-text-strong)" fontWeight="700" noOfLines={1}>
+        <Text fontSize="14px" color="var(--cl-text-strong)" fontWeight="500" noOfLines={1}>
           {selectedDateLabel}
         </Text>
       </Box>

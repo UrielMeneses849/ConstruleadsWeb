@@ -68,7 +68,7 @@ export default function Perfil() {
         border: '#333333',
         text: '#F5F5F5',
         textMuted: '#A3A3A3',
-        accent: '#FF6600',
+        accent: '#FF653F',
         accentSoft: 'rgba(255,102,0,.12)',
       }
     : {
@@ -78,7 +78,7 @@ export default function Perfil() {
         border: '#ECECEC',
         text: '#202020',
         textMuted: '#6B7280',
-        accent: '#FF6600',
+        accent: '#FF653F',
         accentSoft: 'rgba(255,102,0,.10)',
       };
 

@@ -37,10 +37,13 @@ function Mapa({
   onFilteredData,
 }) {
   const [selectedProject, setSelectedProject] = useState(null);
+  const [popupPosition, setPopupPosition] = useState(null);
   const [filteredObras, setFilteredObras] = useState([]);
   const [isMapLoading, setIsMapLoading] = useState(true);
   const [mapLoadingMessage, setMapLoadingMessage] = useState('Cargando datos del mapa...');
   const mapRef = useRef(null);
+  const popupCardRef = useRef(null);
+  const selectedProjectRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const mapReadyRef = useRef(false);
   const markerClusterRef = useRef(null);
@@ -726,14 +729,37 @@ useEffect(() => {
         icon: markerIconRef.current,
       });
 
-      marker.addListener('click', () => {
-        setSelectedProject({
+      marker.addListener('click', (event) => {
+        const clickedPosition = event?.latLng || marker.getPosition();
+        const clickedLat = clickedPosition?.lat?.() ?? latNum;
+        const clickedLng = clickedPosition?.lng?.() ?? lonNum;
+        const project = {
           proyecto: obra.proyecto,
           inversion: formatInvestment(obra.inversion),
           superficie: `${Number(obra.superficie || 0).toLocaleString()} m²`,
           genero: obra.genero,
           estado: obra.estado,
           subgenero: obra.subgenero,
+          lat: clickedLat,
+          lng: clickedLng,
+        };
+        selectedProjectRef.current = project;
+        setPopupPosition(null);
+        setSelectedProject(project);
+        mapInstanceRef.current?.panTo(clickedPosition);
+        window.google.maps.event.addListenerOnce(mapInstanceRef.current, 'idle', () => {
+          requestAnimationFrame(() => {
+            if (!mapRef.current) return;
+            const cardWidth = popupCardRef.current?.offsetWidth || 300;
+            const cardHeight = popupCardRef.current?.offsetHeight || 238;
+            const pointX = mapRef.current.clientWidth / 2;
+            const pointY = mapRef.current.clientHeight / 2;
+            setPopupPosition({
+              left: pointX - cardWidth / 2,
+              top: pointY - cardHeight - 20,
+              pointerLeft: cardWidth / 2 - 8,
+            });
+          });
         });
       });
 
@@ -765,7 +791,7 @@ useEffect(() => {
         scale: 8,
         fillColor: '#FFF5EB',
         fillOpacity: 1,
-        strokeColor: '#FF6600',
+        strokeColor: '#FF653F',
         strokeWeight: 3,
       };
       markerClusterRef.current = new MarkerClusterer({
@@ -790,7 +816,9 @@ useEffect(() => {
           activeMarkerElement.style.zIndex = '1';
           activeMarkerElement = null;
         }
+        selectedProjectRef.current = null;
         setSelectedProject(null);
+        setPopupPosition(null);
       });
     };
 
@@ -974,7 +1002,7 @@ useEffect(() => {
                 py={5}
                 maxW="360px"
               >
-                <Spinner size="lg" color="#FF6600" thickness="4px" mb={4} />
+                <Spinner size="lg" color="#FF653F" thickness="4px" mb={4} />
                 <Text fontWeight="800" fontSize="16px" color="var(--cl-text-strong)" mb={1}>
                   Cargando datos
                 </Text>
@@ -987,46 +1015,77 @@ useEffect(() => {
 
           {selectedProject && (
             <Box
+              ref={popupCardRef}
               position="absolute"
-              top="16px"
-              left="16px"
+              top={`${popupPosition?.top || 0}px`}
+              left={`${popupPosition?.left || 0}px`}
+              visibility={popupPosition ? 'visible' : 'hidden'}
               bg="var(--cl-surface)"
-              borderRadius="12px"
-              p={4}
-              w="320px"
-              boxShadow="var(--cl-shadow)"
+              borderRadius="14px"
+              p={3.5}
+              w="300px"
+              boxShadow="0 16px 38px rgba(0,0,0,.28)"
               zIndex={20}
               border="1px solid var(--cl-border)"
               color="var(--cl-text)"
+              transition="left 100ms linear, top 100ms linear"
             >
+              <Box position="absolute" bottom="-8px" left={`${popupPosition?.pointerLeft || 24}px`} w="16px" h="16px" bg="var(--cl-surface)" borderRight="1px solid var(--cl-border)" borderBottom="1px solid var(--cl-border)" transform="rotate(45deg)" />
+              <Button
+                position="absolute"
+                top="10px"
+                right="10px"
+                minW="28px"
+                w="28px"
+                h="28px"
+                p={0}
+                borderRadius="full"
+                bg="var(--cl-surface-muted)"
+                color="var(--cl-text-muted)"
+                border="1px solid var(--cl-border)"
+                fontSize="18px"
+                fontWeight="400"
+                lineHeight="1"
+                aria-label="Cerrar ficha"
+                title="Cerrar"
+                _hover={{ bg: 'var(--cl-hover)', color: 'var(--cl-text-strong)' }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  selectedProjectRef.current = null;
+                  setSelectedProject(null);
+                  setPopupPosition(null);
+                }}
+              >
+                ×
+              </Button>
               <Box
                 display="inline-block"
                 bg="var(--cl-surface-muted)"
-                color="#FF6600"
+                color="var(--cl-text-muted)"
                 px={2}
                 py={1}
-                borderRadius="8px"
-                fontSize="12px"
-                fontWeight="700"
-                mb={3}
+                borderRadius="999px"
+                fontSize="10px"
+                fontWeight="400"
+                mb={2.5}
               >
                 {selectedProject.genero}
               </Box>
-              <Text fontSize="18px" fontWeight="800" mb={3} lineHeight="1.25" color="var(--cl-text-strong)">
+              <Text fontSize="16px" fontWeight="500" mb={3} lineHeight="1.3" color="var(--cl-text-strong)" noOfLines={2}>
                 {selectedProject.proyecto}
               </Text>
 
               <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2} mb={3}>
-                <Box bg="var(--cl-surface-muted)" p={2} borderRadius="8px" border="1px solid var(--cl-border)">
-                  <Text fontSize="11px" color="var(--cl-text-muted)">💰 Inversión</Text>
-                  <Text fontWeight="800" color="#FF6600">
+                <Box bg="var(--cl-surface-muted)" p={2.5} borderRadius="8px" border="1px solid var(--cl-border)">
+                  <Text fontSize="10px" color="var(--cl-text-muted)">Inversión</Text>
+                  <Text mt={0.5} fontSize="13px" fontWeight="400" color="var(--cl-text-strong)">
                     {selectedProject.inversion}
                   </Text>
                 </Box>
 
-                <Box bg="var(--cl-surface-muted)" p={2} borderRadius="8px" border="1px solid var(--cl-border)">
-                  <Text fontSize="11px" color="var(--cl-text-muted)">📐 Superficie</Text>
-                  <Text fontWeight="800">
+                <Box bg="var(--cl-surface-muted)" p={2.5} borderRadius="8px" border="1px solid var(--cl-border)">
+                  <Text fontSize="10px" color="var(--cl-text-muted)">Superficie</Text>
+                  <Text mt={0.5} fontSize="13px" fontWeight="400" color="var(--cl-text-strong)">
                     {selectedProject.superficie}
                   </Text>
                 </Box>
@@ -1036,23 +1095,27 @@ useEffect(() => {
                 bg="var(--cl-surface-muted)"
                 border="1px solid var(--cl-border)"
                 borderRadius="8px"
-                p={2}
+                px={3}
+                py={2.5}
                 mb={3}
-                fontSize="13px"
+                fontSize="11px"
+                fontWeight="400"
                 color="var(--cl-text-muted)"
               >
-                📍 {selectedProject.estado} · {selectedProject.subgenero}
+                {selectedProject.estado} · {selectedProject.subgenero}
               </Box>
 
               <Button
                 w="100%"
-                bg="#FF6600"
+                bg="#FF653F"
                 color="white"
-                _hover={{ bg: '#E85D00' }}
+                _hover={{ bg: '#D94E2D' }}
                 borderRadius="8px"
                 transition="all 180ms ease"
+                fontWeight="500"
+                h="38px"
               >
-                Ver ficha completa →
+                Ver ficha
               </Button>
             </Box>
           )}

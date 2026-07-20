@@ -94,7 +94,7 @@ function FilterAccordion({
 }
 
 function getDefaultAccordion() {
-  return { 'Tipo de fecha': true };
+  return {};
 }
 
 const TEXT_PRIMARY = 'var(--cl-text)';
@@ -579,7 +579,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
       group: 'avanzados',
     },
     {
-      label: 'Inversión (MDP)',
+      label: 'Inversión (MXN)',
       options: ['$0 - $1M', '$1M - $10M', '$10M - $100M', '$100M+'],
       group: 'avanzados',
     },
@@ -678,6 +678,44 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     };
   }, [obrasDisponiblesParaInversion]);
 
+  const obrasDisponiblesParaSuperficie = useMemo(
+    () => filterObrasByFilters(obras, {
+      regiones: selectedRegiones,
+      estados: selectedEstados,
+      generos: selectedGeneros,
+      subgeneros: selectedSubgeneros,
+      sectores: selectedSectores,
+      etapas: selectedEtapas,
+      desarrollos: selectedDesarrollos,
+      tipoObra: selectedTipoObra,
+      tiposProyecto: selectedTiposProyecto,
+      periodoIndex,
+      fechaConsulta: fechaSeleccionada,
+      fechaInicio: dateRangeStart,
+      fechaFin: dateRangeEnd,
+      investmentMin,
+      investmentMax,
+    }),
+    [
+      obras,
+      selectedRegiones,
+      selectedEstados,
+      selectedGeneros,
+      selectedSubgeneros,
+      selectedSectores,
+      selectedEtapas,
+      selectedDesarrollos,
+      selectedTipoObra,
+      selectedTiposProyecto,
+      periodoIndex,
+      fechaSeleccionada,
+      dateRangeStart,
+      dateRangeEnd,
+      investmentMin,
+      investmentMax,
+    ]
+  );
+
   useEffect(() => {
     if (!dateBounds.min || !dateBounds.max) return;
 
@@ -699,7 +737,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
   }, [dateBounds.min, dateBounds.max, dateRangeStart, dateRangeEnd]);
 
   const surfaceBounds = useMemo(() => {
-    const values = (obras || [])
+    const values = obrasDisponiblesParaSuperficie
       .map((obra) => Number(obra.superficie || 0))
       .filter((value) => Number.isFinite(value) && value > 0)
       .sort((a, b) => a - b);
@@ -715,7 +753,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
       min: Math.max(0, Math.floor(values[0])),
       max: Math.max(1, Math.ceil(values[values.length - 1])),
     };
-  }, [obras]);
+  }, [obrasDisponiblesParaSuperficie]);
 
   useEffect(() => {
     if (!import.meta.env.DEV) return;
@@ -727,12 +765,12 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
         .map((obra) => Number(obra.inversion || 0))
         .filter((value) => Number.isFinite(value) && value > 0)
         .slice(0, 5),
-      sampleSurface: (obras || [])
+      sampleSurface: obrasDisponiblesParaSuperficie
         .map((obra) => Number(obra.superficie || 0))
         .filter((value) => Number.isFinite(value) && value > 0)
         .slice(0, 5),
     });
-  }, [obras, investmentBounds, surfaceBounds]);
+  }, [obras, obrasDisponiblesParaSuperficie, investmentBounds, surfaceBounds]);
 
   useEffect(() => {
     if (!investmentBounds.max) return;
@@ -1574,9 +1612,9 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                     fontWeight={isSelected ? '700' : '600'}
                     color={isSelected ? 'white' : disabled ? 'var(--cl-text-muted)' : TEXT_PRIMARY}
                     opacity={disabled ? 0.35 : 1}
-                    bg={isSelected ? '#FF6600' : 'transparent'}
+                    bg={isSelected ? '#FF653F' : 'transparent'}
                     cursor={disabled ? 'default' : 'pointer'}
-                    _hover={disabled ? {} : { bg: isSelected ? '#FF6600' : 'var(--cl-surface-muted)' }}
+                    _hover={disabled ? {} : { bg: isSelected ? '#FF653F' : 'var(--cl-surface-muted)' }}
                     onClick={() => {
                       if (disabled) return;
 
@@ -2111,7 +2149,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
 
     return (
       <FilterAccordion
-        title="Inversión (MDP)"
+        title="Inversión (MXN)"
         count={
           resolvedInvestmentMin !== investmentBounds.min ||
           resolvedInvestmentMax !== investmentBounds.max

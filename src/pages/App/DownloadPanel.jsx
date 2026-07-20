@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Box,
   Button,
@@ -7,7 +7,8 @@ import {
 } from '@chakra-ui/react';
 
 const downloadOptions = [
-  { value: 'pdf', label: 'PDF' },
+  { value: 'pdf-obras', label: 'PDF - Obras' },
+  { value: 'pdf-companias', label: 'PDF - Compañías' },
   { value: 'excel-clasica', label: 'Excel - Clásica' },
   { value: 'excel-contactos', label: 'Excel - Contactos' },
   { value: 'excel-companias', label: 'Excel - Compañías' },
@@ -17,6 +18,7 @@ const downloadOptions = [
 export default function DownloadPanel({ selectedCount = 0 }) {
   const [selectedOption, setSelectedOption] = useState(downloadOptions[0]);
   const [isOpen, setIsOpen] = useState(false);
+  const panelRef = useRef(null);
   const hasSelection = selectedCount > 0;
 
   useEffect(() => {
@@ -25,16 +27,24 @@ export default function DownloadPanel({ selectedCount = 0 }) {
         setIsOpen(false);
       }
     };
+    const handlePointerDown = (event) => {
+      if (panelRef.current && !panelRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
 
     document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('pointerdown', handlePointerDown);
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('pointerdown', handlePointerDown);
     };
   }, []);
 
   return (
     <Flex
+      ref={panelRef}
       bg="var(--cl-surface)"
       border="1px solid var(--cl-border)"
       borderRadius="12px"
@@ -125,11 +135,11 @@ export default function DownloadPanel({ selectedCount = 0 }) {
       <Button
         h="36px"
         minW={hasSelection ? '140px' : '128px'}
-        bg="#FF6600"
+        bg="#FF653F"
         color="white"
         borderRadius="8px"
         fontSize="13px"
-        _hover={{ bg: '#E65C00' }}
+        _hover={{ bg: '#D94E2D' }}
       >
         {hasSelection ? 'Descargar selección' : 'Descargar todos'}
       </Button>

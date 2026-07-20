@@ -116,8 +116,8 @@ export default function Construleads() {
         textMuted: '#A3A3A3',
         inputBg: '#1F1F1F',
         shadow: '0 12px 30px rgba(0,0,0,.34)',
-        navBg: '#E65C00',
-        navBorder: '#E65C00',
+        navBg: '#E85A37',
+        navBorder: '#E85A37',
       }
     : {
         pageBg: '#FAFAFA',
@@ -131,8 +131,8 @@ export default function Construleads() {
         textMuted: '#6B7280',
         inputBg: '#FFFFFF',
         shadow: '0 8px 24px rgba(0,0,0,.10)',
-        navBg: '#FF6600',
-        navBorder: '#FF6600',
+        navBg: '#FF653F',
+        navBorder: '#FF653F',
       };
 
   useEffect(() => {
@@ -382,7 +382,7 @@ export default function Construleads() {
               justifyContent="center"
               fontWeight="600"
               fontSize="12px"
-              color="#FF6600"
+              color="#FF653F"
               cursor="pointer"
               transition="transform 160ms ease, box-shadow 160ms ease"
               _hover={{ transform: 'translateY(-1px)' }}
@@ -461,7 +461,19 @@ export default function Construleads() {
           </Box>
 
           <Box flex="1" minH="0" position="relative" mt={activeView === 'resultados' ? 0 : 3}>
-            {activeView === 'mapa' && <Box h="100%" minH="0" pb="50px">
+            <style>{`
+              @keyframes cl-view-enter {
+                0% { opacity: 0; transform: translate3d(18px, 0, 0); }
+                65% { opacity: 1; transform: translate3d(-2px, 0, 0); }
+                100% { opacity: 1; transform: none; }
+              }
+              .cl-view-enter {
+                animation: cl-view-enter 360ms cubic-bezier(.22, 1, .36, 1) both;
+                backface-visibility: hidden;
+              }
+              @media (prefers-reduced-motion: reduce) { .cl-view-enter { animation: none; } }
+            `}</style>
+            {activeView === 'mapa' && <Box className="cl-view-enter" h="100%" minH="0" pb="50px">
               <Mapa
                 obras={obras}
                 filtros={filtros}
@@ -469,7 +481,7 @@ export default function Construleads() {
               />
             </Box>}
 
-            {activeView === 'resultados' && <Box h="100%" minH="0" pb="50px">
+            {activeView === 'resultados' && <Box className="cl-view-enter" h="100%" minH="0" pb="50px">
               <Resultados
                 filtros={filtros}
                 obras={filteredObras}
@@ -479,7 +491,7 @@ export default function Construleads() {
               />
             </Box>}
 
-            {activeView === 'graficas' && <Box h="100%" minH="0" pb="50px">
+            {activeView === 'graficas' && <Box className="cl-view-enter" h="100%" minH="0" pb="50px">
               <GraficasView
                 obras={obras}
                 filtros={filtros}

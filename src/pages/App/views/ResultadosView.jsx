@@ -10,8 +10,12 @@ import {
   FiEye,
   FiChevronUp,
   FiChevronDown,
+  FiChevronLeft,
+  FiChevronRight,
   FiSliders,
 } from 'react-icons/fi';
+
+const RESULTS_PER_PAGE = 100;
 
 function parseTableDate(value) {
   if (!value || value === '-') return null;
@@ -124,6 +128,7 @@ function ResultadosView({
   const [filterSearch, setFilterSearch] = useState({});
   const [selectedRows, setSelectedRows] = useState([]);
   const [sortConfig, setSortConfig] = useState({ field: null, direction: 'asc' });
+  const [page, setPage] = useState(1);
   const filterMenuRef = useRef(null);
   const lastSelectionResetToken = useRef(selectionResetToken);
   const lastSelectionSignature = useRef('');
@@ -156,6 +161,7 @@ useEffect(() => {
   };
 
   const toggleSort = (field) => {
+    setPage(1);
     setSortConfig((current) => {
       if (current.field === field) {
         return {
@@ -170,7 +176,7 @@ useEffect(() => {
 
   const getSortIconColor = (field, direction) => {
     if (sortConfig.field !== field) return ui.textMuted;
-    return sortConfig.direction === direction ? '#FF6600' : ui.textMuted;
+    return sortConfig.direction === direction ? '#FF653F' : ui.textMuted;
   };
 
   const tableData = useMemo(() => {
@@ -495,6 +501,13 @@ useEffect(() => {
     return sorted;
   }, [filteredData, sortConfig]);
 
+  const totalPages = Math.max(1, Math.ceil(sortedData.length / RESULTS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const visibleData = useMemo(() => {
+    const start = (currentPage - 1) * RESULTS_PER_PAGE;
+    return sortedData.slice(start, start + RESULTS_PER_PAGE);
+  }, [sortedData, currentPage]);
+
   const selectedRowsSet = useMemo(
     () => new Set(selectedRows),
     [selectedRows]
@@ -557,6 +570,7 @@ useEffect(() => {
   };
 
   const toggleFilterValue = (field, value) => {
+    setPage(1);
     setColumnFilters(prev => {
       const current = prev[field] || [];
 
@@ -696,12 +710,12 @@ useEffect(() => {
                       h="30px"
                       minW="0"
                       borderRadius="8px"
-                      bg={selected ? '#FF6600' : ui.surfaceMuted}
+                      bg={selected ? '#FF653F' : ui.surfaceMuted}
                       color={selected ? 'white' : ui.text}
-                      border={`1px solid ${selected ? '#FF6600' : ui.border}`}
+                      border={`1px solid ${selected ? '#FF653F' : ui.border}`}
                       _hover={{
-                        bg: selected ? '#FF6600' : ui.hover,
-                        borderColor: selected ? '#FF6600' : ui.textMuted,
+                        bg: selected ? '#FF653F' : ui.hover,
+                        borderColor: selected ? '#FF653F' : ui.textMuted,
                       }}
                       onClick={() => toggleFilterValue(field, key)}
                       title={label}
@@ -949,7 +963,7 @@ useEffect(() => {
                 {renderHeaderCell('estado', 'Estado')}
               </th>
               <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
-                {renderHeaderCell('inversion', 'Inversión')}
+                {renderHeaderCell('inversion', 'Inversión (MXN)')}
               </th>
               <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: `1px solid ${ui.border}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {renderHeaderCell('superficie', 'Superficie')}
@@ -984,7 +998,7 @@ useEffect(() => {
           </thead>
 
           <tbody key={`tbody-${obras.length}`}>
-            {sortedData.map((row, index) => {
+            {visibleData.map((row, index) => {
               const rowKey = getRowKey(row);
               const selected = selectedRowsSet.has(rowKey);
 
@@ -1035,7 +1049,7 @@ useEffect(() => {
                         color={ui.textStrong}
                         borderRadius="8px"
                         bg={rowBg}
-                        _hover={{ bg: ui.surfaceMuted, borderColor: '#FF6600', color: '#FF6600' }}
+                        _hover={{ bg: ui.surfaceMuted, borderColor: '#FF653F', color: '#FF653F' }}
                       >
                         <FiEye size={15} />
                       </Button>
@@ -1086,9 +1100,48 @@ useEffect(() => {
         py={3}
         mt={0}
       >
-        <Text color={ui.textMuted} fontSize="13px">
-          Mostrando {filteredData.length} resultados
-        </Text>
+        <Flex align="center" gap={3} minW={0}>
+          <Text color={ui.textMuted} fontSize="13px" whiteSpace="nowrap">
+            Mostrando {visibleData.length
+              ? `${((currentPage - 1) * RESULTS_PER_PAGE) + 1}-${Math.min(currentPage * RESULTS_PER_PAGE, filteredData.length)}`
+              : '0'} de {filteredData.length} resultados
+          </Text>
+          {totalPages > 1 && (
+            <HStack spacing={1}>
+              <Button
+                size="xs"
+                variant="outline"
+                aria-label="Página anterior"
+                title="Página anterior"
+                minW="28px"
+                h="28px"
+                p={0}
+                borderColor={ui.border}
+                isDisabled={currentPage === 1}
+                onClick={() => setPage(Math.max(1, currentPage - 1))}
+              >
+                <FiChevronLeft size={14} />
+              </Button>
+              <Text color={ui.textMuted} fontSize="12px" minW="76px" textAlign="center">
+                {currentPage} de {totalPages}
+              </Text>
+              <Button
+                size="xs"
+                variant="outline"
+                aria-label="Página siguiente"
+                title="Página siguiente"
+                minW="28px"
+                h="28px"
+                p={0}
+                borderColor={ui.border}
+                isDisabled={currentPage === totalPages}
+                onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+              >
+                <FiChevronRight size={14} />
+              </Button>
+            </HStack>
+          )}
+        </Flex>
         <Text color={ui.textMuted} fontSize="13px">
           {selectedRows.length} seleccionados
         </Text>
