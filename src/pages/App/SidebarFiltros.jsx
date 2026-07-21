@@ -186,6 +186,20 @@ function getObraDateByFilter(obra, fechaSeleccionada) {
   return parseFilterDate(obra.fechaPublicacionDate) || parseFilterDate(obra.fechaPublicacion);
 }
 
+function getDateBoundsForCriterion(obras, criterio) {
+  const dates = (obras || [])
+    .map((obra) => getObraDateByFilter(obra, criterio))
+    .filter(Boolean)
+    .sort((a, b) => a.getTime() - b.getTime());
+
+  if (!dates.length) return { min: '', max: '' };
+
+  return {
+    min: toDateInputValue(dates[0]),
+    max: toDateInputValue(dates[dates.length - 1]),
+  };
+}
+
 function normalizeText(value) {
   return String(value || '')
     .normalize('NFD')
@@ -256,6 +270,10 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     '6 meses',
   ];
 
+  const hasSavedFilters = Boolean(
+    localStorage.getItem('construleads-filters') ||
+    localStorage.getItem('construleads-filtros')
+  );
   const savedFilters = (() => {
     try {
       const storedFilters =
@@ -269,7 +287,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
   })();
 
   const [periodoIndex, setPeriodoIndex] = useState(
-    savedFilters.periodoIndex ?? 2
+    savedFilters.periodoIndex ?? -1
   );
   const [dateRangeStart, setDateRangeStart] = useState(
     savedFilters.dateRangeStart || ''
@@ -324,6 +342,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
   const [selectedTiposProyecto, setSelectedTiposProyecto] = useState(
     savedFilters.selectedTiposProyecto || []
   );
+  const [searchInputs, setSearchInputs] = useState({});
 
   const [surfaceMin, setSurfaceMin] = useState(
     getSavedRangeValue(savedFilters.surfaceMin ?? savedFilters.superficieMin, null)
@@ -340,7 +359,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     getSavedRangeValue(savedFilters.investmentMax ?? savedFilters.inversionMax, null)
   );
 
-  const hasLoadedFilters = useRef(true);
+  const shouldInitializeAllFilters = useRef(!hasSavedFilters);
 
   useEffect(() => {
     const handleEsc = (event) => {
@@ -602,26 +621,9 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     selectedValues['Tipo de fecha'] ||
     'Fecha de publicación';
 
-  const dateBounds = useMemo(() => {
-    const dates = (obras || [])
-      .map((obra) => getObraDateByFilter(obra, fechaSeleccionada))
-      .filter(Boolean)
-      .sort((a, b) => a.getTime() - b.getTime());
-
-    if (!dates.length) {
-      return {
-        min: '',
-        max: '',
-      };
-    }
-
-    return {
-      min: toDateInputValue(dates[0]),
-      max: toDateInputValue(dates[dates.length - 1]),
-    };
-  }, [obras, fechaSeleccionada]);
-
-  const obrasDisponiblesParaInversion = useMemo(
+  // Los límites numéricos deben reflejar la información que sigue disponible
+  // después de los filtros generales, sin condicionarse entre sí.
+  const obrasDisponiblesParaRangos = useMemo(
     () => filterObrasByFilters(obras, {
       regiones: selectedRegiones,
       estados: selectedEstados,
@@ -633,11 +635,16 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
       tipoObra: selectedTipoObra,
       tiposProyecto: selectedTiposProyecto,
       periodoIndex,
-      fechaConsulta: fechaSeleccionada,
+      dateRangeStart,
+      dateRangeEnd,
       fechaInicio: dateRangeStart,
       fechaFin: dateRangeEnd,
-      surfaceMin,
-      surfaceMax,
+      fechaConsulta: fechaSeleccionada,
+      superficie: [],
+      surfaceMin: null,
+      surfaceMax: null,
+      investmentMin: null,
+      investmentMax: null,
     }),
     [
       obras,
@@ -651,16 +658,18 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
       selectedTipoObra,
       selectedTiposProyecto,
       periodoIndex,
-      fechaSeleccionada,
       dateRangeStart,
       dateRangeEnd,
-      surfaceMin,
-      surfaceMax,
+      fechaSeleccionada,
     ]
   );
 
+  const dateBounds = useMemo(() => {
+    return getDateBoundsForCriterion(obras, fechaSeleccionada);
+  }, [obras, fechaSeleccionada]);
+
   const investmentBounds = useMemo(() => {
-    const values = obrasDisponiblesParaInversion
+    const values = obrasDisponiblesParaRangos
       .map((obra) => Number(obra.inversion || 0))
       .filter((value) => Number.isFinite(value) && value > 0)
       .sort((a, b) => a - b);
@@ -676,70 +685,19 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
       min: Math.max(0, Math.floor(values[0])),
       max: Math.max(1, Math.ceil(values[values.length - 1])),
     };
-  }, [obrasDisponiblesParaInversion]);
-
-  const obrasDisponiblesParaSuperficie = useMemo(
-    () => filterObrasByFilters(obras, {
-      regiones: selectedRegiones,
-      estados: selectedEstados,
-      generos: selectedGeneros,
-      subgeneros: selectedSubgeneros,
-      sectores: selectedSectores,
-      etapas: selectedEtapas,
-      desarrollos: selectedDesarrollos,
-      tipoObra: selectedTipoObra,
-      tiposProyecto: selectedTiposProyecto,
-      periodoIndex,
-      fechaConsulta: fechaSeleccionada,
-      fechaInicio: dateRangeStart,
-      fechaFin: dateRangeEnd,
-      investmentMin,
-      investmentMax,
-    }),
-    [
-      obras,
-      selectedRegiones,
-      selectedEstados,
-      selectedGeneros,
-      selectedSubgeneros,
-      selectedSectores,
-      selectedEtapas,
-      selectedDesarrollos,
-      selectedTipoObra,
-      selectedTiposProyecto,
-      periodoIndex,
-      fechaSeleccionada,
-      dateRangeStart,
-      dateRangeEnd,
-      investmentMin,
-      investmentMax,
-    ]
-  );
+  }, [obrasDisponiblesParaRangos]);
 
   useEffect(() => {
     if (!dateBounds.min || !dateBounds.max) return;
 
-    setDateRangeStart((current) => {
-      if (!current || current < dateBounds.min || current > dateBounds.max) {
-        return dateBounds.min;
-      }
-
-      return current;
-    });
-
-    setDateRangeEnd((current) => {
-      if (!current || current > dateBounds.max || current < dateBounds.min) {
-        return dateBounds.max;
-      }
-
-      return current;
-    });
-  }, [dateBounds.min, dateBounds.max, dateRangeStart, dateRangeEnd]);
+    setDateRangeStart(dateBounds.min);
+    setDateRangeEnd(dateBounds.max);
+  }, [dateBounds.min, dateBounds.max]);
 
   const surfaceBounds = useMemo(() => {
-    const values = obrasDisponiblesParaSuperficie
+    const values = obrasDisponiblesParaRangos
       .map((obra) => Number(obra.superficie || 0))
-      .filter((value) => Number.isFinite(value) && value > 0)
+      .filter((value) => Number.isFinite(value) && value >= 0)
       .sort((a, b) => a - b);
 
     if (!values.length) {
@@ -753,7 +711,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
       min: Math.max(0, Math.floor(values[0])),
       max: Math.max(1, Math.ceil(values[values.length - 1])),
     };
-  }, [obrasDisponiblesParaSuperficie]);
+  }, [obrasDisponiblesParaRangos]);
 
   useEffect(() => {
     if (!import.meta.env.DEV) return;
@@ -765,76 +723,25 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
         .map((obra) => Number(obra.inversion || 0))
         .filter((value) => Number.isFinite(value) && value > 0)
         .slice(0, 5),
-      sampleSurface: obrasDisponiblesParaSuperficie
+      sampleSurface: (obras || [])
         .map((obra) => Number(obra.superficie || 0))
         .filter((value) => Number.isFinite(value) && value > 0)
         .slice(0, 5),
     });
-  }, [obras, obrasDisponiblesParaSuperficie, investmentBounds, surfaceBounds]);
+  }, [obras, investmentBounds, surfaceBounds]);
 
   useEffect(() => {
     if (!investmentBounds.max) return;
 
-    setInvestmentMin((current) => {
-      const value = Number(current);
-
-      if (!Number.isFinite(value) || value < investmentBounds.min || value > investmentBounds.max) {
-        return investmentBounds.min;
-      }
-
-      return value;
-    });
-
-    setInvestmentMax((current) => {
-      const value = Number(current);
-
-      if (
-        current === null ||
-        !Number.isFinite(value) ||
-        value > investmentBounds.max ||
-        value < investmentBounds.min ||
-        (value === investmentBounds.min && investmentBounds.max > investmentBounds.min)
-      ) {
-        return investmentBounds.max;
-      }
-
-      return value;
-    });
+    setInvestmentMin(investmentBounds.min);
+    setInvestmentMax(investmentBounds.max);
   }, [investmentBounds.min, investmentBounds.max]);
 
   useEffect(() => {
     if (!surfaceBounds.max) return;
 
-    setSurfaceMin((current) => {
-      const value = Number(current);
-
-      if (
-        current === null ||
-        !Number.isFinite(value) ||
-        value < surfaceBounds.min ||
-        value > surfaceBounds.max
-      ) {
-        return surfaceBounds.min;
-      }
-
-      return value;
-    });
-
-    setSurfaceMax((current) => {
-      const value = Number(current);
-
-      if (
-        current === null ||
-        !Number.isFinite(value) ||
-        value > surfaceBounds.max ||
-        value < surfaceBounds.min ||
-        (value === surfaceBounds.min && surfaceBounds.max > surfaceBounds.min)
-      ) {
-        return surfaceBounds.max;
-      }
-
-      return value;
-    });
+    setSurfaceMin(surfaceBounds.min);
+    setSurfaceMax(surfaceBounds.max);
   }, [surfaceBounds.min, surfaceBounds.max]);
 
   const resolvedInvestmentMin = Math.max(
@@ -943,6 +850,57 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
   const omitWhenAllSelected = (selected, total) =>
     selected.length === total ? [] : selected;
 
+  useEffect(() => {
+    if (!shouldInitializeAllFilters.current || !obras.length) return;
+
+    shouldInitializeAllFilters.current = false;
+    setSelectedValues({ 'Tipo de fecha': 'Fecha de publicación' });
+    setSelectedRegiones(Object.keys(estadosPorRegion));
+    setSelectedEstados(Object.values(estadosPorRegion).flat());
+    setSelectedGeneros(Object.keys(subgenerosPorGenero));
+    setSelectedSubgeneros(
+      Object.values(subgenerosPorGenero).flatMap((subgeneros) => Object.keys(subgeneros))
+    );
+    setSelectedSectores(['Privado', 'Gobierno']);
+    setSelectedEtapas(['Obra Negociada', 'Pre-Inicio', 'Inicio', 'Pre-Plan', 'Plan', 'Proyecto']);
+    setSelectedDesarrollos([
+      'Obra Nueva',
+      'Ampliación',
+      'Rehabilitación',
+      'Mantenimiento',
+      'Remodelación',
+      'Adecuación',
+      'Terminación',
+    ]);
+    setSelectedTipoObra(
+      Object.values(subgenerosPorGenero)
+        .flatMap((subgeneros) => Object.values(subgeneros).flat())
+    );
+    setSelectedTiposProyecto(['Proyecto contratado', 'Proyecto de inversión']);
+    setPeriodoIndex(-1);
+    setDateRangeStart(dateBounds.min);
+    setDateRangeEnd(dateBounds.max);
+    setInvestmentMin(investmentBounds.min);
+    setInvestmentMax(investmentBounds.max);
+    setSurfaceMin(surfaceBounds.min);
+    setSurfaceMax(surfaceBounds.max);
+  }, [
+    obras.length,
+    dateBounds.min,
+    dateBounds.max,
+    investmentBounds.min,
+    investmentBounds.max,
+    surfaceBounds.min,
+    surfaceBounds.max,
+  ]);
+
+  const hasInvestmentRangeFilter =
+    resolvedInvestmentMin > investmentBounds.min ||
+    resolvedInvestmentMax < investmentBounds.max;
+  const hasSurfaceRangeFilter =
+    resolvedSurfaceMin > surfaceBounds.min ||
+    resolvedSurfaceMax < surfaceBounds.max;
+
   const filtrosActivos = {
     regiones: omitWhenAllSelected(selectedRegiones, allRegionesCount),
     estados: omitWhenAllSelected(selectedEstados, allEstadosCount),
@@ -956,8 +914,8 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     tiposObra: omitWhenAllSelected(selectedTipoObra, allTiposObraCount),
     tiposObraFiltro: omitWhenAllSelected(selectedTipoObra, allTiposObraCount),
     tiposProyecto: omitWhenAllSelected(selectedTiposProyecto, 2),
-    investmentMin: resolvedInvestmentMin,
-    investmentMax: resolvedInvestmentMax,
+    investmentMin: hasInvestmentRangeFilter ? resolvedInvestmentMin : null,
+    investmentMax: hasInvestmentRangeFilter ? resolvedInvestmentMax : null,
     periodoIndex,
     dateRangeStart,
     dateRangeEnd,
@@ -968,8 +926,8 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
       hasta: dateRangeEnd,
     },
     fechaConsulta: fechaSeleccionada,
-    surfaceMin: superficieMin,
-    surfaceMax: superficieMax,
+    surfaceMin: hasSurfaceRangeFilter ? superficieMin : null,
+    surfaceMax: hasSurfaceRangeFilter ? superficieMax : null,
     superficie: [],
   };
 
@@ -1016,8 +974,50 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     onApplyFilters,
   ]);
 
+  function resetAllFilters() {
+    const allRegiones = Object.keys(estadosPorRegion);
+    const allEstados = Object.values(estadosPorRegion).flat();
+    const allGeneros = Object.keys(subgenerosPorGenero);
+    const allSubgeneros = Object.values(subgenerosPorGenero)
+      .flatMap((subgeneros) => Object.keys(subgeneros));
+    const allTiposObra = Object.values(subgenerosPorGenero)
+      .flatMap((subgeneros) => Object.values(subgeneros).flat());
+    const publicationBounds = getDateBoundsForCriterion(obras, 'Fecha de publicación');
+
+    setSelectedValues({ 'Tipo de fecha': 'Fecha de publicación' });
+    setSelectedRegiones(allRegiones);
+    setSelectedEstados(allEstados);
+    setSelectedGeneros(allGeneros);
+    setSelectedSubgeneros(allSubgeneros);
+    setSelectedDetalles([]);
+    setSelectedSectores(['Privado', 'Gobierno']);
+    setSelectedEtapas(['Obra Negociada', 'Pre-Inicio', 'Inicio', 'Pre-Plan', 'Plan', 'Proyecto']);
+    setSelectedDesarrollos([
+      'Obra Nueva',
+      'Ampliación',
+      'Rehabilitación',
+      'Mantenimiento',
+      'Remodelación',
+      'Adecuación',
+      'Terminación',
+    ]);
+    setSelectedTipoObra(allTiposObra);
+    setSelectedTiposProyecto(['Proyecto contratado', 'Proyecto de inversión']);
+    setExpandedTipoProyecto(null);
+    setInvestmentMin(investmentBounds.min);
+    setInvestmentMax(investmentBounds.max);
+    setSurfaceMin(surfaceBounds.min);
+    setSurfaceMax(surfaceBounds.max);
+    setPeriodoIndex(-1);
+    setDateRangeStart(publicationBounds.min);
+    setDateRangeEnd(publicationBounds.max);
+    localStorage.removeItem('construleads-filters');
+    localStorage.removeItem('construleads-filtros');
+    setOpenedAccordions(getDefaultAccordion());
+    setSearchInputs({});
+  }
+
   // Search helpers for filtering options if > 10
-  const [searchInputs, setSearchInputs] = useState({});
   function renderOptionsWithSearch(options, label, selectedArr, setSelectedArr, multi = true) {
     const searchValue = searchInputs[label] || '';
     const filtered = searchValue
@@ -1663,12 +1663,13 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                 color={TEXT_PRIMARY}
                 fontSize="13px"
                 onClick={() => {
+                  const nextBounds = getDateBoundsForCriterion(obras, option);
                   setSelectedValues((prev) => ({
                     ...prev,
                     'Tipo de fecha': option,
                   }));
-                  setDateRangeStart('');
-                  setDateRangeEnd('');
+                  setDateRangeStart(nextBounds.min);
+                  setDateRangeEnd(nextBounds.max);
                 }}
               >
                 <input
@@ -2404,46 +2405,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
             cursor="pointer"
             transition="all 180ms ease"
             _hover={{ color: TEXT_PRIMARY }}
-            onClick={() => {
-              const allRegiones = Object.keys(estadosPorRegion);
-              const allEstados = Object.values(estadosPorRegion).flat();
-              const allGeneros = Object.keys(subgenerosPorGenero);
-              const allSubgeneros = Object.values(subgenerosPorGenero)
-                .flatMap((subgeneros) => Object.keys(subgeneros));
-              const allTiposObra = Object.values(subgenerosPorGenero)
-                .flatMap((subgeneros) => Object.values(subgeneros).flat());
-
-              setSelectedValues({ 'Tipo de fecha': 'Fecha de publicación' });
-              setSelectedRegiones(allRegiones);
-              setSelectedEstados(allEstados);
-              setSelectedGeneros(allGeneros);
-              setSelectedSubgeneros(allSubgeneros);
-              setSelectedDetalles([]);
-              setSelectedSectores(['Privado', 'Gobierno']);
-              setSelectedEtapas(['Obra Negociada', 'Pre-Inicio', 'Inicio', 'Pre-Plan', 'Plan', 'Proyecto']);
-              setSelectedDesarrollos([
-                'Obra Nueva',
-                'Ampliación',
-                'Rehabilitación',
-                'Mantenimiento',
-                'Remodelación',
-                'Adecuación',
-                'Terminación',
-              ]);
-              setSelectedTipoObra(allTiposObra);
-              setSelectedTiposProyecto(['Proyecto contratado', 'Proyecto de inversión']);
-              setExpandedTipoProyecto(null);
-              setInvestmentMin(investmentBounds.min);
-              setInvestmentMax(investmentBounds.max);
-              setSurfaceMin(surfaceBounds.min);
-              setSurfaceMax(surfaceBounds.max);
-              setDateRangeStart('');
-              setDateRangeEnd('');
-              localStorage.removeItem('construleads-filters');
-              localStorage.removeItem('construleads-filtros');
-              setOpenedAccordions(getDefaultAccordion());
-              setSearchInputs({});
-            }}
+            onClick={resetAllFilters}
           >
             Limpiar filtros
           </Text>

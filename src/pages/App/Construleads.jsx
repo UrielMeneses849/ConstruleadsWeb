@@ -483,7 +483,6 @@ export default function Construleads() {
 
             {activeView === 'resultados' && <Box className="cl-view-enter" h="100%" minH="0" pb="50px">
               <Resultados
-                filtros={filtros}
                 obras={filteredObras}
                 onSelectionChange={handleResultsSelectionChange}
                 selectionResetToken={selectionResetToken}

@@ -114,11 +114,17 @@ function getArrayFilter(filtros, primaryKey, fallbackKey) {
 }
 
 function normalizeText(value) {
-  return String(value || '')
+  const normalized = String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim();
+
+  if (normalized === 'edo. de mexico' || normalized === 'edo de mexico') {
+    return 'estado de mexico';
+  }
+
+  return normalized;
 }
 
 function parseFilterNumber(value, fallback = null) {

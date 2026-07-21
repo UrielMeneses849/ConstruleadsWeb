@@ -11,6 +11,17 @@ export function parseObrasXml(xmlText) {
 
   const normalizeTagName = (value = '') => normalizeText(value).toLowerCase();
 
+  const normalizeEstado = (value = '') => {
+    const normalized = normalizeText(value);
+    const comparable = normalized.toLowerCase();
+
+    if (comparable === 'edo. de mexico' || comparable === 'edo de mexico') {
+      return 'Estado de Mexico';
+    }
+
+    return normalized;
+  };
+
   const normalizeDate = (value = '') => String(value).trim();
 
   const parseNumber = (value = 0) => {
@@ -149,7 +160,7 @@ export function parseObrasXml(xmlText) {
       clave,
       proyecto: normalizeText(proyectoRaw),
       region: normalizeText(regionRaw),
-      estado: normalizeText(estadoRaw),
+      estado: normalizeEstado(estadoRaw),
       genero: normalizeText(generoRaw),
       subgenero: normalizeText(subgeneroRaw),
       tipoObra: normalizeText(tipoObraRaw),

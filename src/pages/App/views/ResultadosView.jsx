@@ -130,6 +130,7 @@ function ResultadosView({
   const [sortConfig, setSortConfig] = useState({ field: null, direction: 'asc' });
   const [page, setPage] = useState(1);
   const filterMenuRef = useRef(null);
+  const resultsContainerRef = useRef(null);
   const lastSelectionResetToken = useRef(selectionResetToken);
   const lastSelectionSignature = useRef('');
 
@@ -258,33 +259,33 @@ useEffect(() => {
 
       superficieRaw:
         parseNumberValue(
-          obra.superficie ||
-          obra.Superficie ||
-          obra.SUPERFICIE ||
-          obra.superficieTotal ||
-          obra.SuperficieTotal ||
-          null
+          obra.superficie ??
+          obra.Superficie ??
+          obra.SUPERFICIE ??
+          obra.superficieTotal ??
+          obra.SuperficieTotal ??
+          0
         ),
       superficie:
         parseNumberValue(
-          obra.superficie ||
-          obra.Superficie ||
-          obra.SUPERFICIE ||
-          obra.superficieTotal ||
-          obra.SuperficieTotal ||
-          null
+          obra.superficie ??
+          obra.Superficie ??
+          obra.SUPERFICIE ??
+          obra.superficieTotal ??
+          obra.SuperficieTotal ??
+          0
         ) !== null
           ? `${formatNumberMX(
               parseNumberValue(
-                obra.superficie ||
-                obra.Superficie ||
-                obra.SUPERFICIE ||
-                obra.superficieTotal ||
-                obra.SuperficieTotal ||
-                null
+                obra.superficie ??
+                obra.Superficie ??
+                obra.SUPERFICIE ??
+                obra.superficieTotal ??
+                obra.SuperficieTotal ??
+                0
               )
             )} m²`
-          : '-',
+          : '0 m²',
 
       estado:
         obra.estado ||
@@ -508,6 +509,33 @@ useEffect(() => {
     return sortedData.slice(start, start + RESULTS_PER_PAGE);
   }, [sortedData, currentPage]);
 
+  const activeFilterChips = useMemo(() => {
+    const chips = [];
+    const columnLabels = {
+      clave: 'Clave', proyecto: 'Proyecto', compania: 'Compañía', genero: 'Género',
+      subgenero: 'Subgénero', tipoobra: 'Tipo de obra', estado: 'Estado',
+      inversion: 'Inversión', superficie: 'Superficie', inicio: 'Inicio',
+      fin: 'Término', publicacion: 'Publicación', tipo: 'Tipo',
+    };
+    Object.entries(columnFilters).forEach(([field, values]) => {
+      if (!Array.isArray(values) || !values.length) return;
+      chips.push({
+        key: `column-${field}`,
+        label: columnLabels[field] || field,
+        value: values.length === 1 ? values[0] : `${values.length} seleccionados`,
+      });
+    });
+
+    return chips;
+  }, [columnFilters]);
+
+  const clearAllVisibleFilters = () => {
+    setColumnFilters({});
+    setFilterSearch({});
+    setFilterMenu(null);
+    setPage(1);
+  };
+
   const selectedRowsSet = useMemo(
     () => new Set(selectedRows),
     [selectedRows]
@@ -518,7 +546,10 @@ useEffect(() => {
       'clave',
       'proyecto',
       'genero',
+      'subgenero',
       'estado',
+      'inversion',
+      'superficie',
       'inicio',
       'fin',
       'publicacion',
@@ -555,11 +586,27 @@ useEffect(() => {
     !allFilteredSelected;
 
   const openFilterMenu = (field, target) => {
-    const rect = target.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const container = resultsContainerRef.current;
+    const containerRect = container?.getBoundingClientRect();
+    const scaleX = container && containerRect?.width
+      ? containerRect.width / container.offsetWidth
+      : 1;
+    const scaleY = container && containerRect?.height
+      ? containerRect.height / container.offsetHeight
+      : scaleX;
+    const menuWidth = dateFields.includes(field) ? 300 : 280;
+    const localLeft = containerRect
+      ? (targetRect.left - containerRect.left) / scaleX - 20
+      : targetRect.left;
 
     setFilterPosition({
-      top: rect.bottom + 8,
-      left: rect.left,
+      top: containerRect
+        ? (targetRect.bottom - containerRect.top) / scaleY + 8
+        : targetRect.bottom + 8,
+      left: container
+        ? Math.max(8, Math.min(localLeft, container.offsetWidth - menuWidth - 8))
+        : localLeft,
     });
 
     setFilterMenu((current) => (current === field ? null : field));
@@ -733,7 +780,7 @@ useEffect(() => {
 
   const renderOptionFilter = (field) => {
     const search = filterSearch[field] || '';
-    const hasSearchInput = field === 'proyecto' || field === 'compania';
+    const hasSearchInput = field === 'clave' || field === 'proyecto' || field === 'compania';
     const values = getUniqueValues(field).filter((value) =>
       String(value).toLowerCase().includes(search.toLowerCase())
     );
@@ -752,7 +799,13 @@ useEffect(() => {
                 [field]: event.target.value,
               }))
             }
-            placeholder={field === 'compania' ? 'Buscar compañía...' : 'Buscar proyecto...'}
+            placeholder={
+              field === 'compania'
+                ? 'Buscar compañía...'
+                : field === 'clave'
+                  ? 'Buscar clave...'
+                  : 'Buscar proyecto...'
+            }
             style={{
               width: '100%',
               height: '34px',
@@ -770,7 +823,9 @@ useEffect(() => {
 
         {hasSearchInput && !search && values.length > visibleValues.length && (
           <Text fontSize="11px" color={ui.textMuted} mb={2}>
-            Escribe para buscar entre {values.length} {field === 'compania' ? 'compañías' : 'proyectos'}.
+            Escribe para buscar entre {values.length} {
+              field === 'compania' ? 'compañías' : field === 'clave' ? 'claves' : 'proyectos'
+            }.
           </Text>
         )}
 
@@ -812,6 +867,7 @@ useEffect(() => {
     >
 
       <Box
+        ref={resultsContainerRef}
         bg={ui.surface}
         border={`1px solid ${ui.border}`}
         borderRadius="8px"
@@ -1067,9 +1123,9 @@ useEffect(() => {
           <div
             ref={filterMenuRef}
             style={{
-              position: 'fixed',
+              position: 'absolute',
               top: `${filterPosition.top}px`,
-              left: `${Math.max(filterPosition.left - 20, 16)}px`,
+              left: `${filterPosition.left}px`,
               zIndex: 1000,
               background: ui.surface,
               border: `1px solid ${ui.border}`,
@@ -1089,6 +1145,60 @@ useEffect(() => {
           </div>
         )}
       </Box>
+
+      {activeFilterChips.length > 0 && (
+        <Flex
+          flexShrink={0}
+          align="center"
+          gap={2}
+          px={3}
+          py={2}
+          borderTop={`1px solid ${ui.border}`}
+          bg={ui.surface}
+          minW={0}
+        >
+          <Text color={ui.textMuted} fontSize="11px" fontWeight="600" whiteSpace="nowrap">
+            Filtros de tabla ({activeFilterChips.length})
+          </Text>
+          <Flex gap={1.5} overflowX="auto" flex="1" minW={0} pb="1px">
+            {activeFilterChips.map((chip) => (
+              <Flex
+                key={chip.key}
+                align="center"
+                gap={1}
+                px={2}
+                h="28px"
+                flexShrink={0}
+                maxW="280px"
+                borderRadius="999px"
+                border="1px solid rgba(255, 101, 63, .42)"
+                bg="rgba(255, 101, 63, .08)"
+                color={ui.text}
+              >
+                <Text fontSize="11px" color={ui.textMuted} whiteSpace="nowrap">
+                  {chip.label}:
+                </Text>
+                <Text fontSize="11px" fontWeight="600" noOfLines={1} title={chip.value}>
+                  {chip.value}
+                </Text>
+              </Flex>
+            ))}
+          </Flex>
+          <Button
+            size="xs"
+            h="28px"
+            px={3}
+            flexShrink={0}
+            borderRadius="8px"
+            bg="#FF653F"
+            color="white"
+            _hover={{ bg: '#E85A37' }}
+            onClick={clearAllVisibleFilters}
+          >
+            Limpiar filtros
+          </Button>
+        </Flex>
+      )}
 
       <Flex
         flexShrink={0}

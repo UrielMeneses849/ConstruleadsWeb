@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import {
   Box,
   Button,
+  Flex,
   Spinner,
   Text,
 } from '@chakra-ui/react';
@@ -573,8 +574,14 @@ debugLog(
         resultado.map((o) => o.superficie)
       );
 
-      const superficieMin = Number(filtrosActivos.superficieMin ?? filtrosActivos.surfaceMin);
-      const superficieMax = Number(filtrosActivos.superficieMax ?? filtrosActivos.surfaceMax);
+      const superficieMin = parseFilterNumber(
+        filtrosActivos.superficieMin ?? filtrosActivos.surfaceMin,
+        null
+      );
+      const superficieMax = parseFilterNumber(
+        filtrosActivos.superficieMax ?? filtrosActivos.surfaceMax,
+        null
+      );
       const hasNumericSurfaceRange =
         Number.isFinite(superficieMin) &&
         Number.isFinite(superficieMax) &&
@@ -734,12 +741,14 @@ useEffect(() => {
         const clickedLat = clickedPosition?.lat?.() ?? latNum;
         const clickedLng = clickedPosition?.lng?.() ?? lonNum;
         const project = {
+          clave: obra.clave,
           proyecto: obra.proyecto,
           inversion: formatInvestment(obra.inversion),
           superficie: `${Number(obra.superficie || 0).toLocaleString()} m²`,
           genero: obra.genero,
           estado: obra.estado,
           subgenero: obra.subgenero,
+          direccion: obra.localizacion,
           lat: clickedLat,
           lng: clickedLng,
         };
@@ -1058,19 +1067,31 @@ useEffect(() => {
               >
                 ×
               </Button>
-              <Box
-                display="inline-block"
-                bg="var(--cl-surface-muted)"
-                color="var(--cl-text-muted)"
-                px={2}
-                py={1}
-                borderRadius="999px"
-                fontSize="10px"
-                fontWeight="400"
-                mb={2.5}
-              >
-                {selectedProject.genero}
-              </Box>
+              <Flex gap={1.5} wrap="wrap" pr="34px" mb={2}>
+                {[selectedProject.genero, selectedProject.subgenero]
+                  .filter(Boolean)
+                  .map((label) => (
+                    <Box
+                      key={label}
+                      bg="var(--cl-surface-muted)"
+                      color="var(--cl-text-muted)"
+                      px={2}
+                      py={1}
+                      borderRadius="999px"
+                      fontSize="10px"
+                      fontWeight="400"
+                    >
+                      {label}
+                    </Box>
+                  ))}
+              </Flex>
+
+              {selectedProject.clave && (
+                <Text fontSize="10px" color="var(--cl-text-muted)" mb={1}>
+                  {selectedProject.clave}
+                </Text>
+              )}
+
               <Text fontSize="16px" fontWeight="500" mb={3} lineHeight="1.3" color="var(--cl-text-strong)" noOfLines={2}>
                 {selectedProject.proyecto}
               </Text>
@@ -1102,7 +1123,12 @@ useEffect(() => {
                 fontWeight="400"
                 color="var(--cl-text-muted)"
               >
-                {selectedProject.estado} · {selectedProject.subgenero}
+                <Text fontSize="10px" color="var(--cl-text-muted)" mb={1}>
+                  Dirección
+                </Text>
+                <Text fontSize="11px" color="var(--cl-text-strong)" fontWeight="400" lineHeight="1.35">
+                  {selectedProject.direccion || selectedProject.estado || 'Dirección no disponible'}
+                </Text>
               </Box>
 
               <Button
