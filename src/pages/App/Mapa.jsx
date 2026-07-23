@@ -32,6 +32,17 @@ function parseFilterNumber(value, fallback = null) {
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
+function getSingleTaxonomyValue(value) {
+  const rawValue = Array.isArray(value)
+    ? value.find((item) => String(item || '').trim())
+    : value;
+
+  return String(rawValue || '')
+    .split(/[|;,]+/)
+    .map((item) => item.trim())
+    .find(Boolean) || '';
+}
+
 function Mapa({
   obras = [],
   filtros = {},
@@ -69,6 +80,21 @@ function Mapa({
   useEffect(() => {
     onFilteredDataRef.current = onFilteredData;
   }, [onFilteredData]);
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    const isLocked = Boolean(selectedProject);
+    map.setOptions({
+      draggable: !isLocked,
+      scrollwheel: !isLocked,
+      disableDoubleClickZoom: isLocked,
+      keyboardShortcuts: !isLocked,
+      gestureHandling: isLocked ? 'none' : 'auto',
+      zoomControl: !isLocked,
+    });
+  }, [selectedProject]);
 
 
   useEffect(() => {
@@ -443,7 +469,7 @@ const tiposProyecto =
   filtrosActivos.tiposProyecto ||
   filtrosActivos.selectedTiposProyecto ||
   [];
-      if (regiones.length) {
+      if (!estados.length && regiones.length) {
         resultado = resultado.filter((o) =>
           matchesTextList(o.region, regiones)
         );
@@ -457,7 +483,7 @@ const tiposProyecto =
         debugLog('POST ESTADOS:', resultado.length);
       }
 
-      if (generos.length) {
+      if (!tipoObra.length && !subgeneros.length && generos.length) {
         resultado = resultado.filter((o) =>
           matchesTextList(o.genero, generos)
         );
@@ -485,7 +511,7 @@ const tiposProyecto =
         debugLog('POST ETAPAS:', resultado.length);
       }
 
-      if (tiposProyecto.length) {
+      if (!etapas.length && tiposProyecto.length) {
         debugLog('TIPOS PROYECTO FILTRO:', tiposProyecto);
 
         debugLog(
@@ -512,7 +538,7 @@ debugLog(
         debugLog('POST TIPO PROYECTO:', resultado.length);
       }
 
-      if (subgeneros.length) {
+      if (!tipoObra.length && subgeneros.length) {
   const tiposObraPermitidos = subgeneros.flatMap(
     (sub) => tiposObraPorSubgenero[sub] || []
   );
@@ -745,9 +771,9 @@ useEffect(() => {
           proyecto: obra.proyecto,
           inversion: formatInvestment(obra.inversion),
           superficie: `${Number(obra.superficie || 0).toLocaleString()} m²`,
-          genero: obra.genero,
+          genero: getSingleTaxonomyValue(obra.genero),
           estado: obra.estado,
-          subgenero: obra.subgenero,
+          subgenero: getSingleTaxonomyValue(obra.subgenero),
           direccion: obra.localizacion,
           lat: clickedLat,
           lng: clickedLng,
@@ -808,6 +834,22 @@ useEffect(() => {
         markers: [],
         renderer: {
           render: renderCluster,
+        },
+        onClusterClick: (_event, cluster, clusterMap) => {
+          selectedProjectRef.current = null;
+          setSelectedProject(null);
+          setPopupPosition(null);
+
+          const currentZoom = Number(clusterMap.getZoom()) || 5;
+          const targetZoom = Math.min(currentZoom + 2, 18);
+          clusterMap.panTo(cluster.position);
+
+          window.setTimeout(() => {
+            clusterMap.setZoom(Math.min(currentZoom + 1, targetZoom));
+          }, 140);
+          window.setTimeout(() => {
+            clusterMap.setZoom(targetZoom);
+          }, 320);
         },
       });
       mapReadyRef.current = true;
@@ -940,7 +982,7 @@ useEffect(() => {
       });
     };
 
-    (async () => {
+    const updateTimer = window.setTimeout(async () => {
       try {
         setIsMapLoading(true);
         setMapLoadingMessage('Cargando mapa y preparando obras...');
@@ -952,10 +994,11 @@ useEffect(() => {
         setMapLoadingMessage('No se pudo cargar el mapa. Intenta recargar la página.');
         setIsMapLoading(false);
       }
-    })();
+    }, mapInstanceRef.current ? 90 : 0);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(updateTimer);
       markerUpdateTokenRef.current += 1;
     };
   }, [filteredObras, obras.length]);
@@ -987,6 +1030,18 @@ useEffect(() => {
             minH="520px"
             w="100%"
           />
+
+          {selectedProject && (
+            <Box
+              position="absolute"
+              inset={0}
+              zIndex={10}
+              cursor="default"
+              onClick={(event) => event.stopPropagation()}
+              onWheel={(event) => event.preventDefault()}
+              onTouchMove={(event) => event.preventDefault()}
+            />
+          )}
 
           {showMapLoader && (
             <Box
@@ -1070,6 +1125,9 @@ useEffect(() => {
               <Flex gap={1.5} wrap="wrap" pr="34px" mb={2}>
                 {[selectedProject.genero, selectedProject.subgenero]
                   .filter(Boolean)
+                  .filter((label, index, labels) => (
+                    labels.findIndex((candidate) => normalizeText(candidate) === normalizeText(label)) === index
+                  ))
                   .map((label) => (
                     <Box
                       key={label}

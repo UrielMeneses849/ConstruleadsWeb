@@ -27,13 +27,13 @@ const METRIC_OPTIONS = [
 ];
 
 const CHART_COLORS = [
-  '#FF653F',
-  '#FF8A70',
-  '#4B5563',
-  '#6B7280',
   '#94A3B8',
-  '#B8BEC7',
-  '#D1D5DB',
+  '#94A3B8',
+  '#94A3B8',
+  '#94A3B8',
+  '#94A3B8',
+  '#94A3B8',
+  '#94A3B8',
 ];
 
 function normalizeText(value) {
@@ -185,6 +185,7 @@ function BarListChart({
   footerLabel,
   visibleLimit = 6,
   bottomAction,
+  barThickness = 18,
 }) {
   const visibleItems = items.slice(0, visibleLimit);
   const maxValue = visibleItems[0]?.value || 1;
@@ -246,7 +247,7 @@ function BarListChart({
                 {item.label}
               </Text>
 
-              <Box flex="1" minW="0" h="18px" position="relative">
+              <Box flex="1" minW="0" h={`${barThickness}px`} position="relative">
                 <Box
                   position="absolute"
                   insetY="0"
@@ -356,8 +357,19 @@ function CompanyMarkerChart({ title, subtitle, items, metric, totalValue, select
   );
 }
 
-function ColumnChart({ title, subtitle, items, metric, totalValue, selectedKey, onSelect, rightSlot }) {
-  const visibleItems = items.slice(0, 6);
+function ColumnChart({
+  title,
+  subtitle,
+  items,
+  metric,
+  totalValue,
+  selectedKey,
+  onSelect,
+  rightSlot,
+  visibleLimit = 6,
+  bottomAction,
+}) {
+  const visibleItems = items.slice(0, visibleLimit);
   const maxValue = Math.max(1, ...visibleItems.map((item) => item.value));
 
   return (
@@ -372,10 +384,11 @@ function ColumnChart({ title, subtitle, items, metric, totalValue, selectedKey, 
           {visibleItems.map((item, index) => {
             const isSelected = normalizeText(selectedKey) === normalizeText(item.key);
             const height = `${Math.max(10, (item.value / maxValue) * 100)}%`;
-            return <Flex key={item.key} as="button" type="button" flex="1" minW="0" h="100%" direction="column" justify="flex-end" align="stretch" cursor="pointer" opacity={selectedKey && !isSelected ? 0.45 : 1} onClick={() => onSelect(item.key)}><Text mb={2} textAlign="center" fontSize="11px" fontWeight="700" color="var(--cl-text-strong)">{getDisplayValue(item.value, metric)}</Text><Box h={height} minH="30px" mx="auto" w="clamp(24px, 70%, 64px)" bg={CHART_COLORS[index % CHART_COLORS.length]} borderRadius="8px 8px 2px 2px" border={isSelected ? '3px solid #FFB27F' : '3px solid transparent'} transition="height 180ms ease, opacity 160ms ease" _hover={{ filter: 'brightness(1.08)' }} /><Text h="42px" mt={2} px={1} textAlign="center" fontSize="10px" fontWeight="600" lineHeight="1.2" noOfLines={2} color="var(--cl-text-muted)">{item.label}</Text></Flex>;
+            return <Flex key={item.key} as="button" type="button" flex="1" minW="0" h="100%" direction="column" justify="flex-end" align="stretch" cursor="pointer" opacity={selectedKey && !isSelected ? 0.45 : 1} onClick={() => onSelect(item.key)}><Text mb={2} textAlign="center" fontSize="11px" fontWeight="700" color="var(--cl-text-strong)">{getDisplayValue(item.value, metric)}</Text><Box h={height} minH="30px" mx="auto" w="clamp(34px, 82%, 78px)" bg={CHART_COLORS[index % CHART_COLORS.length]} borderRadius="8px 8px 2px 2px" border={isSelected ? '3px solid #FFB27F' : '3px solid transparent'} transition="height 180ms ease, opacity 160ms ease" _hover={{ filter: 'brightness(1.08)' }} /><Text h="48px" mt={2} px={1} textAlign="center" fontSize="10px" fontWeight="600" lineHeight="1.2" noOfLines={3} color="var(--cl-text-muted)">{item.label}</Text></Flex>;
           })}
         </Flex>
       ) : <Box border="1px dashed var(--cl-border)" borderRadius="12px" px={4} py={6} color="var(--cl-text-muted)" fontSize="13px">Sin datos para mostrar.</Box>}
+      {bottomAction ? <Flex justify="center" mt={3}>{bottomAction}</Flex> : null}
     </ChartShell>
   );
 }
@@ -400,6 +413,7 @@ function RegionTreemap({
   const renderTile = (item, index) => {
     if (!item) return null;
     const isSelected = normalizeText(selectedKey) === normalizeText(item.key);
+    const percentage = totalValue > 0 ? Math.round((item.value / totalValue) * 100) : 0;
     return (
       <Box
         key={item.key}
@@ -419,12 +433,15 @@ function RegionTreemap({
         <Box position="absolute" inset="0" bg="linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.18))" />
         <Flex position="absolute" inset="0" p={3} direction="column" justify="space-between" color="white">
           <Text fontSize="14px" fontWeight="700" noOfLines={2} lineHeight="1.2">{item.label}</Text>
-          <Text fontSize="16px" fontWeight="700" lineHeight="1.15">
-            {getDisplayValue(item.value, metric)}
-            <Text as="span" ml={1} fontSize="11px" fontWeight="500">
-              {formatGraphMetricSuffix(metric) || 'proyectos'}
+          <Box>
+            <Text fontSize="18px" fontWeight="700" lineHeight="1.1">{percentage}%</Text>
+            <Text mt={1} fontSize="13px" fontWeight="600" lineHeight="1.15">
+              {getDisplayValue(item.value, metric)}
+              <Text as="span" ml={1} fontSize="10px" fontWeight="500">
+                {formatGraphMetricSuffix(metric) || 'proyectos'}
+              </Text>
             </Text>
-          </Text>
+          </Box>
         </Flex>
       </Box>
     );
@@ -1019,12 +1036,12 @@ export default function GraficasView({ obras = [], filtros = {} }) {
         </Flex>
 
         <Grid templateColumns={{ base: '1fr', xl: 'repeat(2, minmax(0, 1fr))' }} columnGap={4} rowGap={7} alignItems="stretch">
-          <PieChart title="Género" subtitle="Distribución por género constructivo" items={generoData} metric={generoMetric} totalValue={sumValues(generoData)} selectedKey={chartSelections.genero} onSelect={(v) => selectChartValue('genero', v)} rightSlot={<MetricToggle value={generoMetric} onChange={setGeneroMetric} />} />
+          <BarListChart title="Género" subtitle="Distribución por género constructivo" items={generoData} metric={generoMetric} totalValue={sumValues(generoData)} selectedKey={chartSelections.genero} onSelect={(v) => selectChartValue('genero', v)} rightSlot={<MetricToggle value={generoMetric} onChange={setGeneroMetric} />} visibleLimit={6} barThickness={30} />
           <ColumnChart title="Subgénero" subtitle={`Principales subgéneros de ${chartSelections.genero || 'todas las obras'}`} items={subGeneroData} metric={subGeneroMetric} totalValue={sumValues(subGeneroData)} selectedKey={chartSelections.subgenero} onSelect={(v) => selectChartValue('subgenero', v)} rightSlot={<MetricToggle value={subGeneroMetric} onChange={setSubGeneroMetric} />} />
           <RegionTreemap title="Regiones" subtitle="Distribución de proyectos por región" items={regionData} metric={regionMetric} totalValue={sumValues(regionData)} selectedKey={chartSelections.region} onSelect={(v) => selectChartValue('region', v)} rightSlot={<MetricToggle value={regionMetric} onChange={setRegionMetric} />} />
-          <BarListChart title={chartSelections.region ? `Estados de la región ${chartSelections.region}` : 'Estados por región'} subtitle="Top estados por número de proyectos" items={estadosData} metric={estadoMetric} totalValue={sumValues(estadosData)} selectedKey={chartSelections.estado} onSelect={(v) => selectChartValue('estado', v)} rightSlot={<MetricToggle value={estadoMetric} onChange={setEstadoMetric} />} />
+          <BarListChart title={chartSelections.region ? `Estados de la región ${chartSelections.region}` : 'Estados por región'} subtitle="Top estados por número de proyectos" items={estadosData} metric={estadoMetric} totalValue={sumValues(estadosData)} selectedKey={chartSelections.estado} onSelect={(v) => selectChartValue('estado', v)} rightSlot={<MetricToggle value={estadoMetric} onChange={setEstadoMetric} />} barThickness={30} />
           <Box minW="0"><LollipopChart title="Distribución temporal" subtitle={`Distribución por ${selectedDateField.toLowerCase()}`} items={monthData} metric={monthMetric} totalValue={sumValues(monthData)} selectedKey={chartSelections.month} onSelect={(v) => selectChartValue('month', v)} rightSlot={<MetricToggle value={monthMetric} onChange={setMonthMetric} />} /></Box>
-          <Box minW="0"><CompanyMarkerChart title="Compañías" subtitle="Principales compañías por proyectos" items={companiaData} metric={companiaMetric} totalValue={sumValues(companiaData)} selectedKey={chartSelections.compania} onSelect={(v) => selectChartValue('compania', v)} rightSlot={<MetricToggle value={companiaMetric} onChange={setCompaniaMetric} />} visibleLimit={5} bottomAction={companiaData.length > 5 ? <Button size="sm" variant="ghost" color="#FF653F" fontSize="12px" cursor="pointer" onClick={() => setIsCompanyModalOpen(true)}>Ver todas las compañías</Button> : null} /></Box>
+          <Box minW="0"><ColumnChart title="Compañías" subtitle="Principales compañías por proyectos" items={companiaData} metric={companiaMetric} totalValue={sumValues(companiaData)} selectedKey={chartSelections.compania} onSelect={(v) => selectChartValue('compania', v)} rightSlot={<MetricToggle value={companiaMetric} onChange={setCompaniaMetric} />} visibleLimit={5} bottomAction={companiaData.length > 5 ? <Button size="sm" variant="ghost" color="#FF653F" fontSize="12px" cursor="pointer" onClick={() => setIsCompanyModalOpen(true)}>Ver todas las compañías</Button> : null} /></Box>
         </Grid>
       </Box>
 

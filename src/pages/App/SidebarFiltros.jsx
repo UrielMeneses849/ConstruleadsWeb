@@ -403,14 +403,14 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
       .map(([region]) => region);
   }
 
-  function getGenerosForSubgeneros(subgeneros) {
+  function getGenerosForSelections(subgeneros, tiposObraSeleccionados) {
     return Object.entries(subgenerosPorGenero)
       .filter(([, subgenerosGenero]) => {
-        const subgenerosDisponibles = Object.keys(subgenerosGenero || {});
-        return subgenerosDisponibles.length > 0 &&
-          subgenerosDisponibles.every((subgenero) =>
-            subgeneros.includes(subgenero)
-          );
+        return Object.entries(subgenerosGenero || {}).some(
+          ([subgenero, tiposObra]) =>
+            subgeneros.includes(subgenero) ||
+            tiposObra.some((tipo) => tiposObraSeleccionados.includes(tipo))
+        );
       })
       .map(([genero]) => genero);
   }
@@ -598,7 +598,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
       group: 'avanzados',
     },
     {
-      label: 'Inversión (MXN)',
+      label: 'Inversión (MDP)',
       options: ['$0 - $1M', '$1M - $10M', '$10M - $100M', '$100M+'],
       group: 'avanzados',
     },
@@ -847,8 +847,11 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     .reduce((total, subgeneros) => total + Object.keys(subgeneros).length, 0);
   const allTiposObraCount = Object.values(subgenerosPorGenero)
     .flatMap((subgeneros) => Object.values(subgeneros).flat()).length;
-  const omitWhenAllSelected = (selected, total) =>
-    selected.length === total ? [] : selected;
+  const selectionForPayload = (selected, total) => {
+    if (selected.length === total) return [];
+    if (selected.length === 0) return ['__NONE__'];
+    return selected;
+  };
 
   useEffect(() => {
     if (!shouldInitializeAllFilters.current || !obras.length) return;
@@ -902,18 +905,18 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     resolvedSurfaceMax < surfaceBounds.max;
 
   const filtrosActivos = {
-    regiones: omitWhenAllSelected(selectedRegiones, allRegionesCount),
-    estados: omitWhenAllSelected(selectedEstados, allEstadosCount),
-    generos: omitWhenAllSelected(selectedGeneros, allGenerosCount),
-    subgeneros: omitWhenAllSelected(selectedSubgeneros, allSubgenerosCount),
-    sectores: omitWhenAllSelected(selectedSectores, 2),
-    etapas: omitWhenAllSelected(selectedEtapas, 6),
-    desarrollos: omitWhenAllSelected(selectedDesarrollos, 7),
-    tipoObra: omitWhenAllSelected(selectedTipoObra, allTiposObraCount),
-    tipoObraSeleccionados: omitWhenAllSelected(selectedTipoObra, allTiposObraCount),
-    tiposObra: omitWhenAllSelected(selectedTipoObra, allTiposObraCount),
-    tiposObraFiltro: omitWhenAllSelected(selectedTipoObra, allTiposObraCount),
-    tiposProyecto: omitWhenAllSelected(selectedTiposProyecto, 2),
+    regiones: selectionForPayload(selectedRegiones, allRegionesCount),
+    estados: selectionForPayload(selectedEstados, allEstadosCount),
+    generos: selectionForPayload(selectedGeneros, allGenerosCount),
+    subgeneros: selectionForPayload(selectedSubgeneros, allSubgenerosCount),
+    sectores: selectionForPayload(selectedSectores, 2),
+    etapas: selectionForPayload(selectedEtapas, 6),
+    desarrollos: selectionForPayload(selectedDesarrollos, 7),
+    tipoObra: selectionForPayload(selectedTipoObra, allTiposObraCount),
+    tipoObraSeleccionados: selectionForPayload(selectedTipoObra, allTiposObraCount),
+    tiposObra: selectionForPayload(selectedTipoObra, allTiposObraCount),
+    tiposObraFiltro: selectionForPayload(selectedTipoObra, allTiposObraCount),
+    tiposProyecto: selectionForPayload(selectedTiposProyecto, 2),
     investmentMin: hasInvestmentRangeFilter ? resolvedInvestmentMin : null,
     investmentMax: hasInvestmentRangeFilter ? resolvedInvestmentMax : null,
     periodoIndex,
@@ -1314,7 +1317,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                           ];
 
                       setSelectedSubgeneros(nextSubgeneros);
-                      setSelectedGeneros(getGenerosForSubgeneros(nextSubgeneros));
+                      setSelectedGeneros(getGenerosForSelections(nextSubgeneros, nextTiposObra));
                       setSelectedTipoObra(nextTiposObra);
                     }}
                     style={{
@@ -1391,7 +1394,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                                     ];
 
                                 setSelectedSubgeneros(nextSubgeneros);
-                                setSelectedGeneros(getGenerosForSubgeneros(nextSubgeneros));
+                                setSelectedGeneros(getGenerosForSelections(nextSubgeneros, nextTiposObra));
                                 setSelectedTipoObra(nextTiposObra);
                               }}
                               style={{
@@ -1448,7 +1451,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
 
                                       setSelectedTipoObra(nextTiposObra);
                                       setSelectedSubgeneros(nextSubgeneros);
-                                      setSelectedGeneros(getGenerosForSubgeneros(nextSubgeneros));
+                                      setSelectedGeneros(getGenerosForSelections(nextSubgeneros, nextTiposObra));
                                     }}
                                   >
                                     <input
@@ -1495,10 +1498,11 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     const minDate = parseFilterDate(min);
     const maxDate = parseFilterDate(max);
     const visibleMonth = selectedDate || minDate || calendarMonth;
-    const monthLabel = new Intl.DateTimeFormat('es-MX', {
+    const formattedMonthLabel = new Intl.DateTimeFormat('es-MX', {
       month: 'long',
       year: 'numeric',
     }).format(calendarMonth);
+    const monthLabel = formattedMonthLabel.charAt(0).toUpperCase() + formattedMonthLabel.slice(1);
 
     return (
       <Box position="relative">
@@ -1553,7 +1557,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
             onClick={(event) => event.stopPropagation()}
           >
             <Flex align="center" justify="space-between" mb={2}>
-              <Text fontSize="12px" fontWeight="700" color={TEXT_STRONG} textTransform="capitalize">
+              <Text fontSize="12px" fontWeight="700" color={TEXT_STRONG}>
                 {monthLabel}
               </Text>
 
@@ -1638,6 +1642,19 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     const etapasPorTipo = {
       'Proyecto contratado': ['Obra Negociada', 'Pre-Inicio', 'Inicio'],
       'Proyecto de inversión': ['Pre-Plan', 'Plan', 'Proyecto'],
+    };
+    const getTiposProyectoForEtapas = (etapasSeleccionadas) =>
+      Object.entries(etapasPorTipo)
+        .filter(([, etapasTipo]) =>
+          etapasTipo.some((etapa) => etapasSeleccionadas.includes(etapa))
+        )
+        .map(([tipo]) => tipo);
+    const setEtapasWithParents = (updater) => {
+      const nextEtapas = typeof updater === 'function'
+        ? updater(selectedEtapas)
+        : updater;
+      setSelectedEtapas(nextEtapas);
+      setSelectedTiposProyecto(getTiposProyectoForEtapas(nextEtapas));
     };
     return (
       <>
@@ -1787,8 +1804,11 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
           <VStack align="stretch" spacing={2}>
             {['Proyecto contratado', 'Proyecto de inversión'].map((tipo) => {
               const etapas = etapasPorTipo[tipo] || [];
-              const tipoSelected = selectedTiposProyecto.includes(tipo);
-              const tipoActive = tipoSelected || etapas.some((etapa) => selectedEtapas.includes(etapa));
+              const tipoSelected = etapas.length > 0 &&
+                etapas.every((etapa) => selectedEtapas.includes(etapa));
+              const tipoPartiallySelected = !tipoSelected &&
+                etapas.some((etapa) => selectedEtapas.includes(etapa));
+              const tipoActive = tipoSelected || tipoPartiallySelected;
               const expanded = expandedTipoProyecto === tipo;
 
               return (
@@ -1807,14 +1827,14 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                   >
                     <input
                       type="checkbox"
-                      checked={tipoActive}
+                      checked={tipoSelected}
                       readOnly
+                      ref={(input) => {
+                        if (input) input.indeterminate = tipoPartiallySelected;
+                      }}
                       onClick={(e) => {
                         e.stopPropagation();
                         setExpandedTipoProyecto(tipo);
-                        const nextTiposProyecto = tipoActive
-                          ? selectedTiposProyecto.filter((item) => item !== tipo)
-                          : [...selectedTiposProyecto, tipo];
                         const nextEtapas = tipoActive
                           ? selectedEtapas.filter((etapa) => !etapas.includes(etapa))
                           : [
@@ -1822,8 +1842,8 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                               ...etapas.filter((etapa) => !selectedEtapas.includes(etapa)),
                             ];
 
-                        setSelectedTiposProyecto(nextTiposProyecto);
                         setSelectedEtapas(nextEtapas);
+                        setSelectedTiposProyecto(getTiposProyectoForEtapas(nextEtapas));
                       }}
                       style={{
                         marginRight: 8,
@@ -1862,7 +1882,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                         etapas,
                         `Etapa - ${tipo}`,
                         selectedEtapas,
-                        setSelectedEtapas,
+                        setEtapasWithParents,
                         true
                       )}
                     </Box>
@@ -2150,7 +2170,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
 
     return (
       <FilterAccordion
-        title="Inversión (MXN)"
+        title="Inversión (MDP)"
         count={
           resolvedInvestmentMin !== investmentBounds.min ||
           resolvedInvestmentMax !== investmentBounds.max

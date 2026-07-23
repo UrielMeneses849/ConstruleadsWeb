@@ -385,7 +385,7 @@ useEffect(() => {
     wordBreak: 'break-word',
     lineHeight: '1.3',
     maxHeight: '2.6em',
-    minHeight: '2.6em',
+    textAlign: 'center',
   };
 
   const renderCellText = (value) => (
@@ -652,7 +652,7 @@ useEffect(() => {
   };
 
   const renderHeaderCell = (field, label) => (
-    <Flex align="center" justify="flex-start" gap={1}>
+    <Flex align="center" justify="center" gap={1}>
       <Text
         fontSize="12px"
         fontWeight="700"
@@ -916,7 +916,8 @@ useEffect(() => {
               .resultados-table th,
               .resultados-table td {
                 box-sizing: border-box;
-                vertical-align: top;
+                text-align: center !important;
+                vertical-align: middle;
               }
               .resultados-table th:last-child {
                 position: sticky;

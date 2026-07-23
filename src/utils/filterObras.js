@@ -281,7 +281,9 @@ export function filterObrasByFilters(obras = [], filtros = {}) {
   const tipoObra = getArrayFilter(filtros, 'tipoObra', 'selectedTipoObra');
   const tiposProyecto = getArrayFilter(filtros, 'tiposProyecto', 'selectedTiposProyecto');
 
-  if (regiones.length) {
+  // En jerarquías, el hijo es la fuente de verdad. Aplicar padre e hijo a la
+  // vez rompe las selecciones parciales (por ejemplo, un solo estado).
+  if (!estados.length && regiones.length) {
     resultado = resultado.filter((obra) =>
       matchesTextList(obra.region, regiones)
     );
@@ -293,7 +295,7 @@ export function filterObrasByFilters(obras = [], filtros = {}) {
     );
   }
 
-  if (generos.length) {
+  if (!tipoObra.length && !subgeneros.length && generos.length) {
     resultado = resultado.filter((obra) =>
       matchesTextList(obra.genero, generos)
     );
@@ -317,13 +319,13 @@ export function filterObrasByFilters(obras = [], filtros = {}) {
     );
   }
 
-  if (tiposProyecto.length) {
+  if (!etapas.length && tiposProyecto.length) {
     resultado = resultado.filter((obra) =>
       matchesTextList(obra.tipoProyecto, tiposProyecto)
     );
   }
 
-  if (subgeneros.length) {
+  if (!tipoObra.length && subgeneros.length) {
     const tiposObraPermitidos = subgeneros.flatMap(
       (subgenero) => TIPO_OBRA_POR_SUBGENERO[subgenero] || []
     );
