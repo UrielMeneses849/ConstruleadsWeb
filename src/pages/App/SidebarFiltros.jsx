@@ -1783,11 +1783,6 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
               })}
             </SimpleGrid>
 
-            {dateBounds.min && dateBounds.max && (
-              <Text fontSize="11px" color="var(--cl-text-muted)" mt={2}>
-                Disponible: {dateBounds.min} a {dateBounds.max}
-              </Text>
-            )}
           </Box>
         </FilterAccordion>
 

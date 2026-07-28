@@ -429,22 +429,17 @@ export function aggregateObrasByMetric(obras = [], keyGetter, metric = 'proyecto
     .sort((a, b) => b.value - a.value);
 }
 
+export const formatInteger = (value) =>
+  new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: 0,
+  }).format(Number(value) || 0);
+
 export function formatGraphMetricValue(value, metric = 'proyectos') {
   if (metric === 'inversion') {
-    return new Intl.NumberFormat('es-MX', { maximumFractionDigits: 0 }).format(
-      Math.round((Number(value) || 0) / 1000000)
-    );
+    return formatInteger(Math.round((Number(value) || 0) / 1000000));
   }
 
-  if (metric === 'superficie') {
-    return new Intl.NumberFormat('es-MX', { maximumFractionDigits: 0 }).format(
-      Math.round(Number(value) || 0)
-    );
-  }
-
-  return new Intl.NumberFormat('es-MX', { maximumFractionDigits: 0 }).format(
-    Math.round(Number(value) || 0)
-  );
+  return formatInteger(Math.round(Number(value) || 0));
 }
 
 export function formatGraphMetricSuffix(metric = 'proyectos') {

@@ -301,7 +301,7 @@ export default function Construleads() {
             Gráficas
           </Box>
 
-          <Box
+          {/* <Box
             px={3}
             h="44px"
             display="flex"
@@ -316,9 +316,9 @@ export default function Construleads() {
             _hover={{ bg: 'rgba(255,255,255,.14)' }}
           >
             Analytics
-          </Box>
+          </Box> */}
 
-          <Box
+          {/* <Box
             px={3}
             h="44px"
             display="flex"
@@ -333,7 +333,7 @@ export default function Construleads() {
             _hover={{ bg: 'rgba(255,255,255,.14)' }}
           >
             Personalizado
-          </Box>
+          </Box> */}
         </HStack>
 
         <HStack spacing={3}>
@@ -455,7 +455,12 @@ export default function Construleads() {
                 />
               </Box>
               <Box flexShrink={0}>
-                <DownloadPanel selectedCount={selectedResultObras.length} />
+                <DownloadPanel
+                  selectedObras={selectedResultObras}
+                  filteredObras={filteredObras}
+                  filtros={filtros}
+                  user={user}
+                />
               </Box>
             </Flex>
           </Box>

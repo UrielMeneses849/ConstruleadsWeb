@@ -3,29 +3,41 @@ import {
   Box,
   Button,
   Flex,
+  Spinner,
   Text,
 } from '@chakra-ui/react';
+import {
+  buildObrasKeys,
+  DATE_TYPE_WS_MAP,
+  formatDateForWs,
+  iniciarDescargaReporte,
+  solicitarReporte,
+} from '../../api/reportes';
 
 const downloadOptions = [
-  { value: 'pdf-obras', label: 'PDF - Obras' },
-  { value: 'pdf-companias', label: 'PDF - Compañías' },
-  { value: 'excel-clasica', label: 'Excel - Clásica' },
-  { value: 'excel-contactos', label: 'Excel - Contactos' },
-  { value: 'excel-companias', label: 'Excel - Compañías' },
-  { value: 'excel-prospeccion', label: 'Excel - Prospección' },
+  { value: 'pdf_obras', label: 'PDF - Obras' },
+  { value: 'excel_clasico', label: 'Excel - Clásico' },
+  { value: 'excel_contactos', label: 'Excel - Contactos' },
+  { value: 'excel_mapa', label: 'Excel - Mapa' },
+  { value: 'excel_prospeccion', label: 'Excel - Prospección' },
 ];
 
-export default function DownloadPanel({ selectedCount = 0 }) {
+export default function DownloadPanel({
+  selectedObras = [],
+  filteredObras = [],
+  filtros = {},
+  user = {},
+}) {
   const [selectedOption, setSelectedOption] = useState(downloadOptions[0]);
   const [isOpen, setIsOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [notification, setNotification] = useState(null);
   const panelRef = useRef(null);
-  const hasSelection = selectedCount > 0;
+  const hasSelection = selectedObras.length > 0;
 
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        setIsOpen(false);
-      }
+      if (event.key === 'Escape') setIsOpen(false);
     };
     const handlePointerDown = (event) => {
       if (panelRef.current && !panelRef.current.contains(event.target)) {
@@ -35,12 +47,75 @@ export default function DownloadPanel({ selectedCount = 0 }) {
 
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('pointerdown', handlePointerDown);
-
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('pointerdown', handlePointerDown);
     };
   }, []);
+
+  useEffect(() => {
+    if (!notification) return undefined;
+    const timer = window.setTimeout(() => setNotification(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [notification]);
+
+  const handleDownload = async () => {
+    if (isGenerating) return;
+
+    const obrasParaDescargar = hasSelection ? selectedObras : filteredObras;
+    const obrasKeys = buildObrasKeys(obrasParaDescargar);
+    const isExcel = selectedOption.value !== 'pdf_obras';
+    const selectedDateType =
+      filtros.fechaConsulta ||
+      filtros.selectedValues?.['Fecha de consulta'] ||
+      'Fecha de publicación';
+    const dateType = DATE_TYPE_WS_MAP[selectedDateType] || '';
+    const dateMin = formatDateForWs(filtros.fechaInicio || filtros.fechaRango?.desde);
+    const dateMax = formatDateForWs(filtros.fechaFin || filtros.fechaRango?.hasta);
+
+    if (!obrasKeys) {
+      setNotification({ type: 'error', message: 'No hay obras válidas para descargar.' });
+      return;
+    }
+    if (!user.idUsuario || !user.idSession) {
+      setNotification({ type: 'error', message: 'La sesión del usuario no está disponible.' });
+      return;
+    }
+    if (isExcel && (!dateType || !dateMin || !dateMax)) {
+      setNotification({
+        type: 'error',
+        message: 'Selecciona un criterio y un rango de fechas válido para el reporte Excel.',
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    setIsOpen(false);
+    setNotification(null);
+
+    try {
+      const { fileUrl } = await solicitarReporte({
+        reportType: selectedOption.value,
+        userId: user.idUsuario,
+        sessionId: user.idSession,
+        obrasKeys,
+        dateType,
+        dateMin,
+        dateMax,
+      });
+      iniciarDescargaReporte(fileUrl);
+      setNotification({ type: 'success', message: 'Reporte generado correctamente.' });
+    } catch (error) {
+      setNotification({
+        type: 'error',
+        message: error instanceof Error && error.message
+          ? error.message
+          : 'No fue posible generar el reporte.',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   return (
     <Flex
@@ -55,6 +130,71 @@ export default function DownloadPanel({ selectedCount = 0 }) {
       w="clamp(288px, 24vw, 320px)"
       position="relative"
     >
+      <style>{`
+        @keyframes cl-report-progress {
+          0% { transform: translateX(-100%); }
+          55% { transform: translateX(80%); }
+          100% { transform: translateX(250%); }
+        }
+      `}</style>
+
+      {(isGenerating || notification) && (
+        <Box
+          position="absolute"
+          bottom="56px"
+          right={0}
+          w="min(360px, calc(100vw - 24px))"
+          bg="var(--cl-surface)"
+          border="1px solid var(--cl-border)"
+          borderRadius="14px"
+          boxShadow="0 16px 38px rgba(0,0,0,.18)"
+          p={4}
+          zIndex={60}
+          role="status"
+          aria-live="polite"
+        >
+          <Flex align="center" gap={3}>
+            {isGenerating ? (
+              <Spinner size="sm" color="#FF653F" />
+            ) : (
+              <Flex
+                w="28px"
+                h="28px"
+                borderRadius="full"
+                align="center"
+                justify="center"
+                bg={notification?.type === 'success' ? '#DCFCE7' : '#FEE2E2'}
+                color={notification?.type === 'success' ? '#15803D' : '#B91C1C'}
+                fontWeight="800"
+              >
+                {notification?.type === 'success' ? '✓' : '!'}
+              </Flex>
+            )}
+            <Box minW="0" flex="1">
+              <Text fontSize="13px" fontWeight="700" color="var(--cl-text-strong)">
+                {isGenerating ? selectedOption.label : notification?.message}
+              </Text>
+              {isGenerating && (
+                <Text mt={0.5} fontSize="12px" color="var(--cl-text-muted)">
+                  Generando reporte…
+                </Text>
+              )}
+            </Box>
+          </Flex>
+          {isGenerating && (
+            <Box mt={3} h="4px" overflow="hidden" borderRadius="full" bg="var(--cl-border)">
+              <Box
+                h="100%"
+                w="38%"
+                borderRadius="full"
+                bg="#FF653F"
+                animation="cl-report-progress 1.5s ease-in-out infinite"
+              />
+            </Box>
+          )}
+        </Box>
+      )}
+
       <Box flex="1" position="relative">
         <Flex
           as="button"
@@ -70,13 +210,13 @@ export default function DownloadPanel({ selectedCount = 0 }) {
           color="var(--cl-text)"
           fontSize="13px"
           textAlign="left"
+          disabled={isGenerating}
+          opacity={isGenerating ? 0.65 : 1}
           transition="border-color 160ms ease, background 160ms ease"
           _hover={{ bg: 'var(--cl-hover)', borderColor: 'var(--cl-text-muted)' }}
           onClick={() => setIsOpen((value) => !value)}
         >
-          <Text as="span" noOfLines={1}>
-            {selectedOption.label}
-          </Text>
+          <Text as="span" noOfLines={1}>{selectedOption.label}</Text>
           <Text as="span" color="var(--cl-text-muted)" fontSize="14px" ml={2}>
             {isOpen ? '⌃' : '⌄'}
           </Text>
@@ -95,7 +235,6 @@ export default function DownloadPanel({ selectedCount = 0 }) {
             border="1px solid var(--cl-border)"
             borderRadius="8px"
             overflow="hidden"
-            boxShadow="none"
           >
             {downloadOptions.map((option) => (
               <Flex
@@ -106,13 +245,11 @@ export default function DownloadPanel({ selectedCount = 0 }) {
                 px={3}
                 py={2}
                 align="center"
-                justify="space-between"
                 bg="var(--cl-surface)"
                 color="var(--cl-text)"
                 fontSize="13px"
                 textAlign="left"
                 whiteSpace="nowrap"
-                transition="background 160ms ease"
                 _hover={{ bg: 'var(--cl-hover)' }}
                 onClick={() => {
                   setSelectedOption(option);
@@ -139,9 +276,16 @@ export default function DownloadPanel({ selectedCount = 0 }) {
         color="white"
         borderRadius="8px"
         fontSize="13px"
+        disabled={isGenerating}
         _hover={{ bg: '#D94E2D' }}
+        onClick={handleDownload}
       >
-        {hasSelection ? 'Descargar selección' : 'Descargar todos'}
+        {isGenerating ? (
+          <Flex align="center" gap={2}>
+            <Spinner size="xs" />
+            <Text as="span">Generando…</Text>
+          </Flex>
+        ) : hasSelection ? 'Descargar selección' : 'Descargar todos'}
       </Button>
     </Flex>
   );

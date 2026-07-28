@@ -13,6 +13,7 @@ import { FiInfo } from 'react-icons/fi';
 import {
   aggregateObrasByMetric,
   filterObrasByFilters,
+  formatInteger,
   formatGraphMetricSuffix,
   formatGraphMetricValue,
   getMonthKeyFromObra,
@@ -35,6 +36,8 @@ const CHART_COLORS = [
   '#94A3B8',
   '#94A3B8',
 ];
+
+const REGION_COLORS = ['#4B5563', '#6B7280', '#9CA3AF', '#D1D5DB', '#E5E7EB'];
 
 function normalizeText(value) {
   return String(value || '').trim();
@@ -428,10 +431,17 @@ function RegionTreemap({
         transition="transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease"
         _hover={{ transform: 'translateY(-1px)' }}
         onClick={() => onSelect(item.key)}
-        bg={CHART_COLORS[index % CHART_COLORS.length]}
+        bg={REGION_COLORS[index % REGION_COLORS.length]}
       >
         <Box position="absolute" inset="0" bg="linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.18))" />
-        <Flex position="absolute" inset="0" p={3} direction="column" justify="space-between" color="white">
+        <Flex
+          position="absolute"
+          inset="0"
+          p={3}
+          direction="column"
+          justify="space-between"
+          color={index >= 3 ? '#1F2937' : 'white'}
+        >
           <Text fontSize="14px" fontWeight="700" noOfLines={2} lineHeight="1.2">{item.label}</Text>
           <Box>
             <Text fontSize="18px" fontWeight="700" lineHeight="1.1">{percentage}%</Text>
@@ -1018,22 +1028,24 @@ export default function GraficasView({ obras = [], filtros = {} }) {
           <Box bg="var(--cl-surface)" border="1px solid var(--cl-border)" borderRadius="12px" px={4} py={3} minW="160px">
             <Text fontSize="11px" color="var(--cl-text-muted)" fontWeight="600">Selección actual</Text>
             <HStack spacing={1.5} align="baseline">
-              <Text fontSize="22px" fontWeight="400" color="var(--cl-text-strong)" lineHeight="1.1">{totalProyectos}</Text>
+              <Text fontSize="22px" fontWeight="400" color="var(--cl-text-strong)" lineHeight="1.1">{formatInteger(totalProyectos)}</Text>
               <Text fontSize="12px" fontWeight="400" color="var(--cl-text-muted)">proyectos</Text>
             </HStack>
           </Box>
         </Flex>
 
-        <Flex h="38px" mb={4} gap={2} align="center" flexWrap="nowrap" overflowX="auto" overflowY="hidden" visibility={appliedSelections.length ? 'visible' : 'hidden'}>
-          {appliedSelections.map((selection) => (
-            <HStack key={selection.key} spacing={1} px={3} py={1.5} flexShrink={0} borderRadius="999px" bg="rgba(255,102,0,.10)" border="1px solid rgba(255,102,0,.28)">
-              <Text fontSize="11px" color="var(--cl-text-muted)">{selection.label}:</Text>
-              <Text fontSize="11px" color="var(--cl-text-strong)" fontWeight="600">{selection.displayValue}</Text>
-              <Button minW="18px" h="18px" p={0} ml={1} border="none" bg="transparent" color="#FF653F" fontSize="15px" onClick={() => selectChartValue(selection.key, selection.value)}>×</Button>
-            </HStack>
-          ))}
-          <Button size="sm" h="30px" px={4} flexShrink={0} borderRadius="999px" bg="#FF653F" color="white" fontSize="12px" _hover={{ bg: '#D94E2D' }} onClick={clearChartSelections}>Quitar selección</Button>
-        </Flex>
+        {appliedSelections.length > 0 && (
+          <Flex mb={4} gap={2} align="center" flexWrap="wrap">
+            {appliedSelections.map((selection) => (
+              <HStack key={selection.key} spacing={1} px={3} py={1.5} flexShrink={0} borderRadius="999px" bg="rgba(255,102,0,.10)" border="1px solid rgba(255,102,0,.28)">
+                <Text fontSize="11px" color="var(--cl-text-muted)">{selection.label}:</Text>
+                <Text fontSize="11px" color="var(--cl-text-strong)" fontWeight="600">{selection.displayValue}</Text>
+                <Button minW="18px" h="18px" p={0} ml={1} border="none" bg="transparent" color="#FF653F" fontSize="15px" onClick={() => selectChartValue(selection.key, selection.value)}>×</Button>
+              </HStack>
+            ))}
+            <Button size="sm" h="30px" px={4} flexShrink={0} borderRadius="999px" bg="#FF653F" color="white" fontSize="12px" _hover={{ bg: '#D94E2D' }} onClick={clearChartSelections}>Quitar selección</Button>
+          </Flex>
+        )}
 
         <Grid templateColumns={{ base: '1fr', xl: 'repeat(2, minmax(0, 1fr))' }} columnGap={4} rowGap={7} alignItems="stretch">
           <BarListChart title="Género" subtitle="Distribución por género constructivo" items={generoData} metric={generoMetric} totalValue={sumValues(generoData)} selectedKey={chartSelections.genero} onSelect={(v) => selectChartValue('genero', v)} rightSlot={<MetricToggle value={generoMetric} onChange={setGeneroMetric} />} visibleLimit={6} barThickness={30} />
@@ -1049,7 +1061,7 @@ export default function GraficasView({ obras = [], filtros = {} }) {
         <Flex position="fixed" inset="0" zIndex={100} bg="rgba(0,0,0,.68)" align="center" justify="center" p={6} onClick={() => setIsCompanyModalOpen(false)}>
           <Box w="min(760px, 100%)" maxH="82vh" bg="var(--cl-surface)" border="1px solid var(--cl-border)" borderRadius="16px" boxShadow="0 24px 70px rgba(0,0,0,.35)" overflow="hidden" onClick={(e) => e.stopPropagation()}>
             <Flex px={5} py={4} align="center" justify="space-between" borderBottom="1px solid var(--cl-border)">
-              <Box><Text fontSize="20px" fontWeight="700" color="var(--cl-text-strong)">Todas las compañías</Text><Text fontSize="12px" color="var(--cl-text-muted)">{companiaData.length} compañías en la selección actual</Text></Box>
+              <Box><Text fontSize="20px" fontWeight="700" color="var(--cl-text-strong)">Todas las compañías</Text><Text fontSize="12px" color="var(--cl-text-muted)">{formatInteger(companiaData.length)} compañías en la selección actual</Text></Box>
               <Button minW="34px" h="34px" p={0} borderRadius="full" bg="var(--cl-input-bg)" onClick={() => setIsCompanyModalOpen(false)}>×</Button>
             </Flex>
             <VStack align="stretch" spacing={1} p={4} maxH="calc(82vh - 86px)" overflowY="auto">

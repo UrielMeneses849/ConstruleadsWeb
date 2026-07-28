@@ -63,6 +63,7 @@ function Mapa({
   const markerCacheRef = useRef(new Map());
   const markerUpdateTokenRef = useRef(0);
   const markerIconRef = useRef(null);
+  const clusterIconCacheRef = useRef(new Map());
   const onFilteredDataRef = useRef(onFilteredData);
   const lastPublishedCount = useRef(-1);
   const didFitInitialBoundsRef = useRef(false);
@@ -712,17 +713,22 @@ useEffect(() => {
 
     const createClusterIcon = (count) => {
       const size = count >= 100 ? 48 : count >= 10 ? 42 : 36;
+      const cachedIcon = clusterIconCacheRef.current.get(size);
+      if (cachedIcon) return cachedIcon;
+
       const svg = `
         <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
           <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 2}" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="2"/>
         </svg>
       `;
 
-      return {
+      const icon = {
         url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
         scaledSize: new window.google.maps.Size(size, size),
         anchor: new window.google.maps.Point(size / 2, size / 2),
       };
+      clusterIconCacheRef.current.set(size, icon);
+      return icon;
     };
 
     const renderCluster = ({ count, position }) => new window.google.maps.Marker({
@@ -900,18 +906,10 @@ useEffect(() => {
         return;
       }
 
-      const startedAt = performance.now();
+      const startedAt = DEBUG_MAPA ? performance.now() : 0;
       const markers = [];
       let builtMarkers = 0;
-      let firstPaintCount = 0;
       const chunkSize = filteredObras.length > 500 ? 320 : filteredObras.length;
-
-      // En la primera carga evitamos bloquear la vista hasta construir miles de
-      // marcadores. El primer bloque se muestra de inmediato y el resto se
-      // incorpora en segundo plano en el render final del cluster.
-      if (markerClusterRef.current) {
-        markerClusterRef.current.clearMarkers(true);
-      }
 
       for (let index = 0; index < filteredObras.length; index += 1) {
         if (markerUpdateTokenRef.current !== updateToken) return;
@@ -931,16 +929,6 @@ useEffect(() => {
         if (marker) markers.push(marker);
 
         if (chunkSize < filteredObras.length && index > 0 && index % chunkSize === 0) {
-          if (!firstPaintCount && markers.length && markerClusterRef.current) {
-            markerClusterRef.current.addMarkers(markers, true);
-            markerClusterRef.current.render();
-            firstPaintCount = markers.length;
-            setIsMapLoading(false);
-          }
-
-          setMapLoadingMessage(
-            `Pintando obras... ${Math.min(index, filteredObras.length).toLocaleString()} de ${filteredObras.length.toLocaleString()}`
-          );
           await new Promise((resolve) => requestAnimationFrame(resolve));
         }
       }
@@ -948,11 +936,21 @@ useEffect(() => {
       if (markerUpdateTokenRef.current !== updateToken) return;
 
       if (markerClusterRef.current) {
-        const pendingMarkers = firstPaintCount
-          ? markers.slice(firstPaintCount)
-          : markers;
-        markerClusterRef.current.addMarkers(pendingMarkers, true);
-        markerClusterRef.current.render();
+        const previousMarkers = markerElementsRef.current;
+        const previousSet = new Set(previousMarkers);
+        const nextSet = new Set(markers);
+        const removedMarkers = previousMarkers.filter((marker) => !nextSet.has(marker));
+        const addedMarkers = markers.filter((marker) => !previousSet.has(marker));
+
+        if (removedMarkers.length) {
+          markerClusterRef.current.removeMarkers(removedMarkers, true);
+        }
+        if (addedMarkers.length) {
+          markerClusterRef.current.addMarkers(addedMarkers, true);
+        }
+        if (removedMarkers.length || addedMarkers.length) {
+          markerClusterRef.current.render();
+        }
       }
 
       if (markerUpdateTokenRef.current === updateToken) {
@@ -978,7 +976,7 @@ useEffect(() => {
         nuevos: builtMarkers,
         reutilizados: markers.length - builtMarkers,
         cache: markerCacheRef.current.size,
-        ms: Math.round(performance.now() - startedAt),
+        ms: DEBUG_MAPA ? Math.round(performance.now() - startedAt) : undefined,
       });
     };
 
