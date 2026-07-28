@@ -103,6 +103,23 @@ export default function DownloadPanel({
         dateMin,
         dateMax,
       });
+      const history = JSON.parse(localStorage.getItem('cl_download_history') || '[]');
+      const now = new Date();
+      const reportName = selectedOption.label.replace(' - ', ' — ');
+      localStorage.setItem('cl_download_history', JSON.stringify([
+        {
+          id: Date.now(),
+          date: new Intl.DateTimeFormat('es-MX', {
+            day: '2-digit', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit',
+          }).format(now),
+          type: isExcel ? 'Excel' : 'PDF',
+          name: `${reportName} · ${obrasParaDescargar.length} obras`,
+          size: 'Generado',
+          url: fileUrl,
+        },
+        ...history,
+      ].slice(0, 100)));
       iniciarDescargaReporte(fileUrl);
       setNotification({ type: 'success', message: 'Reporte generado correctamente.' });
     } catch (error) {

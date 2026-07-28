@@ -478,29 +478,32 @@ export default function Construleads() {
               }
               @media (prefers-reduced-motion: reduce) { .cl-view-enter { animation: none; } }
             `}</style>
-            {activeView === 'mapa' && <Box className="cl-view-enter" h="100%" minH="0" pb="50px">
+            <Box className={activeView === 'mapa' ? 'cl-view-enter' : undefined}
+              display={activeView === 'mapa' ? 'block' : 'none'} h="100%" minH="0" pb="50px">
               <Mapa
                 obras={obras}
                 filtros={filtros}
                 isDarkMode={isDarkMode}
               />
-            </Box>}
+            </Box>
 
-            {activeView === 'resultados' && <Box className="cl-view-enter" h="100%" minH="0" pb="50px">
+            <Box className={activeView === 'resultados' ? 'cl-view-enter' : undefined}
+              display={activeView === 'resultados' ? 'block' : 'none'} h="100%" minH="0" pb="50px">
               <Resultados
                 obras={filteredObras}
                 onSelectionChange={handleResultsSelectionChange}
                 selectionResetToken={selectionResetToken}
                 onGoToMap={() => setActiveView('mapa')}
               />
-            </Box>}
+            </Box>
 
-            {activeView === 'graficas' && <Box className="cl-view-enter" h="100%" minH="0" pb="50px">
+            <Box className={activeView === 'graficas' ? 'cl-view-enter' : undefined}
+              display={activeView === 'graficas' ? 'block' : 'none'} h="100%" minH="0" pb="50px">
               <GraficasView
                 obras={obras}
                 filtros={filtros}
               />
-            </Box>}
+            </Box>
           </Box>
         </Box>
       </Flex>
