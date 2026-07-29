@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Box, Button, Flex, Spinner, Text } from '@chakra-ui/react';
+import { Box, Button, Flex, Image, Spinner, Text } from '@chakra-ui/react';
 
 export default function FichaTecnicaModal({
   isOpen,
   url,
+  htmlContent,
   title,
   isLoading,
   error,
@@ -13,6 +14,11 @@ export default function FichaTecnicaModal({
   onClose,
   onDownload,
 }) {
+  const publicLogoUrl = new URL(
+    `${import.meta.env.BASE_URL}bimsa-logo.png`,
+    window.location.origin
+  ).href;
+
   useEffect(() => {
     if (!isOpen) return undefined;
     const handleKeyDown = (event) => {
@@ -23,6 +29,27 @@ export default function FichaTecnicaModal({
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  const replaceIframeLogo = (event) => {
+    try {
+      const iframeDocument = event.currentTarget.contentDocument;
+      if (!iframeDocument) return;
+
+      const logoImages = Array.from(iframeDocument.images).filter((image) => {
+        const source = image.getAttribute('src') || '';
+        const alternativeText = image.getAttribute('alt') || '';
+        return /bimsa|logo_bimsa/i.test(`${source} ${alternativeText}`);
+      });
+
+      logoImages.forEach((image) => {
+        image.removeAttribute('srcset');
+        image.src = publicLogoUrl;
+      });
+    } catch {
+      // Un iframe de otro dominio no permite modificar su documento.
+      // En ese caso se conserva intacta la ficha entregada por el servicio.
+    }
+  };
 
   return createPortal(
     <Flex
@@ -78,16 +105,49 @@ export default function FichaTecnicaModal({
               <Text fontSize="13px" color="#777">{error}</Text>
             </Box>
           )}
-          {!isLoading && !error && url && (
+          {!isLoading && !error && (htmlContent || url) && (
             <Box
-              as="iframe"
-              src={url}
-              title={title || 'Ficha técnica'}
-              border="0"
               w="100%"
               h="100%"
+              overflow="hidden"
               bg="white"
-            />
+              position="relative"
+            >
+              <Flex
+                position="absolute"
+                zIndex={2}
+                top="22px"
+                left="max(28px, calc((100% - 1120px) / 2))"
+                w="176px"
+                h="48px"
+                align="center"
+                bg="white"
+                pointerEvents="none"
+                aria-hidden="true"
+              >
+                <Image
+                  src={publicLogoUrl}
+                  alt=""
+                  w="168px"
+                  h="40px"
+                  objectFit="contain"
+                  objectPosition="left center"
+                />
+              </Flex>
+              <Box
+                as="iframe"
+                src={htmlContent ? undefined : url}
+                srcDoc={htmlContent || undefined}
+                title={title || 'Ficha técnica'}
+                onLoad={replaceIframeLogo}
+                border="0"
+                w="125%"
+                h="125%"
+                bg="white"
+                transform="scale(.8)"
+                transformOrigin="top left"
+              />
+            </Box>
           )}
         </Flex>
         <Flex

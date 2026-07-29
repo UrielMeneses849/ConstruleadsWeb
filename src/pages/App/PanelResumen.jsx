@@ -11,7 +11,7 @@ import {
 import { getSelectedDateField } from '../../utils/filterObras';
 
 export default function PanelResumen({ obras = [], filtros = {}, variant = 'sidebar' }) {
-const [isCompactWidth] = useMediaQuery('(max-width: 1366px)');
+const [isCompactWidth] = useMediaQuery('(max-width: 1600px)');
 const selectedDateField = useMemo(
   () => getSelectedDateField(filtros),
   [filtros]
@@ -71,25 +71,20 @@ if (variant === 'map') {
         <Box
           key={item.label}
           flex="0 0 auto"
-          w={
-            item.label === 'Inversión total'
-              ? '172px'
-              : item.label === 'Superficie'
-                ? '174px'
-                : item.label === 'Proyectos'
-                  ? '112px'
-                  : '104px'
-          }
+          w="max-content"
           bg="var(--cl-surface)"
           border="1px solid var(--cl-border)"
           borderRadius="10px"
           boxShadow="var(--cl-shadow)"
           color="var(--cl-text)"
-          minH="54px"
-          px={2.5}
+          minH="60px"
+          px={3}
           py={1.5}
           position="relative"
           overflow="hidden"
+          display="flex"
+          flexDirection="column"
+          justifyContent="center"
         >
           <Box
             position="absolute"
@@ -99,7 +94,7 @@ if (variant === 'map') {
             w="3px"
           />
 
-          <Flex align="center" gap={2} mb={0.5}>
+          <Flex align="center" gap={2} mb={1}>
             <Text
               fontSize={isCompactWidth ? '10px' : '11px'}
               fontWeight="700"
@@ -135,21 +130,36 @@ if (variant === 'map') {
         </Box>
       ))}
       <Box
-        flex="0 0 220px"
-        w="220px"
+        flex="0 0 auto"
+        w="max-content"
         bg="var(--cl-surface)"
         border="1px solid var(--cl-border)"
         borderRadius="10px"
         boxShadow="var(--cl-shadow)"
-        minH="54px"
+        minH="60px"
         px={3}
-        py={1}
+        py={1.5}
+        display="flex"
+        flexDirection="column"
+        justifyContent="center"
       >
-        <Text fontSize="11px" color="var(--cl-text-muted)" fontWeight="600" whiteSpace="nowrap">
+        <Text
+          fontSize={isCompactWidth ? '10px' : '11px'}
+          color="var(--cl-text-muted)"
+          fontWeight="700"
+          lineHeight="1"
+          whiteSpace="nowrap"
+        >
           Criterio de fecha
         </Text>
-        <Text fontSize="14px" color="var(--cl-text-strong)" fontWeight="500"
-          whiteSpace="nowrap">
+        <Text
+          mt={1}
+          fontSize={isCompactWidth ? '14px' : '17px'}
+          lineHeight="1.1"
+          color="var(--cl-text-strong)"
+          fontWeight="500"
+          whiteSpace="nowrap"
+        >
           {selectedDateLabel}
         </Text>
       </Box>

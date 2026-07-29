@@ -72,7 +72,7 @@ export default function Construleads() {
   const [useCompactScale] = useMediaQuery(
     '(min-width: 1100px) and (max-width: 1366px) and (max-height: 900px)'
   );
-  const [useMediumGraphScale] = useMediaQuery(
+  const [useMediumScale] = useMediaQuery(
     '(min-width: 1367px) and (max-width: 1600px) and (max-height: 1000px)'
   );
   const isAuthenticated =
@@ -99,11 +99,9 @@ export default function Construleads() {
   const [activeView, setActiveView] = useState('mapa');
   const [fichaTecnica, setFichaTecnica] = useState({
     isOpen: false, isLoading: false, isDownloading: false,
-    url: '', title: '', obraKey: '', error: '', downloadError: '',
+    url: '', htmlContent: '', title: '', obraKey: '', error: '', downloadError: '',
   });
-  const interfaceScale = useCompactScale
-    ? 0.8
-    : (useMediumGraphScale && activeView === 'graficas' ? 0.9 : 1);
+  const interfaceScale = useCompactScale || useMediumScale ? 0.8 : 1;
   const usesScaledCanvas = interfaceScale < 1;
   const canvasSize = `${100 / interfaceScale}%`;
   const canvasViewportHeight = `${100 / interfaceScale}vh`;
@@ -195,17 +193,17 @@ export default function Construleads() {
     const title = obra?.proyecto || obra?.Proyecto || obra?.source?.proyecto || 'Ficha técnica';
     setFichaTecnica({
       isOpen: true, isLoading: true, isDownloading: false,
-      url: '', title, obraKey, error: '', downloadError: '',
+      url: '', htmlContent: '', title, obraKey, error: '', downloadError: '',
     });
     try {
-      const { htmlUrl } = await solicitarFichaHtml({
+      const { htmlUrl, htmlContent } = await solicitarFichaHtml({
         userId: user.idUsuario,
         sessionId: user.idSession,
         obraKey,
       });
       setFichaTecnica({
         isOpen: true, isLoading: false, isDownloading: false,
-        url: htmlUrl, title, obraKey, error: '', downloadError: '',
+        url: htmlUrl, htmlContent, title, obraKey, error: '', downloadError: '',
       });
     } catch (error) {
       setFichaTecnica({
@@ -213,6 +211,7 @@ export default function Construleads() {
         isLoading: false,
         isDownloading: false,
         url: '',
+        htmlContent: '',
         title,
         obraKey,
         error: error instanceof Error ? error.message : 'No fue posible consultar la ficha.',

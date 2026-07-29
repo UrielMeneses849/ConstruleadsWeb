@@ -50,10 +50,12 @@ function Mapa({
   onViewFicha,
 }) {
   const [selectedProject, setSelectedProject] = useState(null);
+  const [popupPosition, setPopupPosition] = useState(null);
   const [filteredObras, setFilteredObras] = useState([]);
   const [isMapLoading, setIsMapLoading] = useState(true);
   const [mapLoadingMessage, setMapLoadingMessage] = useState('Cargando datos del mapa...');
   const mapRef = useRef(null);
+  const popupCardRef = useRef(null);
   const selectedProjectRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const mapReadyRef = useRef(false);
@@ -720,7 +722,53 @@ useEffect(() => {
           lng: clickedLng,
         };
         selectedProjectRef.current = project;
+        setPopupPosition(null);
         setSelectedProject(project);
+        const activeMap = mapInstanceRef.current;
+        const targetLatLng = new window.google.maps.LatLng(clickedLat, clickedLng);
+
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          if (!mapRef.current || !popupCardRef.current) return;
+
+          const mapWidth = mapRef.current.clientWidth;
+          const mapHeight = mapRef.current.clientHeight;
+          const cardWidth = popupCardRef.current.offsetWidth;
+          const cardHeight = popupCardRef.current.offsetHeight;
+          const padding = 12;
+          const pointerSize = 16;
+          const pointerGap = 4;
+          const left = Math.max(
+            padding,
+            Math.min((mapWidth - cardWidth) / 2, mapWidth - cardWidth - padding)
+          );
+          const top = Math.max(
+            padding,
+            Math.min((mapHeight - cardHeight) / 2, mapHeight - cardHeight - padding)
+          );
+          const markerPointY = Math.min(
+            mapHeight - padding,
+            top + cardHeight + pointerSize / 2 + pointerGap
+          );
+
+          setPopupPosition({
+            left,
+            top,
+            placement: 'above',
+            pointerLeft: Math.max(22, Math.min(cardWidth / 2 - pointerSize / 2, cardWidth - 38)),
+          });
+
+          const projection = activeMap?.getProjection();
+          const zoom = activeMap?.getZoom();
+          if (activeMap && projection && Number.isFinite(zoom)) {
+            const worldPoint = projection.fromLatLngToPoint(targetLatLng);
+            const worldOffsetY = (mapHeight / 2 - markerPointY) / (2 ** zoom);
+            activeMap.panTo(projection.fromPointToLatLng(
+              new window.google.maps.Point(worldPoint.x, worldPoint.y + worldOffsetY)
+            ));
+          } else {
+            activeMap?.panTo(targetLatLng);
+          }
+        }));
       });
 
       return marker;
@@ -762,6 +810,7 @@ useEffect(() => {
         onClusterClick: (_event, cluster, clusterMap) => {
           selectedProjectRef.current = null;
           setSelectedProject(null);
+          setPopupPosition(null);
 
           const currentZoom = Number(clusterMap.getZoom()) || 5;
           const targetZoom = Math.min(currentZoom + 2, 18);
@@ -787,6 +836,7 @@ useEffect(() => {
       map.addListener('click', () => {
         selectedProjectRef.current = null;
         setSelectedProject(null);
+        setPopupPosition(null);
       });
     };
 
@@ -974,35 +1024,51 @@ useEffect(() => {
           )}
 
           {selectedProject && (
-            <Flex
+            <Box
               position="absolute"
               inset={0}
               zIndex={20}
-              align="center"
-              justify="center"
-              p={{ base: 3, md: 5 }}
-              bg="rgba(20,20,20,.12)"
-              backdropFilter="blur(1px)"
+              bg="rgba(20,20,20,.06)"
               onClick={() => {
                 selectedProjectRef.current = null;
                 setSelectedProject(null);
+                setPopupPosition(null);
               }}
               onWheel={(event) => event.preventDefault()}
               onTouchMove={(event) => event.preventDefault()}
             >
               <Box
-                position="relative"
+                ref={popupCardRef}
+                position="absolute"
+                top={`${popupPosition?.top || 0}px`}
+                left={`${popupPosition?.left || 0}px`}
+                visibility={popupPosition ? 'visible' : 'hidden'}
                 bg="var(--cl-surface)"
                 borderRadius="14px"
                 p={3.5}
-                w="min(340px, 100%)"
-                maxH="calc(100% - 8px)"
-                overflowY="auto"
+                w="340px"
+                maxW="calc(100% - 24px)"
+                maxH="calc(100% - 24px)"
+                overflow="visible"
                 boxShadow="0 16px 38px rgba(0,0,0,.28)"
                 border="1px solid var(--cl-border)"
                 color="var(--cl-text)"
                 onClick={(event) => event.stopPropagation()}
               >
+              <Box
+                position="absolute"
+                left={`${popupPosition?.pointerLeft || 24}px`}
+                top={popupPosition?.placement === 'below' ? '-8px' : 'auto'}
+                bottom={popupPosition?.placement === 'above' ? '-8px' : 'auto'}
+                w="16px"
+                h="16px"
+                bg="var(--cl-surface)"
+                borderLeft={popupPosition?.placement === 'below' ? '1px solid var(--cl-border)' : '0'}
+                borderTop={popupPosition?.placement === 'below' ? '1px solid var(--cl-border)' : '0'}
+                borderRight={popupPosition?.placement === 'above' ? '1px solid var(--cl-border)' : '0'}
+                borderBottom={popupPosition?.placement === 'above' ? '1px solid var(--cl-border)' : '0'}
+                transform="rotate(45deg)"
+              />
               <Button
                 position="absolute"
                 top="10px"
@@ -1025,6 +1091,7 @@ useEffect(() => {
                   event.stopPropagation();
                   selectedProjectRef.current = null;
                   setSelectedProject(null);
+                  setPopupPosition(null);
                 }}
               >
                 ×
@@ -1110,7 +1177,7 @@ useEffect(() => {
                 Ver ficha
               </Button>
               </Box>
-            </Flex>
+            </Box>
           )}
 
         </Box>

@@ -204,10 +204,40 @@ export async function solicitarFichaHtml({
   const status = row?.getAttribute('Estatus') || row?.getAttribute('estatus');
   const message = row?.getAttribute('Mensaje') || row?.getAttribute('mensaje') || '';
   const htmlUrl = row?.getAttribute('URL') || row?.getAttribute('Url') || row?.getAttribute('url') || '';
+  const htmlBase64 =
+    row?.getAttribute('HTML_BASE64') ||
+    row?.getAttribute('HtmlBase64') ||
+    row?.getElementsByTagName('HTML_BASE64')[0]?.textContent ||
+    '';
+  const rawHtml =
+    row?.getAttribute('ContenidoHtml') ||
+    row?.getElementsByTagName('ContenidoHtml')[0]?.textContent ||
+    '';
+  let htmlContent = rawHtml;
 
-  if (status !== '1' || !htmlUrl) {
+  if (htmlBase64) {
+    try {
+      const bytes = Uint8Array.from(window.atob(htmlBase64), (character) => character.charCodeAt(0));
+      htmlContent = new TextDecoder('utf-8').decode(bytes);
+    } catch {
+      throw new Error('El contenido HTML de la ficha no tiene un formato válido.');
+    }
+  }
+
+  if (htmlContent) {
+    const publicLogoUrl = new URL(
+      `${import.meta.env.BASE_URL}bimsa-logo.png`,
+      window.location.origin
+    ).href;
+    htmlContent = htmlContent.replace(
+      /file:\/\/\/[^"'<>]*logo_bimsa\.png/gi,
+      publicLogoUrl
+    );
+  }
+
+  if (status !== '1' || (!htmlUrl && !htmlContent)) {
     throw new Error(message || 'El servicio no devolvió una ficha disponible.');
   }
 
-  return { htmlUrl, message };
+  return { htmlUrl, htmlContent, message };
 }
