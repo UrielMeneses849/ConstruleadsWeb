@@ -94,15 +94,25 @@ export default function DownloadPanel({
     setNotification(null);
 
     try {
-      const { fileUrl } = await solicitarReporte({
-        reportType: selectedOption.value,
-        userId: user.idUsuario,
-        sessionId: user.idSession,
-        obrasKeys,
-        dateType,
-        dateMin,
-        dateMax,
-      });
+      const reportBatches = selectedOption.value === 'pdf_obras'
+        ? Array.from(
+            { length: Math.ceil(obrasParaDescargar.length / 900) },
+            (_, index) => obrasParaDescargar.slice(index * 900, (index + 1) * 900)
+          )
+        : [obrasParaDescargar];
+      const reportResponses = [];
+      for (const batch of reportBatches) {
+        reportResponses.push(await solicitarReporte({
+          reportType: selectedOption.value,
+          userId: user.idUsuario,
+          sessionId: user.idSession,
+          obrasKeys: buildObrasKeys(batch),
+          dateType,
+          dateMin,
+          dateMax,
+        }));
+      }
+      const fileUrls = reportResponses.map(({ fileUrl }) => fileUrl);
       const history = JSON.parse(localStorage.getItem('cl_download_history') || '[]');
       const now = new Date();
       const reportName = selectedOption.label.replace(' - ', ' — ');
@@ -116,11 +126,11 @@ export default function DownloadPanel({
           type: isExcel ? 'Excel' : 'PDF',
           name: `${reportName} · ${obrasParaDescargar.length} obras`,
           size: 'Generado',
-          url: fileUrl,
+          url: fileUrls[0],
         },
         ...history,
       ].slice(0, 100)));
-      iniciarDescargaReporte(fileUrl);
+      await iniciarDescargaReporte(fileUrls, `construleads-${selectedOption.value}-${Date.now()}`);
       setNotification({ type: 'success', message: 'Reporte generado correctamente.' });
     } catch (error) {
       setNotification({
@@ -144,7 +154,7 @@ export default function DownloadPanel({
       gap={2}
       align="center"
       boxShadow="none"
-      w="clamp(288px, 24vw, 320px)"
+      w="clamp(350px, 27vw, 410px)"
       position="relative"
     >
       <style>{`
@@ -233,7 +243,9 @@ export default function DownloadPanel({
           _hover={{ bg: 'var(--cl-hover)', borderColor: 'var(--cl-text-muted)' }}
           onClick={() => setIsOpen((value) => !value)}
         >
-          <Text as="span" noOfLines={1}>{selectedOption.label}</Text>
+          <Text as="span" whiteSpace="nowrap" overflow="hidden" textOverflow="ellipsis">
+            {selectedOption.label}
+          </Text>
           <Text as="span" color="var(--cl-text-muted)" fontSize="14px" ml={2}>
             {isOpen ? '⌃' : '⌄'}
           </Text>

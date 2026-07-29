@@ -47,14 +47,13 @@ function Mapa({
   obras = [],
   filtros = {},
   onFilteredData,
+  onViewFicha,
 }) {
   const [selectedProject, setSelectedProject] = useState(null);
-  const [popupPosition, setPopupPosition] = useState(null);
   const [filteredObras, setFilteredObras] = useState([]);
   const [isMapLoading, setIsMapLoading] = useState(true);
   const [mapLoadingMessage, setMapLoadingMessage] = useState('Cargando datos del mapa...');
   const mapRef = useRef(null);
-  const popupCardRef = useRef(null);
   const selectedProjectRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const mapReadyRef = useRef(false);
@@ -62,21 +61,24 @@ function Mapa({
   const markerElementsRef = useRef([]);
   const markerCacheRef = useRef(new Map());
   const markerUpdateTokenRef = useRef(0);
-  const markerIconRef = useRef(null);
-  const clusterIconCacheRef = useRef(new Map());
   const onFilteredDataRef = useRef(onFilteredData);
   const lastPublishedCount = useRef(-1);
   const didFitInitialBoundsRef = useRef(false);
   const DEBUG_MAPA = false;
-  const debugLog = (...args) => {
-    if (DEBUG_MAPA) console.log(...args);
-  };
+  const debugLog = () => {};
   const AUTO_FIT_INITIAL_BOUNDS = false;
 
   const showMapLoader = isMapLoading || !obras.length;
   const visibleMapLoadingMessage = !obras.length
     ? 'Obteniendo obras del servicio y preparando el mapa...'
     : mapLoadingMessage;
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (map && map.getMapTypeId() !== 'roadmap') {
+      map.setMapTypeId('roadmap');
+    }
+  });
 
   useEffect(() => {
     onFilteredDataRef.current = onFilteredData;
@@ -218,74 +220,7 @@ const getObraTimeByFilter = (obra, selectedDateField) => {
 
       const diasSeleccionados = diasPorPeriodo[periodIndex];
 
-      const fechaStats = DEBUG_MAPA
-        ? resultado.reduce(
-            (acc, obra) => {
-              const fechaObraTime = getObraTimeByFilter(obra, selectedDateField);
-              const fechaObra = fechaObraTime ? new Date(fechaObraTime) : null;
-
-              if (!fechaObra) {
-                acc.invalidas += 1;
-                return acc;
-              }
-
-              acc.validas += 1;
-
-              if (!acc.min || fechaObra < acc.min) acc.min = fechaObra;
-              if (!acc.max || fechaObra > acc.max) acc.max = fechaObra;
-
-              if (acc.muestra.length < 5) {
-                acc.muestra.push({
-                  clave: obra.clave,
-                  proyecto: obra.proyecto,
-                  fecha: fechaObra.toISOString().slice(0, 10),
-                  fechaPublicacion: obra.fechaPublicacion,
-                  fechaInicio: obra.fechaInicio,
-                  fechaTermino: obra.fechaTermino,
-                });
-              }
-
-              return acc;
-            },
-            {
-              validas: 0,
-              invalidas: 0,
-              min: null,
-              max: null,
-              muestra: [],
-            }
-          )
-        : {
-            validas: 0,
-            invalidas: 0,
-            min: null,
-            max: null,
-            muestra: [],
-          };
       const totalAntesFechas = resultado.length;
-
-      if (DEBUG_MAPA) {
-        console.groupCollapsed('[Construleads][Fechas] Diagnóstico de filtro');
-        console.log('Criterio:', selectedDateField);
-        console.log('Rango solicitado:', {
-          desde: fechaInicioFiltro,
-          hasta: fechaFinFiltro,
-        });
-        console.log('Periodo legacy:', {
-          periodIndex,
-          diasSeleccionados,
-        });
-        console.log('Dataset antes de fecha:', totalAntesFechas);
-        console.log('Fechas válidas / inválidas:', {
-          validas: fechaStats.validas,
-          invalidas: fechaStats.invalidas,
-        });
-        console.log('Rango real del dataset para criterio:', {
-          min: fechaStats.min ? fechaStats.min.toISOString().slice(0, 10) : null,
-          max: fechaStats.max ? fechaStats.max.toISOString().slice(0, 10) : null,
-        });
-        console.table(fechaStats.muestra);
-      }
 
       if (fechaInicioFiltro && fechaFinFiltro) {
         const fechaInicio = new Date(`${fechaInicioFiltro}T00:00:00`);
@@ -335,7 +270,6 @@ const getObraTimeByFilter = (obra, selectedDateField) => {
         despues: resultado.length,
         removidos: totalAntesFechas - resultado.length,
       });
-      if (DEBUG_MAPA) console.groupEnd();
 
 const regiones =
   filtrosActivos.regiones ||
@@ -470,7 +404,7 @@ const tiposProyecto =
   filtrosActivos.tiposProyecto ||
   filtrosActivos.selectedTiposProyecto ||
   [];
-      if (!estados.length && regiones.length) {
+      if (regiones.length) {
         resultado = resultado.filter((o) =>
           matchesTextList(o.region, regiones)
         );
@@ -694,8 +628,6 @@ useEffect(() => {
       return `${Math.round(millions)} MDP`;
     };
 
-    let activeMarkerElement = null;
-
     const cleanupMarkers = ({ clearCache = false } = {}) => {
       if (markerClusterRef.current) {
         markerClusterRef.current.clearMarkers();
@@ -703,7 +635,7 @@ useEffect(() => {
 
       if (clearCache) {
         markerCacheRef.current.forEach((marker) => {
-          if (marker?.setMap) marker.setMap(null);
+          if (marker) marker.map = null;
         });
         markerCacheRef.current.clear();
       }
@@ -711,37 +643,31 @@ useEffect(() => {
       markerElementsRef.current = [];
     };
 
-    const createClusterIcon = (count) => {
+    const createClusterContent = (count) => {
       const size = count >= 100 ? 48 : count >= 10 ? 42 : 36;
-      const cachedIcon = clusterIconCacheRef.current.get(size);
-      if (cachedIcon) return cachedIcon;
-
-      const svg = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-          <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 2}" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="2"/>
-        </svg>
-      `;
-
-      const icon = {
-        url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-        scaledSize: new window.google.maps.Size(size, size),
-        anchor: new window.google.maps.Point(size / 2, size / 2),
-      };
-      clusterIconCacheRef.current.set(size, icon);
-      return icon;
-    };
-
-    const renderCluster = ({ count, position }) => new window.google.maps.Marker({
-      position,
-      icon: createClusterIcon(count),
-      label: {
-        text: String(count),
+      const content = document.createElement('div');
+      content.textContent = String(count);
+      Object.assign(content.style, {
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: '50%',
+        background: '#F3F4F6',
+        border: '2px solid #9CA3AF',
         color: '#374151',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         fontSize: '12px',
         fontWeight: '700',
-      },
-      optimized: true,
-      zIndex: Number(window.google.maps.Marker.MAX_ZINDEX) + count,
+        boxSizing: 'border-box',
+      });
+      return content;
+    };
+
+    const renderCluster = ({ count, position }) => new window.google.maps.marker.AdvancedMarkerElement({
+      position,
+      content: createClusterContent(count),
+      zIndex: 1000000 + count,
     });
 
     const getObraMarkerKey = (obra, index) => String(
@@ -762,16 +688,25 @@ useEffect(() => {
         return null;
       }
 
-      const marker = new window.google.maps.Marker({
+      const markerContent = document.createElement('div');
+      Object.assign(markerContent.style, {
+        width: '18px',
+        height: '18px',
+        borderRadius: '50%',
+        background: '#FFF5EB',
+        border: '3px solid #FF653F',
+        boxSizing: 'border-box',
+      });
+
+      const marker = new window.google.maps.marker.AdvancedMarkerElement({
         position: { lat: latNum, lng: lonNum },
-        optimized: true,
-        icon: markerIconRef.current,
+        content: markerContent,
       });
 
       marker.addListener('click', (event) => {
-        const clickedPosition = event?.latLng || marker.getPosition();
-        const clickedLat = clickedPosition?.lat?.() ?? latNum;
-        const clickedLng = clickedPosition?.lng?.() ?? lonNum;
+        const clickedPosition = event?.latLng || marker.position;
+        const clickedLat = typeof clickedPosition?.lat === 'function' ? clickedPosition.lat() : clickedPosition?.lat ?? latNum;
+        const clickedLng = typeof clickedPosition?.lng === 'function' ? clickedPosition.lng() : clickedPosition?.lng ?? lonNum;
         const project = {
           clave: obra.clave,
           proyecto: obra.proyecto,
@@ -785,23 +720,7 @@ useEffect(() => {
           lng: clickedLng,
         };
         selectedProjectRef.current = project;
-        setPopupPosition(null);
         setSelectedProject(project);
-        mapInstanceRef.current?.panTo(clickedPosition);
-        window.google.maps.event.addListenerOnce(mapInstanceRef.current, 'idle', () => {
-          requestAnimationFrame(() => {
-            if (!mapRef.current) return;
-            const cardWidth = popupCardRef.current?.offsetWidth || 300;
-            const cardHeight = popupCardRef.current?.offsetHeight || 238;
-            const pointX = mapRef.current.clientWidth / 2;
-            const pointY = mapRef.current.clientHeight / 2;
-            setPopupPosition({
-              left: pointX - cardWidth / 2,
-              top: pointY - cardHeight - 20,
-              pointerLeft: cardWidth / 2 - 8,
-            });
-          });
-        });
       });
 
       return marker;
@@ -810,31 +729,30 @@ useEffect(() => {
 
     const createMap = async () => {
       if (mapInstanceRef.current) return;
-      setOptions({ apiKey, version: 'weekly' });
+      if (!globalThis.__construleadsGoogleMapsConfigured) {
+        setOptions({ apiKey, version: 'weekly' });
+        globalThis.__construleadsGoogleMapsConfigured = true;
+      }
 
       const { Map } = await importLibrary('maps');
+      await importLibrary('marker');
 
       if (cancelled || !mapRef.current) return;
 
       const map = new Map(mapRef.current, {
         center: { lat: 23.6, lng: -102.0 },
         zoom: 5.8,
-        mapTypeId: 'satellite',
-        mapId: 'bimsa-construleads-map',
+        mapTypeId: 'roadmap',
+        mapId: 'DEMO_MAP_ID',
         fullscreenControl: false,
         mapTypeControl: false,
         streetViewControl: false,
       });
 
+      // El mapId anterior podía imponer el tipo configurado en Google Cloud.
+      // Forzamos el mapa estándar también sobre la instancia ya creada.
+      map.setMapTypeId('roadmap');
       mapInstanceRef.current = map;
-      markerIconRef.current = {
-        path: window.google.maps.SymbolPath.CIRCLE,
-        scale: 8,
-        fillColor: '#FFF5EB',
-        fillOpacity: 1,
-        strokeColor: '#FF653F',
-        strokeWeight: 3,
-      };
       markerClusterRef.current = new MarkerClusterer({
         map,
         markers: [],
@@ -844,7 +762,6 @@ useEffect(() => {
         onClusterClick: (_event, cluster, clusterMap) => {
           selectedProjectRef.current = null;
           setSelectedProject(null);
-          setPopupPosition(null);
 
           const currentZoom = Number(clusterMap.getZoom()) || 5;
           const targetZoom = Math.min(currentZoom + 2, 18);
@@ -868,14 +785,8 @@ useEffect(() => {
       });
 
       map.addListener('click', () => {
-        if (activeMarkerElement) {
-          activeMarkerElement.style.transform = 'scale(1)';
-          activeMarkerElement.style.zIndex = '1';
-          activeMarkerElement = null;
-        }
         selectedProjectRef.current = null;
         setSelectedProject(null);
-        setPopupPosition(null);
       });
     };
 
@@ -963,7 +874,7 @@ useEffect(() => {
         const bounds = new window.google.maps.LatLngBounds();
         markers.forEach((marker, index) => {
           if (index % 4 !== 0) return;
-          const position = marker.getPosition?.();
+          const position = marker.position;
           if (position) bounds.extend(position);
         });
         mapInstanceRef.current.fitBounds(bounds);
@@ -987,8 +898,7 @@ useEffect(() => {
         await createMap();
         if (cancelled) return;
         await updateMarkers();
-      } catch (error) {
-        console.error('Error cargando Google Maps:', error);
+      } catch {
         setMapLoadingMessage('No se pudo cargar el mapa. Intenta recargar la página.');
         setIsMapLoading(false);
       }
@@ -1029,18 +939,6 @@ useEffect(() => {
             w="100%"
           />
 
-          {selectedProject && (
-            <Box
-              position="absolute"
-              inset={0}
-              zIndex={10}
-              cursor="default"
-              onClick={(event) => event.stopPropagation()}
-              onWheel={(event) => event.preventDefault()}
-              onTouchMove={(event) => event.preventDefault()}
-            />
-          )}
-
           {showMapLoader && (
             <Box
               position="absolute"
@@ -1076,23 +974,35 @@ useEffect(() => {
           )}
 
           {selectedProject && (
-            <Box
-              ref={popupCardRef}
+            <Flex
               position="absolute"
-              top={`${popupPosition?.top || 0}px`}
-              left={`${popupPosition?.left || 0}px`}
-              visibility={popupPosition ? 'visible' : 'hidden'}
-              bg="var(--cl-surface)"
-              borderRadius="14px"
-              p={3.5}
-              w="300px"
-              boxShadow="0 16px 38px rgba(0,0,0,.28)"
+              inset={0}
               zIndex={20}
-              border="1px solid var(--cl-border)"
-              color="var(--cl-text)"
-              transition="left 100ms linear, top 100ms linear"
+              align="center"
+              justify="center"
+              p={{ base: 3, md: 5 }}
+              bg="rgba(20,20,20,.12)"
+              backdropFilter="blur(1px)"
+              onClick={() => {
+                selectedProjectRef.current = null;
+                setSelectedProject(null);
+              }}
+              onWheel={(event) => event.preventDefault()}
+              onTouchMove={(event) => event.preventDefault()}
             >
-              <Box position="absolute" bottom="-8px" left={`${popupPosition?.pointerLeft || 24}px`} w="16px" h="16px" bg="var(--cl-surface)" borderRight="1px solid var(--cl-border)" borderBottom="1px solid var(--cl-border)" transform="rotate(45deg)" />
+              <Box
+                position="relative"
+                bg="var(--cl-surface)"
+                borderRadius="14px"
+                p={3.5}
+                w="min(340px, 100%)"
+                maxH="calc(100% - 8px)"
+                overflowY="auto"
+                boxShadow="0 16px 38px rgba(0,0,0,.28)"
+                border="1px solid var(--cl-border)"
+                color="var(--cl-text)"
+                onClick={(event) => event.stopPropagation()}
+              >
               <Button
                 position="absolute"
                 top="10px"
@@ -1115,7 +1025,6 @@ useEffect(() => {
                   event.stopPropagation();
                   selectedProjectRef.current = null;
                   setSelectedProject(null);
-                  setPopupPosition(null);
                 }}
               >
                 ×
@@ -1196,10 +1105,12 @@ useEffect(() => {
                 transition="all 180ms ease"
                 fontWeight="500"
                 h="38px"
+                onClick={() => onViewFicha?.(selectedProject)}
               >
                 Ver ficha
               </Button>
-            </Box>
+              </Box>
+            </Flex>
           )}
 
         </Box>

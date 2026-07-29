@@ -23,7 +23,13 @@ import Mapa from './Mapa';
 import Resultados from './views/ResultadosView';
 import GraficasView from './views/GraficasView';
 import DownloadPanel from './DownloadPanel';
+import FichaTecnicaModal from './FichaTecnicaModal';
 import { obtenerObras } from '../../api/obras';
+import {
+  iniciarDescargaReporte,
+  solicitarFichaHtml,
+  solicitarReporte,
+} from '../../api/reportes';
 import { parseObrasXml } from '../../utils/parseObrasXml';
 import { filterObrasByFilters } from '../../utils/filterObras';
 
@@ -91,6 +97,10 @@ export default function Construleads() {
   const [selectedResultObras, setSelectedResultObras] = useState([]);
   const [selectionResetToken, setSelectionResetToken] = useState(0);
   const [activeView, setActiveView] = useState('mapa');
+  const [fichaTecnica, setFichaTecnica] = useState({
+    isOpen: false, isLoading: false, isDownloading: false,
+    url: '', title: '', obraKey: '', error: '', downloadError: '',
+  });
   const interfaceScale = useCompactScale
     ? 0.8
     : (useMediumGraphScale && activeView === 'graficas' ? 0.9 : 1);
@@ -149,8 +159,8 @@ export default function Construleads() {
         const obrasParseadas = parseObrasXml(xml);
 
         setObras(obrasParseadas);
-      } catch (error) {
-        console.error('ERROR CARGANDO OBRAS:', error);
+      } catch {
+        setObras([]);
       } finally {
         setLoadingObras(false);
       }
@@ -179,6 +189,73 @@ export default function Construleads() {
     );
     setSelectionResetToken((current) => current + 1);
   }, []);
+
+  const handleViewFicha = useCallback(async (obra) => {
+    const obraKey = obra?.clave || obra?.Clave_Proyecto || obra?.source?.clave;
+    const title = obra?.proyecto || obra?.Proyecto || obra?.source?.proyecto || 'Ficha técnica';
+    setFichaTecnica({
+      isOpen: true, isLoading: true, isDownloading: false,
+      url: '', title, obraKey, error: '', downloadError: '',
+    });
+    try {
+      const { htmlUrl } = await solicitarFichaHtml({
+        userId: user.idUsuario,
+        sessionId: user.idSession,
+        obraKey,
+      });
+      setFichaTecnica({
+        isOpen: true, isLoading: false, isDownloading: false,
+        url: htmlUrl, title, obraKey, error: '', downloadError: '',
+      });
+    } catch (error) {
+      setFichaTecnica({
+        isOpen: true,
+        isLoading: false,
+        isDownloading: false,
+        url: '',
+        title,
+        obraKey,
+        error: error instanceof Error ? error.message : 'No fue posible consultar la ficha.',
+        downloadError: '',
+      });
+    }
+  }, [user.idSession, user.idUsuario]);
+
+  const closeFicha = useCallback(() => {
+    setFichaTecnica((current) => ({ ...current, isOpen: false }));
+  }, []);
+
+  const handleDownloadFicha = useCallback(async () => {
+    const obraKey = fichaTecnica.obraKey;
+    if (!obraKey || fichaTecnica.isDownloading) return;
+
+    setFichaTecnica((current) => ({
+      ...current, isDownloading: true, downloadError: '',
+    }));
+    try {
+      const { fileUrl } = await solicitarReporte({
+        reportType: 'pdf_obras',
+        userId: user.idUsuario,
+        sessionId: user.idSession,
+        obrasKeys: obraKey,
+      });
+      await iniciarDescargaReporte(fileUrl, `ficha-${obraKey}`);
+      setFichaTecnica((current) => ({ ...current, isDownloading: false }));
+    } catch (error) {
+      setFichaTecnica((current) => ({
+        ...current,
+        isDownloading: false,
+        downloadError: error instanceof Error
+          ? error.message
+          : 'No fue posible descargar la ficha.',
+      }));
+    }
+  }, [
+    fichaTecnica.isDownloading,
+    fichaTecnica.obraKey,
+    user.idSession,
+    user.idUsuario,
+  ]);
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -484,6 +561,7 @@ export default function Construleads() {
                 obras={obras}
                 filtros={filtros}
                 isDarkMode={isDarkMode}
+                onViewFicha={handleViewFicha}
               />
             </Box>
 
@@ -494,6 +572,7 @@ export default function Construleads() {
                 onSelectionChange={handleResultsSelectionChange}
                 selectionResetToken={selectionResetToken}
                 onGoToMap={() => setActiveView('mapa')}
+                onViewFicha={handleViewFicha}
               />
             </Box>
 
@@ -507,6 +586,11 @@ export default function Construleads() {
           </Box>
         </Box>
       </Flex>
+      <FichaTecnicaModal
+        {...fichaTecnica}
+        onClose={closeFicha}
+        onDownload={handleDownloadFicha}
+      />
     </Box>
   );
 }

@@ -40,7 +40,6 @@ const [isOpen, setIsOpen] = useState(false);
 const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
 const onOpen = () => {
-  console.log("ON OPEN");
   setIsOpen(true);
 };
 
@@ -124,7 +123,6 @@ const onClose = () => {
             position="relative"
             zIndex="1001"
             onClick={() => {
-              console.log('MENU CLICK');
               setIsMobileMenuOpen((prev) => !prev);
             }}
           >

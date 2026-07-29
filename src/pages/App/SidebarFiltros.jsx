@@ -714,23 +714,6 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
   }, [obrasDisponiblesParaRangos]);
 
   useEffect(() => {
-    if (!import.meta.env.DEV) return;
-
-    console.log('[SidebarFiltros][bounds]', {
-      investmentBounds,
-      surfaceBounds,
-      sampleInvestment: (obras || [])
-        .map((obra) => Number(obra.inversion || 0))
-        .filter((value) => Number.isFinite(value) && value > 0)
-        .slice(0, 5),
-      sampleSurface: (obras || [])
-        .map((obra) => Number(obra.superficie || 0))
-        .filter((value) => Number.isFinite(value) && value > 0)
-        .slice(0, 5),
-    });
-  }, [obras, investmentBounds, surfaceBounds]);
-
-  useEffect(() => {
     if (!investmentBounds.max) return;
 
     setInvestmentMin(investmentBounds.min);
@@ -800,8 +783,8 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
           selectedValues,
         })
       );
-    } catch (error) {
-      console.warn('[Construleads][Filtros] No se pudo persistir el estado:', error);
+    } catch {
+      return undefined;
     }
   }, [
     selectedRegiones,
@@ -936,19 +919,9 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
 
   useEffect(() => {
     if (!rangeFiltersReady) {
-      console.log('[Construleads][Filtros] Esperando rango de inversión inicial antes de publicar filtros', {
-        investmentMin: resolvedInvestmentMin,
-        investmentMax: resolvedInvestmentMax,
-        investmentBounds,
-      });
       return;
     }
 
-    console.log('SUPERFICIE NORMALIZADA:', filtrosActivos.superficie);
-    console.log('FILTROS PUBLICADOS:', filtrosActivos);
-    console.log('TIPOS OBRA PUBLICADOS:', selectedTipoObra);
-    console.log('SUBGENEROS PUBLICADOS:', filtrosActivos.subgeneros);
-    console.log('TIPOS OBRA FILTRO:', filtrosActivos.tiposObraFiltro);
     window.construleadsFilters = filtrosActivos;
     const publishTimer = window.setTimeout(() => {
       onApplyFilters?.(filtrosActivos);

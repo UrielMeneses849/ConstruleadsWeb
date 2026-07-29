@@ -122,6 +122,7 @@ function ResultadosView({
   onSelectionChange,
   selectionResetToken = 0,
   onGoToMap,
+  onViewFicha,
 }) {
   const [filterMenu, setFilterMenu] = useState(null);
   const [columnFilters, setColumnFilters] = useState({});
@@ -138,16 +139,6 @@ function ResultadosView({
     top: 0,
     left: 0,
   });
-
-useEffect(() => {
-  // Debug temporal. Cambiar a true solo cuando se necesite revisar data en consola.
-  const DEBUG_RESULTADOS = false;
-  if (DEBUG_RESULTADOS) {
-    console.log('[ResultadosView] obras:', obras?.length, obras?.[0]);
-  }
-}, [obras]);
-
-
 
   const ui = {
     surface: 'var(--cl-surface)',
@@ -365,14 +356,6 @@ useEffect(() => {
     }));
   }, [obras]);
 
-useEffect(() => {
-  // Debug temporal. Cambiar a true solo cuando se necesite revisar data en consola.
-  const DEBUG_RESULTADOS = false;
-  if (DEBUG_RESULTADOS) {
-    console.log('[ResultadosView] tableData:', tableData.length, tableData[0]);
-  }
-}, [tableData]);
-
   const getRowKey = (row) => String(row.id || row.clave || row.proyecto);
 
   const cellTextStyle = {
@@ -385,7 +368,7 @@ useEffect(() => {
     wordBreak: 'break-word',
     lineHeight: '1.3',
     maxHeight: '2.6em',
-    textAlign: 'center',
+    textAlign: 'left',
   };
 
   const renderCellText = (value) => (
@@ -916,8 +899,14 @@ useEffect(() => {
               .resultados-table th,
               .resultados-table td {
                 box-sizing: border-box;
-                text-align: center !important;
+                text-align: left !important;
                 vertical-align: middle;
+              }
+              .resultados-table th:first-child,
+              .resultados-table td:first-child,
+              .resultados-table th:last-child,
+              .resultados-table td:last-child {
+                text-align: center !important;
               }
               .resultados-table th:last-child {
                 position: sticky;
@@ -1107,6 +1096,7 @@ useEffect(() => {
                         borderRadius="8px"
                         bg={rowBg}
                         _hover={{ bg: ui.surfaceMuted, borderColor: '#FF653F', color: '#FF653F' }}
+                        onClick={() => onViewFicha?.(row.source || row)}
                       >
                         <FiEye size={15} />
                       </Button>

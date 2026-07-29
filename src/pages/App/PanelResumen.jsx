@@ -66,20 +66,28 @@ const metricasDinamicas = [
 
 if (variant === 'map') {
   return (
-    <Flex align="stretch" gap={2} w="100%" flexWrap="wrap">
+    <Flex align="stretch" gap={1.5} w="100%" flexWrap="nowrap">
       {metricasDinamicas.map((item) => (
         <Box
           key={item.label}
-          flex="1 1 220px"
-          minW="120px"
-          maxW="150px"
+          flex="0 0 auto"
+          w={
+            item.label === 'Inversión total'
+              ? '172px'
+              : item.label === 'Superficie'
+                ? '174px'
+                : item.label === 'Proyectos'
+                  ? '112px'
+                  : '104px'
+          }
           bg="var(--cl-surface)"
           border="1px solid var(--cl-border)"
           borderRadius="10px"
           boxShadow="var(--cl-shadow)"
           color="var(--cl-text)"
-          px={2}
-          py={2}
+          minH="54px"
+          px={2.5}
+          py={1.5}
           position="relative"
           overflow="hidden"
         >
@@ -91,24 +99,25 @@ if (variant === 'map') {
             w="3px"
           />
 
-          <Flex align="center" gap={2} mb={1}>
+          <Flex align="center" gap={2} mb={0.5}>
             <Text
               fontSize={isCompactWidth ? '10px' : '11px'}
               fontWeight="700"
               color="var(--cl-text-muted)"
               lineHeight="1"
+              whiteSpace="nowrap"
             >
               {item.label}
             </Text>
           </Flex>
 
-          <HStack spacing={1} align="baseline">
+          <HStack spacing={1.5} align="baseline" whiteSpace="nowrap">
             <Text
               fontSize={isCompactWidth ? (item.label === 'Superficie' ? '13px' : '14px') : (item.label === 'Superficie' ? '15px' : '17px')}
               fontWeight="500"
               lineHeight="1.1"
               color="var(--cl-text-strong)"
-              noOfLines={1}
+              whiteSpace="nowrap"
             >
               {item.valor}
             </Text>
@@ -117,6 +126,7 @@ if (variant === 'map') {
                 fontSize={isCompactWidth ? '10px' : '11px'}
                 fontWeight="500"
                 color="var(--cl-text-muted)"
+                whiteSpace="nowrap"
               >
                 {item.suffix}
               </Text>
@@ -125,20 +135,21 @@ if (variant === 'map') {
         </Box>
       ))}
       <Box
-        flex="1 1 200px"
-        minW="200px"
-        maxW="220px"
+        flex="0 0 220px"
+        w="220px"
         bg="var(--cl-surface)"
         border="1px solid var(--cl-border)"
         borderRadius="10px"
         boxShadow="var(--cl-shadow)"
-        px={4}
-        py={2}
+        minH="54px"
+        px={3}
+        py={1}
       >
-        <Text fontSize="11px" color="var(--cl-text-muted)" fontWeight="600">
+        <Text fontSize="11px" color="var(--cl-text-muted)" fontWeight="600" whiteSpace="nowrap">
           Criterio de fecha
         </Text>
-        <Text fontSize="14px" color="var(--cl-text-strong)" fontWeight="500" noOfLines={1}>
+        <Text fontSize="14px" color="var(--cl-text-strong)" fontWeight="500"
+          whiteSpace="nowrap">
           {selectedDateLabel}
         </Text>
       </Box>

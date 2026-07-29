@@ -281,9 +281,9 @@ export function filterObrasByFilters(obras = [], filtros = {}) {
   const tipoObra = getArrayFilter(filtros, 'tipoObra', 'selectedTipoObra');
   const tiposProyecto = getArrayFilter(filtros, 'tiposProyecto', 'selectedTiposProyecto');
 
-  // En jerarquías, el hijo es la fuente de verdad. Aplicar padre e hijo a la
-  // vez rompe las selecciones parciales (por ejemplo, un solo estado).
-  if (!estados.length && regiones.length) {
+  // La región limita siempre el universo. Los estados, cuando existen,
+  // refinan ese resultado sin reintroducir regiones desmarcadas.
+  if (regiones.length) {
     resultado = resultado.filter((obra) =>
       matchesTextList(obra.region, regiones)
     );

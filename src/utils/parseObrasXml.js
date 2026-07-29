@@ -198,20 +198,5 @@ export function parseObrasXml(xmlText) {
     };
   }
 
-  if (import.meta.env.DEV) {
-    const firstWithTermination = obras.find((obra) => obra.fechaTermino);
-    console.log('[parseObrasXml] Fecha de terminación parseada:', {
-      totalObras: obras.length,
-      obrasConFechaTermino: obras.filter((obra) => Boolean(obra.fechaTermino)).length,
-      ejemplo: firstWithTermination
-        ? {
-            clave: firstWithTermination.clave,
-            fechaTermino: firstWithTermination.fechaTermino,
-            fechaTerminoTime: firstWithTermination.fechaTerminoTime,
-          }
-        : null,
-    });
-  }
-
   return obras;
 }
