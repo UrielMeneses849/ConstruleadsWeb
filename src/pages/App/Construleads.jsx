@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { lazy, Suspense, useState, useEffect, useCallback, useMemo } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 
 import {
@@ -6,6 +6,7 @@ import {
   Flex,
   HStack,
   Image,
+  Spinner,
   Text,
   useMediaQuery,
 } from '@chakra-ui/react';
@@ -20,18 +21,46 @@ import {
 import SidebarFiltros from './SidebarFiltros';
 import PanelResumen from './PanelResumen';
 import Mapa from './Mapa';
-import Resultados from './views/ResultadosView';
-import GraficasView from './views/GraficasView';
 import DownloadPanel from './DownloadPanel';
 import FichaTecnicaModal from './FichaTecnicaModal';
-import { obtenerObras } from '../../api/obras';
+import { obtenerObrasProgresivas } from '../../api/obras';
 import {
   iniciarDescargaReporte,
-  solicitarFichaHtml,
+  solicitarFichaDatos,
   solicitarReporte,
 } from '../../api/reportes';
 import { parseObrasXml } from '../../utils/parseObrasXml';
+import { parseObrasOffMainThread } from '../../utils/parseObrasOffMainThread';
 import { filterObrasByFilters } from '../../utils/filterObras';
+import { readCachedObras, writeCachedObras } from '../../utils/obrasCache';
+
+const PREFILTERED_MAP_FILTERS = Object.freeze({ __preFiltered: true });
+const loadResultadosView = () => import('./views/ResultadosView');
+const loadGraficasView = () => import('./views/GraficasView');
+const Resultados = lazy(loadResultadosView);
+const GraficasView = lazy(loadGraficasView);
+
+function ViewLoader({ label }) {
+  return (
+    <Flex h="100%" align="center" justify="center">
+      <Flex
+        align="center"
+        gap={3}
+        px={4}
+        py={2.5}
+        borderRadius="full"
+        bg="var(--cl-surface)"
+        border="1px solid var(--cl-border)"
+        boxShadow="var(--cl-shadow)"
+      >
+        <Spinner size="sm" thickness="3px" color="#FF653F" />
+        <Text fontSize="12px" fontWeight="600" color="var(--cl-text-muted)">
+          Preparando {label}…
+        </Text>
+      </Flex>
+    </Flex>
+  );
+}
 
 function getObraSelectionKey(obra) {
   return String(
@@ -89,17 +118,23 @@ export default function Construleads() {
 
   const [filtros, setFiltros] = useState({});
   const [obras, setObras] = useState([]);
-  const [loadingObras, setLoadingObras] = useState(true);
+  const [mapPreviewObras, setMapPreviewObras] = useState([]);
+  const [, setLoadingObras] = useState(true);
   const filteredObras = useMemo(
     () => filterObrasByFilters(obras, filtros),
     [obras, filtros]
   );
   const [selectedResultObras, setSelectedResultObras] = useState([]);
-  const [selectionResetToken, setSelectionResetToken] = useState(0);
+  const selectionResetToken = 0;
   const [activeView, setActiveView] = useState('mapa');
+  const [mountedViews, setMountedViews] = useState({
+    mapa: true,
+    resultados: false,
+    graficas: false,
+  });
   const [fichaTecnica, setFichaTecnica] = useState({
     isOpen: false, isLoading: false, isDownloading: false,
-    url: '', htmlContent: '', title: '', obraKey: '', error: '', downloadError: '',
+    data: null, title: '', obraKey: '', error: '', downloadError: '',
   });
   const interfaceScale = useCompactScale || useMediumScale ? 0.8 : 1;
   const usesScaledCanvas = interfaceScale < 1;
@@ -148,24 +183,82 @@ export default function Construleads() {
   }, [colorMode]);
 
   useEffect(() => {
+    let isActive = true;
+    const abortController = new AbortController();
+
     async function cargarObras() {
+      const userId = user.idUsuario;
+      let cachedObras = null;
+
       try {
         setLoadingObras(true);
 
-        const xml = await obtenerObras();
+        cachedObras = await readCachedObras(userId);
+        if (isActive && cachedObras?.length) {
+          setObras(cachedObras);
+          setLoadingObras(false);
 
-        const obrasParseadas = parseObrasXml(xml);
+          // Se entrega primero el hilo principal al mapa y a sus marcadores.
+          // La actualización de red comienza después, de forma silenciosa.
+          await new Promise((resolve) => window.setTimeout(resolve, 900));
+        }
 
+        let firstPreviewPublished = false;
+        const streamedResponse = await obtenerObrasProgresivas({
+          signal: abortController.signal,
+          onBatch: (fragments) => {
+            if (!isActive || cachedObras?.length || firstPreviewPublished) return;
+            const previewObras = parseObrasXml(
+              `<NewDataSet>${fragments.join('')}</NewDataSet>`
+            );
+            const hasMapPoints = previewObras.some((obra) => obra.hasValidCoordinates);
+            if (
+              !previewObras.length ||
+              !hasMapPoints
+            ) return;
+            firstPreviewPublished = true;
+            setMapPreviewObras(previewObras);
+            setLoadingObras(false);
+          },
+        });
+        const completeXml = streamedResponse.streamed
+          ? `<NewDataSet>${streamedResponse.fragments.join('')}</NewDataSet>`
+          : streamedResponse.xml;
+        const obrasParseadas = await parseObrasOffMainThread(
+          completeXml,
+          abortController.signal
+        );
+
+        if (!isActive) return;
         setObras(obrasParseadas);
+        setMapPreviewObras([]);
+        void writeCachedObras(userId, obrasParseadas);
       } catch {
-        setObras([]);
+        if (isActive && !cachedObras?.length) setObras([]);
       } finally {
-        setLoadingObras(false);
+        if (isActive) setLoadingObras(false);
       }
     }
 
     cargarObras();
+    return () => {
+      isActive = false;
+      abortController.abort();
+    };
+  }, [user.idUsuario]);
+
+  const changeView = useCallback((nextView) => {
+    setMountedViews((current) => (
+      current[nextView] ? current : { ...current, [nextView]: true }
+    ));
+    setActiveView(nextView);
   }, []);
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('cl_authenticated');
+    localStorage.removeItem('construleadsUser');
+    navigate('/', { replace: true });
+  }, [navigate]);
 
   const handleResultsSelectionChange = useCallback((selectedObras) => {
     const nextSelection = Array.isArray(selectedObras)
@@ -181,37 +274,29 @@ export default function Construleads() {
     });
   }, []);
 
-  const clearResultsSelection = useCallback(() => {
-    setSelectedResultObras((currentSelection) =>
-      currentSelection.length ? [] : currentSelection
-    );
-    setSelectionResetToken((current) => current + 1);
-  }, []);
-
   const handleViewFicha = useCallback(async (obra) => {
     const obraKey = obra?.clave || obra?.Clave_Proyecto || obra?.source?.clave;
     const title = obra?.proyecto || obra?.Proyecto || obra?.source?.proyecto || 'Ficha técnica';
     setFichaTecnica({
       isOpen: true, isLoading: true, isDownloading: false,
-      url: '', htmlContent: '', title, obraKey, error: '', downloadError: '',
+      data: null, title, obraKey, error: '', downloadError: '',
     });
     try {
-      const { htmlUrl, htmlContent } = await solicitarFichaHtml({
+      const data = await solicitarFichaDatos({
         userId: user.idUsuario,
         sessionId: user.idSession,
         obraKey,
       });
       setFichaTecnica({
         isOpen: true, isLoading: false, isDownloading: false,
-        url: htmlUrl, htmlContent, title, obraKey, error: '', downloadError: '',
+        data, title, obraKey, error: '', downloadError: '',
       });
     } catch (error) {
       setFichaTecnica({
         isOpen: true,
         isLoading: false,
         isDownloading: false,
-        url: '',
-        htmlContent: '',
+        data: null,
         title,
         obraKey,
         error: error instanceof Error ? error.message : 'No fue posible consultar la ficha.',
@@ -337,7 +422,7 @@ export default function Construleads() {
             fontSize="14px"
             transition="all 180ms ease"
             _hover={{ bg: 'rgba(255,255,255,.14)', color: 'white' }}
-            onClick={() => setActiveView('mapa')}
+            onClick={() => changeView('mapa')}
           >
             Mapa
           </Box>
@@ -355,7 +440,8 @@ export default function Construleads() {
             fontSize="14px"
             transition="all 180ms ease"
             _hover={{ bg: 'rgba(255,255,255,.14)', color: 'white' }}
-            onClick={() => setActiveView('resultados')}
+            onPointerEnter={() => { void loadResultadosView(); }}
+            onClick={() => changeView('resultados')}
           >
             Resultados
           </Box>
@@ -372,7 +458,8 @@ export default function Construleads() {
             borderBottom={activeView === 'graficas' ? '3px solid white' : '3px solid transparent'}
             transition="all 180ms ease"
             _hover={{ bg: 'rgba(255,255,255,.14)' }}
-            onClick={() => setActiveView('graficas')}
+            onPointerEnter={() => { void loadGraficasView(); }}
+            onClick={() => changeView('graficas')}
           >
             Gráficas
           </Box>
@@ -443,6 +530,14 @@ export default function Construleads() {
             cursor="pointer"
             transition="all 180ms ease"
             _hover={{ color: 'rgba(255,255,255,.82)' }}
+            onClick={handleLogout}
+            role="button"
+            tabIndex={0}
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') handleLogout();
+            }}
           />
 
           <Box position="relative">
@@ -557,31 +652,40 @@ export default function Construleads() {
             <Box className={activeView === 'mapa' ? 'cl-view-enter' : undefined}
               display={activeView === 'mapa' ? 'block' : 'none'} h="100%" minH="0" pb="50px">
               <Mapa
-                obras={obras}
-                filtros={filtros}
+                obras={obras.length ? filteredObras : mapPreviewObras}
+                filtros={PREFILTERED_MAP_FILTERS}
+                isDataReady={obras.length > 0}
                 isDarkMode={isDarkMode}
                 onViewFicha={handleViewFicha}
               />
             </Box>
 
-            <Box className={activeView === 'resultados' ? 'cl-view-enter' : undefined}
-              display={activeView === 'resultados' ? 'block' : 'none'} h="100%" minH="0" pb="50px">
-              <Resultados
-                obras={filteredObras}
-                onSelectionChange={handleResultsSelectionChange}
-                selectionResetToken={selectionResetToken}
-                onGoToMap={() => setActiveView('mapa')}
-                onViewFicha={handleViewFicha}
-              />
-            </Box>
+            {mountedViews.resultados && (
+              <Box className={activeView === 'resultados' ? 'cl-view-enter' : undefined}
+                display={activeView === 'resultados' ? 'block' : 'none'} h="100%" minH="0" pb="50px">
+                <Suspense fallback={<ViewLoader label="resultados" />}>
+                  <Resultados
+                    obras={filteredObras}
+                    onSelectionChange={handleResultsSelectionChange}
+                    selectionResetToken={selectionResetToken}
+                    onGoToMap={() => changeView('mapa')}
+                    onViewFicha={handleViewFicha}
+                  />
+                </Suspense>
+              </Box>
+            )}
 
-            <Box className={activeView === 'graficas' ? 'cl-view-enter' : undefined}
-              display={activeView === 'graficas' ? 'block' : 'none'} h="100%" minH="0" pb="50px">
-              <GraficasView
-                obras={obras}
-                filtros={filtros}
-              />
-            </Box>
+            {mountedViews.graficas && (
+              <Box className={activeView === 'graficas' ? 'cl-view-enter' : undefined}
+                display={activeView === 'graficas' ? 'block' : 'none'} h="100%" minH="0" pb="50px">
+                <Suspense fallback={<ViewLoader label="gráficas" />}>
+                  <GraficasView
+                    obras={obras}
+                    filtros={filtros}
+                  />
+                </Suspense>
+              </Box>
+            )}
           </Box>
         </Box>
       </Flex>

@@ -16,11 +16,43 @@ import {
 
 const downloadOptions = [
   { value: 'pdf_obras', label: 'PDF - Obras' },
+  { value: 'pdf_companias', label: 'PDF - Compañías' },
+  { value: 'pdf_graficas', label: 'PDF - Gráficas' },
   { value: 'excel_clasico', label: 'Excel - Clásico' },
   { value: 'excel_contactos', label: 'Excel - Contactos' },
   { value: 'excel_mapa', label: 'Excel - Mapa' },
   { value: 'excel_prospeccion', label: 'Excel - Prospección' },
 ];
+
+function ReportFileIcon({ isPdf }) {
+  const color = isPdf ? '#E5484D' : '#1F9D61';
+
+  return (
+    <Box
+      as="svg"
+      viewBox="0 0 44 52"
+      w="38px"
+      h="44px"
+      flexShrink={0}
+      aria-hidden="true"
+    >
+      <path d="M7 2h20l10 10v36a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z" fill={color} />
+      <path d="M27 2v10h10" fill="rgba(255,255,255,.45)" />
+      <rect x="9" y="27" width="24" height="13" rx="3" fill="white" opacity=".96" />
+      <text
+        x="21"
+        y="36.5"
+        textAnchor="middle"
+        fontSize="8.5"
+        fontWeight="800"
+        fontFamily="Arial, sans-serif"
+        fill={color}
+      >
+        {isPdf ? 'PDF' : 'XLS'}
+      </text>
+    </Box>
+  );
+}
 
 export default function DownloadPanel({
   selectedObras = [],
@@ -31,8 +63,11 @@ export default function DownloadPanel({
   const [selectedOption, setSelectedOption] = useState(downloadOptions[0]);
   const [isOpen, setIsOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadStage, setDownloadStage] = useState('Preparando reporte…');
   const [notification, setNotification] = useState(null);
   const panelRef = useRef(null);
+  const downloadAbortRef = useRef(null);
   const hasSelection = selectedObras.length > 0;
 
   useEffect(() => {
@@ -64,7 +99,8 @@ export default function DownloadPanel({
 
     const obrasParaDescargar = hasSelection ? selectedObras : filteredObras;
     const obrasKeys = buildObrasKeys(obrasParaDescargar);
-    const isExcel = selectedOption.value !== 'pdf_obras';
+    const isChartsPdf = selectedOption.value === 'pdf_graficas';
+    const isExcel = !selectedOption.value.startsWith('pdf_');
     const selectedDateType =
       filtros.fechaConsulta ||
       filtros.selectedValues?.['Fecha de consulta'] ||
@@ -77,7 +113,7 @@ export default function DownloadPanel({
       setNotification({ type: 'error', message: 'No hay obras válidas para descargar.' });
       return;
     }
-    if (!user.idUsuario || !user.idSession) {
+    if (!isChartsPdf && (!user.idUsuario || !user.idSession)) {
       setNotification({ type: 'error', message: 'La sesión del usuario no está disponible.' });
       return;
     }
@@ -90,18 +126,67 @@ export default function DownloadPanel({
     }
 
     setIsGenerating(true);
+    setDownloadProgress(3);
+    setDownloadStage('Solicitando reporte…');
     setIsOpen(false);
     setNotification(null);
+    const abortController = new AbortController();
+    downloadAbortRef.current = abortController;
+
+    let estimatedProgressTimer = window.setInterval(() => {
+      setDownloadProgress((current) => {
+        if (current < 30) return Math.min(current + 2, 30);
+        if (current < 58) return Math.min(current + 1, 58);
+        return Math.min(current + 0.5, 70);
+      });
+    }, 350);
 
     try {
-      const reportBatches = selectedOption.value === 'pdf_obras'
+      if (isChartsPdf) {
+        setDownloadStage('Diseñando 6 páginas…');
+        const { generateChartsPdf } = await import('../../utils/chartReportPdf');
+        await generateChartsPdf({
+          obras: obrasParaDescargar,
+          filtros,
+          user,
+          signal: abortController.signal,
+          onProgress: (progress) => {
+            setDownloadProgress((current) => Math.max(current, progress));
+          },
+        });
+        if (estimatedProgressTimer) window.clearInterval(estimatedProgressTimer);
+        estimatedProgressTimer = null;
+        const history = JSON.parse(localStorage.getItem('cl_download_history') || '[]');
+        const now = new Date();
+        localStorage.setItem('cl_download_history', JSON.stringify([
+          {
+            id: Date.now(),
+            date: new Intl.DateTimeFormat('es-MX', {
+              day: '2-digit', month: 'short', year: 'numeric',
+              hour: '2-digit', minute: '2-digit',
+            }).format(now),
+            type: 'PDF',
+            name: `PDF — Gráficas · ${obrasParaDescargar.length} obras`,
+            size: 'Generado',
+            url: '',
+          },
+          ...history,
+        ].slice(0, 100)));
+        setDownloadProgress(100);
+        setDownloadStage('Descarga lista');
+        setNotification({ type: 'success', message: 'PDF de gráficas generado correctamente.' });
+        return;
+      }
+
+      const reportBatches = ['pdf_obras', 'pdf_companias'].includes(selectedOption.value)
         ? Array.from(
             { length: Math.ceil(obrasParaDescargar.length / 900) },
             (_, index) => obrasParaDescargar.slice(index * 900, (index + 1) * 900)
           )
         : [obrasParaDescargar];
       const reportResponses = [];
-      for (const batch of reportBatches) {
+      for (let index = 0; index < reportBatches.length; index += 1) {
+        const batch = reportBatches[index];
         reportResponses.push(await solicitarReporte({
           reportType: selectedOption.value,
           userId: user.idUsuario,
@@ -110,8 +195,18 @@ export default function DownloadPanel({
           dateType,
           dateMin,
           dateMax,
+          signal: abortController.signal,
         }));
+        const completedBatchProgress = Math.max(
+          50,
+          Math.round(15 + ((index + 1) / reportBatches.length) * 55)
+        );
+        setDownloadProgress((current) => Math.max(current, completedBatchProgress));
       }
+      window.clearInterval(estimatedProgressTimer);
+      estimatedProgressTimer = null;
+      setDownloadProgress(72);
+      setDownloadStage('Descargando archivo…');
       const fileUrls = reportResponses.map(({ fileUrl }) => fileUrl);
       const history = JSON.parse(localStorage.getItem('cl_download_history') || '[]');
       const now = new Date();
@@ -130,16 +225,30 @@ export default function DownloadPanel({
         },
         ...history,
       ].slice(0, 100)));
-      await iniciarDescargaReporte(fileUrls, `construleads-${selectedOption.value}-${Date.now()}`);
+      await iniciarDescargaReporte(
+        fileUrls,
+        `construleads-${selectedOption.value}-${Date.now()}`,
+        (transferProgress) => {
+          setDownloadProgress(72 + Math.round(transferProgress * 0.26));
+        },
+        abortController.signal
+      );
+      setDownloadProgress(100);
+      setDownloadStage('Descarga lista');
       setNotification({ type: 'success', message: 'Reporte generado correctamente.' });
     } catch (error) {
+      const wasCancelled = error?.name === 'AbortError';
       setNotification({
-        type: 'error',
-        message: error instanceof Error && error.message
+        type: wasCancelled ? 'cancelled' : 'error',
+        message: wasCancelled
+          ? 'Descarga cancelada.'
+          : error instanceof Error && error.message
           ? error.message
           : 'No fue posible generar el reporte.',
       });
     } finally {
+      if (estimatedProgressTimer) window.clearInterval(estimatedProgressTimer);
+      downloadAbortRef.current = null;
       setIsGenerating(false);
     }
   };
@@ -157,14 +266,6 @@ export default function DownloadPanel({
       w="clamp(350px, 27vw, 410px)"
       position="relative"
     >
-      <style>{`
-        @keyframes cl-report-progress {
-          0% { transform: translateX(-100%); }
-          55% { transform: translateX(80%); }
-          100% { transform: translateX(250%); }
-        }
-      `}</style>
-
       {(isGenerating || notification) && (
         <Box
           position="absolute"
@@ -182,7 +283,7 @@ export default function DownloadPanel({
         >
           <Flex align="center" gap={3}>
             {isGenerating ? (
-              <Spinner size="sm" color="#FF653F" />
+              <ReportFileIcon isPdf={selectedOption.value.startsWith('pdf_')} />
             ) : (
               <Flex
                 w="28px"
@@ -190,32 +291,69 @@ export default function DownloadPanel({
                 borderRadius="full"
                 align="center"
                 justify="center"
-                bg={notification?.type === 'success' ? '#DCFCE7' : '#FEE2E2'}
-                color={notification?.type === 'success' ? '#15803D' : '#B91C1C'}
+                bg={notification?.type === 'success'
+                  ? '#DCFCE7'
+                  : notification?.type === 'cancelled' ? 'var(--cl-surface-muted)' : '#FEE2E2'}
+                color={notification?.type === 'success'
+                  ? '#15803D'
+                  : notification?.type === 'cancelled' ? 'var(--cl-text-muted)' : '#B91C1C'}
                 fontWeight="800"
               >
                 {notification?.type === 'success' ? '✓' : '!'}
               </Flex>
             )}
             <Box minW="0" flex="1">
-              <Text fontSize="13px" fontWeight="700" color="var(--cl-text-strong)">
-                {isGenerating ? selectedOption.label : notification?.message}
-              </Text>
+              <Flex align="center" justify="space-between" gap={3}>
+                <Text fontSize="13px" fontWeight="700" color="var(--cl-text-strong)">
+                  {isGenerating ? selectedOption.label : notification?.message}
+                </Text>
+                {isGenerating && (
+                  <Text fontSize="12px" fontWeight="800" color="#FF653F">
+                    {Math.round(downloadProgress)}%
+                  </Text>
+                )}
+              </Flex>
               {isGenerating && (
                 <Text mt={0.5} fontSize="12px" color="var(--cl-text-muted)">
-                  Generando reporte…
+                  {downloadStage}
                 </Text>
               )}
             </Box>
+            {isGenerating && (
+              <Button
+                size="xs"
+                variant="ghost"
+                minW="30px"
+                h="30px"
+                p={0}
+                borderRadius="full"
+                color="var(--cl-text-muted)"
+                aria-label="Cancelar descarga"
+                title="Cancelar descarga"
+                onClick={() => downloadAbortRef.current?.abort()}
+              >
+                ×
+              </Button>
+            )}
           </Flex>
           {isGenerating && (
-            <Box mt={3} h="4px" overflow="hidden" borderRadius="full" bg="var(--cl-border)">
+            <Box
+              mt={3}
+              h="4px"
+              overflow="hidden"
+              borderRadius="full"
+              bg="var(--cl-border)"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(downloadProgress)}
+            >
               <Box
                 h="100%"
-                w="38%"
+                w={`${downloadProgress}%`}
                 borderRadius="full"
                 bg="#FF653F"
-                animation="cl-report-progress 1.5s ease-in-out infinite"
+                transition="width 220ms ease"
               />
             </Box>
           )}

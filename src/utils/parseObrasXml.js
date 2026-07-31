@@ -58,36 +58,25 @@ export function parseObrasXml(xmlText) {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
 
-  const getFirstText = (item, tag) => {
-    const exactTags = Array.isArray(tag) ? tag : [tag];
-    const wantedTags = exactTags.map((entry) => normalizeTagName(entry));
-
-    for (let index = 0; index < exactTags.length; index += 1) {
-      const exactMatches = item.getElementsByTagName?.(exactTags[index]) || [];
-      for (let exactIndex = 0; exactIndex < exactMatches.length; exactIndex += 1) {
-        const node = exactMatches[exactIndex];
-        if (node?.textContent?.trim()) {
-          return node.textContent.trim();
-        }
-      }
-    }
-
+  const buildValueMap = (item) => {
+    const values = new Map();
     const childNodes = item.getElementsByTagName('*');
+
     for (let index = 0; index < childNodes.length; index += 1) {
       const node = childNodes[index];
-      const nodeName = normalizeTagName(node.localName || node.nodeName);
+      const value = node.textContent?.trim();
+      if (!value) continue;
 
-      if (wantedTags.includes(nodeName) && node.textContent?.trim()) {
-        return node.textContent.trim();
-      }
+      const nodeName = normalizeTagName(node.localName || node.nodeName);
+      if (!values.has(nodeName)) values.set(nodeName, value);
     }
 
-    return '';
+    return values;
   };
 
-  const getText = (item, tags) => {
+  const getText = (values, tags) => {
     for (let index = 0; index < tags.length; index += 1) {
-      const value = getFirstText(item, tags[index]);
+      const value = values.get(normalizeTagName(tags[index]));
       if (value) return value;
     }
 
@@ -98,38 +87,40 @@ export function parseObrasXml(xmlText) {
 
   for (let index = 0; index < items.length; index += 1) {
     const item = items[index];
+    const values = buildValueMap(item);
 
-    const clave = getFirstText(item, 'Clave_Proyecto');
-    const proyectoRaw = getFirstText(item, 'Proyecto');
-    const regionRaw = getFirstText(item, 'Region');
-    const estadoRaw = getFirstText(item, 'Estado_Proyecto');
-    const generoRaw = getFirstText(item, 'Genero');
-    const subgeneroRaw = getFirstText(item, 'Subgenero');
-    const tipoObraRaw = getFirstText(item, 'Tipo_Obra');
-    const tipoDesarrolloRaw = getFirstText(item, 'Tipo_Desarrollo');
-    const tipoProyectoRaw = getFirstText(item, 'Tipo_Proyecto');
-    const etapaRaw = getFirstText(item, 'Etapa');
-    const sectorRaw = getFirstText(item, 'Sector');
-    const inversionRaw = getFirstText(item, 'Inversion');
-    const superficieRaw = getFirstText(item, 'Sup_Construida');
-    const latRaw = getFirstText(item, 'proy_ubicacionlatitud');
-    const lngRaw = getFirstText(item, 'proy_ubicacionlongitud');
-    const localizacion = getFirstText(item, 'Localizacion1');
-    const descripcion = getFirstText(item, 'Descripcion');
-    const compania = getFirstText(item, 'Compania');
+    const getValue = (...tags) => getText(values, tags);
+    const clave = getValue('Clave_Proyecto');
+    const proyectoRaw = getValue('Proyecto');
+    const regionRaw = getValue('Region');
+    const estadoRaw = getValue('Estado_Proyecto');
+    const generoRaw = getValue('Genero');
+    const subgeneroRaw = getValue('Subgenero');
+    const tipoObraRaw = getValue('Tipo_Obra');
+    const tipoDesarrolloRaw = getValue('Tipo_Desarrollo');
+    const tipoProyectoRaw = getValue('Tipo_Proyecto');
+    const etapaRaw = getValue('Etapa');
+    const sectorRaw = getValue('Sector');
+    const inversionRaw = getValue('Inversion');
+    const superficieRaw = getValue('Sup_Construida');
+    const latRaw = getValue('proy_ubicacionlatitud');
+    const lngRaw = getValue('proy_ubicacionlongitud');
+    const localizacion = getValue('Localizacion1');
+    const descripcion = getValue('Descripcion');
+    const compania = getValue('Compania');
 
-    const fechaPublicacion = getText(item, [
+    const fechaPublicacion = getText(values, [
       'Fecha_publicacion',
       'Fecha_Publicacion',
       'FECHA_PUBLICACION',
       'Fecha_Publicación',
     ]);
-    const fechaInicio = getText(item, [
+    const fechaInicio = getText(values, [
       'Fecha_Inicio',
       'FECHA_INICIO',
       'Fecha_inicio',
     ]);
-    const fechaTermino = getText(item, [
+    const fechaTermino = getText(values, [
       'Fecha_Terminacion',
       'Fecha_Termino',
       'Fecha_Terminación',

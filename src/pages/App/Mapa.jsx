@@ -9,6 +9,9 @@ import {
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 
+const DEBUG_MAPA = false;
+const AUTO_FIT_INITIAL_BOUNDS = false;
+
 function normalizeText(value) {
   return String(value || '')
     .normalize('NFD')
@@ -46,6 +49,7 @@ function getSingleTaxonomyValue(value) {
 function Mapa({
   obras = [],
   filtros = {},
+  isDataReady = true,
   onFilteredData,
   onViewFicha,
 }) {
@@ -54,6 +58,7 @@ function Mapa({
   const [filteredObras, setFilteredObras] = useState([]);
   const [isMapLoading, setIsMapLoading] = useState(true);
   const [mapLoadingMessage, setMapLoadingMessage] = useState('Cargando datos del mapa...');
+  const [markerProgress, setMarkerProgress] = useState({ loaded: 0, total: 0 });
   const mapRef = useRef(null);
   const popupCardRef = useRef(null);
   const selectedProjectRef = useRef(null);
@@ -66,12 +71,10 @@ function Mapa({
   const onFilteredDataRef = useRef(onFilteredData);
   const lastPublishedCount = useRef(-1);
   const didFitInitialBoundsRef = useRef(false);
-  const DEBUG_MAPA = false;
   const debugLog = () => {};
-  const AUTO_FIT_INITIAL_BOUNDS = false;
 
-  const showMapLoader = isMapLoading || !obras.length;
-  const visibleMapLoadingMessage = !obras.length
+  const showMapLoader = isMapLoading || !isDataReady;
+  const visibleMapLoadingMessage = !isDataReady
     ? 'Obteniendo obras del servicio y preparando el mapa...'
     : mapLoadingMessage;
 
@@ -104,6 +107,15 @@ function Mapa({
 
   useEffect(() => {
     const applyFilters = () => {
+      if (filtros?.__preFiltered) {
+        setFilteredObras(obras);
+        if (onFilteredDataRef.current && lastPublishedCount.current !== obras.length) {
+          lastPublishedCount.current = obras.length;
+          onFilteredDataRef.current(obras);
+        }
+        return;
+      }
+
       const filtrosActivos = Object.keys(filtros || {}).length
         ? filtros
         : (window.construleadsFilters || {});
@@ -662,6 +674,13 @@ useEffect(() => {
         fontSize: '12px',
         fontWeight: '700',
         boxSizing: 'border-box',
+        opacity: '0',
+        transform: 'scale(.92)',
+        transition: 'opacity 180ms ease, transform 220ms cubic-bezier(.22, 1, .36, 1)',
+      });
+      requestAnimationFrame(() => {
+        content.style.opacity = '1';
+        content.style.transform = 'scale(1)';
       });
       return content;
     };
@@ -844,6 +863,7 @@ useEffect(() => {
       if (!mapInstanceRef.current || !mapReadyRef.current) return;
 
       setIsMapLoading(true);
+      setMarkerProgress({ loaded: 0, total: filteredObras.length });
       setMapLoadingMessage(
         filteredObras.length
           ? `Preparando ${filteredObras.length.toLocaleString()} obras en el mapa...`
@@ -853,10 +873,14 @@ useEffect(() => {
       const updateToken = markerUpdateTokenRef.current + 1;
       markerUpdateTokenRef.current = updateToken;
 
+      selectedProjectRef.current = null;
+      setSelectedProject(null);
+      setPopupPosition(null);
+
       if (!filteredObras.length) {
         cleanupMarkers();
 
-        if (!obras.length) {
+        if (!isDataReady) {
           setMapLoadingMessage('Obteniendo obras del servicio y preparando el mapa...');
           setIsMapLoading(true);
           return;
@@ -870,7 +894,12 @@ useEffect(() => {
       const startedAt = DEBUG_MAPA ? performance.now() : 0;
       const markers = [];
       let builtMarkers = 0;
-      const chunkSize = filteredObras.length > 500 ? 320 : filteredObras.length;
+      const chunkSize = filteredObras.length > 1000 ? 600 : filteredObras.length;
+      let markerBatch = [];
+      let renderedPreview = false;
+      let pendingClusterRender = false;
+
+      cleanupMarkers();
 
       for (let index = 0; index < filteredObras.length; index += 1) {
         if (markerUpdateTokenRef.current !== updateToken) return;
@@ -887,34 +916,51 @@ useEffect(() => {
           }
         }
 
-        if (marker) markers.push(marker);
+        if (marker) {
+          markers.push(marker);
+          markerBatch.push(marker);
+        }
 
-        if (chunkSize < filteredObras.length && index > 0 && index % chunkSize === 0) {
+        const completesBatch =
+          chunkSize < filteredObras.length &&
+          ((index + 1) % chunkSize === 0 || index === filteredObras.length - 1);
+
+        if (completesBatch) {
+          if (markerBatch.length && markerClusterRef.current) {
+            markerClusterRef.current.addMarkers(markerBatch, true);
+            if (!renderedPreview) {
+              markerClusterRef.current.render();
+              renderedPreview = true;
+            } else {
+              pendingClusterRender = true;
+            }
+            markerBatch = [];
+          }
+          markerElementsRef.current = [...markers];
+          setMarkerProgress({ loaded: index + 1, total: filteredObras.length });
+          setMapLoadingMessage(
+            `${(index + 1).toLocaleString()} de ${filteredObras.length.toLocaleString()} proyectos`
+          );
           await new Promise((resolve) => requestAnimationFrame(resolve));
         }
       }
 
       if (markerUpdateTokenRef.current !== updateToken) return;
 
-      if (markerClusterRef.current) {
-        const previousMarkers = markerElementsRef.current;
-        const previousSet = new Set(previousMarkers);
-        const nextSet = new Set(markers);
-        const removedMarkers = previousMarkers.filter((marker) => !nextSet.has(marker));
-        const addedMarkers = markers.filter((marker) => !previousSet.has(marker));
+      if (markerBatch.length && markerClusterRef.current) {
+        markerClusterRef.current.addMarkers(markerBatch, true);
+        pendingClusterRender = true;
+      }
 
-        if (removedMarkers.length) {
-          markerClusterRef.current.removeMarkers(removedMarkers, true);
-        }
-        if (addedMarkers.length) {
-          markerClusterRef.current.addMarkers(addedMarkers, true);
-        }
-        if (removedMarkers.length || addedMarkers.length) {
-          markerClusterRef.current.render();
-        }
+      if (markerClusterRef.current && (pendingClusterRender || !renderedPreview)) {
+        markerClusterRef.current.render();
       }
 
       if (markerUpdateTokenRef.current === updateToken) {
+        setMarkerProgress({
+          loaded: filteredObras.length,
+          total: filteredObras.length,
+        });
         setIsMapLoading(false);
       }
 
@@ -952,14 +998,14 @@ useEffect(() => {
         setMapLoadingMessage('No se pudo cargar el mapa. Intenta recargar la página.');
         setIsMapLoading(false);
       }
-    }, mapInstanceRef.current ? 90 : 0);
+    }, 0);
 
     return () => {
       cancelled = true;
       window.clearTimeout(updateTimer);
       markerUpdateTokenRef.current += 1;
     };
-  }, [filteredObras, obras.length]);
+  }, [filteredObras, isDataReady]);
 
   return (
     <Box
@@ -992,34 +1038,35 @@ useEffect(() => {
           {showMapLoader && (
             <Box
               position="absolute"
-              inset={0}
+              top="14px"
+              left="50%"
+              transform="translateX(-50%)"
               zIndex={30}
-              bg="rgba(255, 255, 255, 0.82)"
-              backdropFilter="blur(6px)"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              textAlign="center"
-              px={6}
               pointerEvents="none"
             >
-              <Box
+              <Flex
                 bg="var(--cl-surface)"
                 border="1px solid var(--cl-border)"
-                borderRadius="16px"
+                borderRadius="full"
                 boxShadow="var(--cl-shadow)"
-                px={6}
-                py={5}
-                maxW="360px"
+                px={4}
+                py={2.5}
+                align="center"
+                gap={3}
+                minW="260px"
               >
-                <Spinner size="lg" color="#FF653F" thickness="4px" mb={4} />
-                <Text fontWeight="800" fontSize="16px" color="var(--cl-text-strong)" mb={1}>
-                  Cargando datos
-                </Text>
-                <Text fontSize="13px" color="var(--cl-text-muted)">
-                  {visibleMapLoadingMessage}
-                </Text>
-              </Box>
+                <Spinner size="sm" color="#FF653F" thickness="3px" />
+                <Box>
+                  <Text fontWeight="700" fontSize="12px" color="var(--cl-text-strong)" lineHeight="1.2">
+                    Cargando proyectos
+                  </Text>
+                  <Text fontSize="11px" color="var(--cl-text-muted)" lineHeight="1.2">
+                    {markerProgress.total
+                      ? `${markerProgress.loaded.toLocaleString()} de ${markerProgress.total.toLocaleString()} proyectos`
+                      : visibleMapLoadingMessage}
+                  </Text>
+                </Box>
+              </Flex>
             </Box>
           )}
 

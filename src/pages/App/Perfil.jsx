@@ -7,6 +7,7 @@ import {
   FiArrowLeft, FiCheck, FiChevronRight, FiDownload, FiEdit2, FiFileText,
   FiMapPin, FiPlus, FiSearch, FiSettings, FiShield, FiUser, FiUsers, FiX,
 } from 'react-icons/fi';
+import { iniciarDescargaReporte } from '../../api/reportes';
 
 const ACCENT = '#FF653F';
 const NAVY = '#252525';
@@ -367,8 +368,20 @@ export default function Perfil() {
                       <Box flex="1"><Text fontSize="13px" fontWeight="700">{item.name}</Text><Text fontSize="11px" color="#888888">{item.date}</Text></Box>
                       <Text fontSize="11px" color="#777777" display={{ base: 'none', md: 'block' }}>{item.size}</Text>
                       <Text fontSize="10px" px={2.5} py={1} bg="#F3F3F3" borderRadius="full">{item.type}</Text>
-                      <Button as={item.url ? 'a' : 'button'} href={item.url || undefined} target={item.url ? '_blank' : undefined}
-                        size="sm" variant="ghost" color={ACCENT} disabled={!item.url} aria-label="Descargar de nuevo"><FiDownload /></Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        color={ACCENT}
+                        disabled={!item.url}
+                        aria-label="Descargar de nuevo"
+                        onClick={() => {
+                          if (item.url) {
+                            void iniciarDescargaReporte(item.url, `reporte-${item.id}`);
+                          }
+                        }}
+                      >
+                        <FiDownload />
+                      </Button>
                     </Flex>
                   )) : <Text color="#888888">Todavía no hay descargas registradas.</Text>}
                 </Stack>

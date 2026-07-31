@@ -82,6 +82,14 @@ export async function validarCodigo(email, codigo) {
     nombreUsuario: row?.getAttribute("nombre_usuario"),
     idSession: row?.getAttribute("id_session"),
     tipoUsuario: row?.getAttribute("tipo_usuario"),
+    correo: email,
+    empresa:
+      row?.getAttribute("empresa") ||
+      row?.getAttribute("Empresa") ||
+      row?.getAttribute("nombre_empresa") ||
+      row?.getAttribute("Nombre_Empresa") ||
+      row?.getAttribute("compania") ||
+      row?.getAttribute("Compania"),
   };
 
   if (result.estatus === "1") {

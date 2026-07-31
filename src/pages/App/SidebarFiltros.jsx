@@ -380,41 +380,6 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     };
   }, []);
 
-  useEffect(() => {
-    const estados = selectedRegiones.flatMap(
-      (region) => estadosPorRegion[region] || []
-    );
-
-    setSelectedEstados((actuales) => {
-      const faltantes = estados.filter(
-        (estado) => !actuales.includes(estado)
-      );
-
-      return [...actuales, ...faltantes];
-    });
-  }, [selectedRegiones, estadosPorRegion]);
-
-  function getRegionesForEstados(estados) {
-    return Object.entries(estadosPorRegion)
-      .filter(([, estadosRegion]) =>
-        estadosRegion.length > 0 &&
-        estadosRegion.every((estado) => estados.includes(estado))
-      )
-      .map(([region]) => region);
-  }
-
-  function getGenerosForSelections(subgeneros, tiposObraSeleccionados) {
-    return Object.entries(subgenerosPorGenero)
-      .filter(([, subgenerosGenero]) => {
-        return Object.entries(subgenerosGenero || {}).some(
-          ([subgenero, tiposObra]) =>
-            subgeneros.includes(subgenero) ||
-            tiposObra.some((tipo) => tiposObraSeleccionados.includes(tipo))
-        );
-      })
-      .map(([genero]) => genero);
-  }
-
   const subgenerosPorGenero = {
     Vivienda: {
       Lujo: [
@@ -832,7 +797,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     .flatMap((subgeneros) => Object.values(subgeneros).flat()).length;
   const selectionForPayload = (selected, total) => {
     if (selected.length === total) return [];
-    if (selected.length === 0) return ['__NONE__'];
+    if (selected.length === 0) return [];
     return selected;
   };
 
@@ -841,28 +806,15 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
 
     shouldInitializeAllFilters.current = false;
     setSelectedValues({ 'Tipo de fecha': 'Fecha de publicación' });
-    setSelectedRegiones(Object.keys(estadosPorRegion));
-    setSelectedEstados(Object.values(estadosPorRegion).flat());
-    setSelectedGeneros(Object.keys(subgenerosPorGenero));
-    setSelectedSubgeneros(
-      Object.values(subgenerosPorGenero).flatMap((subgeneros) => Object.keys(subgeneros))
-    );
-    setSelectedSectores(['Privado', 'Gobierno']);
-    setSelectedEtapas(['Obra Negociada', 'Pre-Inicio', 'Inicio', 'Pre-Plan', 'Plan', 'Proyecto']);
-    setSelectedDesarrollos([
-      'Obra Nueva',
-      'Ampliación',
-      'Rehabilitación',
-      'Mantenimiento',
-      'Remodelación',
-      'Adecuación',
-      'Terminación',
-    ]);
-    setSelectedTipoObra(
-      Object.values(subgenerosPorGenero)
-        .flatMap((subgeneros) => Object.values(subgeneros).flat())
-    );
-    setSelectedTiposProyecto(['Proyecto contratado', 'Proyecto de inversión']);
+    setSelectedRegiones([]);
+    setSelectedEstados([]);
+    setSelectedGeneros([]);
+    setSelectedSubgeneros([]);
+    setSelectedSectores([]);
+    setSelectedEtapas([]);
+    setSelectedDesarrollos([]);
+    setSelectedTipoObra([]);
+    setSelectedTiposProyecto([]);
     setPeriodoIndex(-1);
     setDateRangeStart(dateBounds.min);
     setDateRangeEnd(dateBounds.max);
@@ -951,34 +903,19 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
   ]);
 
   function resetAllFilters() {
-    const allRegiones = Object.keys(estadosPorRegion);
-    const allEstados = Object.values(estadosPorRegion).flat();
-    const allGeneros = Object.keys(subgenerosPorGenero);
-    const allSubgeneros = Object.values(subgenerosPorGenero)
-      .flatMap((subgeneros) => Object.keys(subgeneros));
-    const allTiposObra = Object.values(subgenerosPorGenero)
-      .flatMap((subgeneros) => Object.values(subgeneros).flat());
     const publicationBounds = getDateBoundsForCriterion(obras, 'Fecha de publicación');
 
     setSelectedValues({ 'Tipo de fecha': 'Fecha de publicación' });
-    setSelectedRegiones(allRegiones);
-    setSelectedEstados(allEstados);
-    setSelectedGeneros(allGeneros);
-    setSelectedSubgeneros(allSubgeneros);
+    setSelectedRegiones([]);
+    setSelectedEstados([]);
+    setSelectedGeneros([]);
+    setSelectedSubgeneros([]);
     setSelectedDetalles([]);
-    setSelectedSectores(['Privado', 'Gobierno']);
-    setSelectedEtapas(['Obra Negociada', 'Pre-Inicio', 'Inicio', 'Pre-Plan', 'Plan', 'Proyecto']);
-    setSelectedDesarrollos([
-      'Obra Nueva',
-      'Ampliación',
-      'Rehabilitación',
-      'Mantenimiento',
-      'Remodelación',
-      'Adecuación',
-      'Terminación',
-    ]);
-    setSelectedTipoObra(allTiposObra);
-    setSelectedTiposProyecto(['Proyecto contratado', 'Proyecto de inversión']);
+    setSelectedSectores([]);
+    setSelectedEtapas([]);
+    setSelectedDesarrollos([]);
+    setSelectedTipoObra([]);
+    setSelectedTiposProyecto([]);
     setExpandedTipoProyecto(null);
     setInvestmentMin(investmentBounds.min);
     setInvestmentMax(investmentBounds.max);
@@ -1092,10 +1029,12 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
         <VStack align="stretch" spacing={1}>
           {regiones.map((region) => {
             const estadosRegion = estadosPorRegion[region] || [];
-            const selected = estadosRegion.length > 0 &&
-              estadosRegion.every((estado) => selectedEstados.includes(estado));
-            const partiallySelected = !selected &&
-              estadosRegion.some((estado) => selectedEstados.includes(estado));
+            const parentSelected = selectedRegiones.includes(region);
+            const selectedChildrenCount = estadosRegion.filter((estado) =>
+              selectedEstados.includes(estado)
+            ).length;
+            const selected = parentSelected && selectedChildrenCount === estadosRegion.length;
+            const partiallySelected = parentSelected && !selected;
             const expanded = expandedRegion === region;
 
             return (
@@ -1127,15 +1066,23 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                     }}
                     onClick={(event) => {
                       event.stopPropagation();
-                      const nextEstados = selected || partiallySelected
-                        ? selectedEstados.filter((estado) => !estadosRegion.includes(estado))
-                        : [
-                            ...selectedEstados,
-                            ...estadosRegion.filter((estado) => !selectedEstados.includes(estado)),
-                          ];
-
-                      setSelectedEstados(nextEstados);
-                      setSelectedRegiones(getRegionesForEstados(nextEstados));
+                      setExpandedRegion(region);
+                      if (selected) {
+                        setSelectedRegiones((current) =>
+                          current.filter((item) => item !== region)
+                        );
+                        setSelectedEstados((current) =>
+                          current.filter((estado) => !estadosRegion.includes(estado))
+                        );
+                      } else {
+                        setSelectedRegiones((current) =>
+                          current.includes(region) ? current : [...current, region]
+                        );
+                        setSelectedEstados((current) => [
+                          ...current,
+                          ...estadosRegion.filter((estado) => !current.includes(estado)),
+                        ]);
+                      }
                     }}
                     style={{
                       marginRight: 8,
@@ -1181,9 +1128,17 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                             const nextEstados = estadoSeleccionado
                               ? selectedEstados.filter((item) => item !== estado)
                               : [...selectedEstados, estado];
+                            const hasSelectedChildren = estadosRegion.some((item) =>
+                              nextEstados.includes(item)
+                            );
 
                             setSelectedEstados(nextEstados);
-                            setSelectedRegiones(getRegionesForEstados(nextEstados));
+                            setSelectedRegiones((current) => {
+                              if (hasSelectedChildren) {
+                                return current.includes(region) ? current : [...current, region];
+                              }
+                              return current.filter((item) => item !== region);
+                            });
                           }}
                         >
                           <input
@@ -1230,21 +1185,11 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
             const tiposGenero = subgeneros.flatMap((subgenero) =>
               subgenerosMap[subgenero] || []
             );
-            const isSubgeneroComplete = (subgenero) => {
-              const tiposObra = subgenerosMap[subgenero] || [];
-              return selectedSubgeneros.includes(subgenero) ||
-                (tiposObra.length > 0 &&
-                  tiposObra.every((tipo) => selectedTipoObra.includes(tipo)));
-            };
-            const hasSubgeneroSelection = (subgenero) => {
-              const tiposObra = subgenerosMap[subgenero] || [];
-              return isSubgeneroComplete(subgenero) ||
-                tiposObra.some((tipo) => selectedTipoObra.includes(tipo));
-            };
-            const selected = subgeneros.length > 0 &&
-              subgeneros.every((subgenero) => isSubgeneroComplete(subgenero));
-            const partiallySelected = !selected &&
-              subgeneros.some((subgenero) => hasSubgeneroSelection(subgenero));
+            const parentSelected = selectedGeneros.includes(genero);
+            const selected = parentSelected &&
+              subgeneros.every((subgenero) => selectedSubgeneros.includes(subgenero)) &&
+              tiposGenero.every((tipo) => selectedTipoObra.includes(tipo));
+            const partiallySelected = parentSelected && !selected;
             const expanded = expandedGenero === genero;
 
             return (
@@ -1276,22 +1221,30 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                     }}
                     onClick={(event) => {
                       event.stopPropagation();
-                      const nextSubgeneros = selected || partiallySelected
-                        ? selectedSubgeneros.filter((subgenero) => !subgeneros.includes(subgenero))
-                        : [
-                            ...selectedSubgeneros,
-                            ...subgeneros.filter((subgenero) => !selectedSubgeneros.includes(subgenero)),
-                          ];
-                      const nextTiposObra = selected || partiallySelected
-                        ? selectedTipoObra.filter((tipo) => !tiposGenero.includes(tipo))
-                        : [
-                            ...selectedTipoObra,
-                            ...tiposGenero.filter((tipo) => !selectedTipoObra.includes(tipo)),
-                          ];
-
-                      setSelectedSubgeneros(nextSubgeneros);
-                      setSelectedGeneros(getGenerosForSelections(nextSubgeneros, nextTiposObra));
-                      setSelectedTipoObra(nextTiposObra);
+                      setExpandedGenero(genero);
+                      if (selected) {
+                        setSelectedGeneros((current) =>
+                          current.filter((item) => item !== genero)
+                        );
+                        setSelectedSubgeneros((current) =>
+                          current.filter((item) => !subgeneros.includes(item))
+                        );
+                        setSelectedTipoObra((current) =>
+                          current.filter((item) => !tiposGenero.includes(item))
+                        );
+                      } else {
+                        setSelectedGeneros((current) =>
+                          current.includes(genero) ? current : [...current, genero]
+                        );
+                        setSelectedSubgeneros((current) => [
+                          ...current,
+                          ...subgeneros.filter((item) => !current.includes(item)),
+                        ]);
+                        setSelectedTipoObra((current) => [
+                          ...current,
+                          ...tiposGenero.filter((item) => !current.includes(item)),
+                        ]);
+                      }
                     }}
                     style={{
                       marginRight: 8,
@@ -1320,11 +1273,11 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                   <VStack align="stretch" spacing={1} mt={1} pl={5}>
                     {subgeneros.map((subgenero) => {
                       const tiposObra = subgenerosMap[subgenero] || [];
-                      const selectedSubgenero = selectedSubgeneros.includes(subgenero) ||
-                        (tiposObra.length > 0 &&
-                          tiposObra.every((tipo) => selectedTipoObra.includes(tipo)));
-                      const partiallySelectedSubgenero = !selectedSubgenero &&
-                        tiposObra.some((tipo) => selectedTipoObra.includes(tipo));
+                      const parentSubgeneroSelected = selectedSubgeneros.includes(subgenero);
+                      const selectedSubgenero = parentSubgeneroSelected &&
+                        tiposObra.every((tipo) => selectedTipoObra.includes(tipo));
+                      const partiallySelectedSubgenero = parentSubgeneroSelected &&
+                        !selectedSubgenero;
                       const expandedSub = expandedSubgenero === `${genero}-${subgenero}`;
 
                       return (
@@ -1356,19 +1309,37 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                               }}
                               onClick={(event) => {
                                 event.stopPropagation();
-                                const nextSubgeneros = selectedSubgenero || partiallySelectedSubgenero
-                                  ? selectedSubgeneros.filter((item) => item !== subgenero)
-                                  : [...selectedSubgeneros, subgenero];
-                                const nextTiposObra = selectedSubgenero || partiallySelectedSubgenero
-                                  ? selectedTipoObra.filter((tipo) => !tiposObra.includes(tipo))
-                                  : [
-                                      ...selectedTipoObra,
-                                      ...tiposObra.filter((tipo) => !selectedTipoObra.includes(tipo)),
-                                    ];
+                                setExpandedSubgenero(`${genero}-${subgenero}`);
+                                if (selectedSubgenero) {
+                                  const nextSubgeneros = selectedSubgeneros.filter(
+                                    (item) => item !== subgenero
+                                  );
+                                  const nextTiposObra = selectedTipoObra.filter(
+                                    (tipo) => !tiposObra.includes(tipo)
+                                  );
+                                  const hasSelectedDescendants =
+                                    subgeneros.some((item) => nextSubgeneros.includes(item)) ||
+                                    tiposGenero.some((item) => nextTiposObra.includes(item));
 
-                                setSelectedSubgeneros(nextSubgeneros);
-                                setSelectedGeneros(getGenerosForSelections(nextSubgeneros, nextTiposObra));
-                                setSelectedTipoObra(nextTiposObra);
+                                  setSelectedSubgeneros(nextSubgeneros);
+                                  setSelectedTipoObra(nextTiposObra);
+                                  if (!hasSelectedDescendants) {
+                                    setSelectedGeneros((current) =>
+                                      current.filter((item) => item !== genero)
+                                    );
+                                  }
+                                } else {
+                                  setSelectedSubgeneros((current) =>
+                                    current.includes(subgenero) ? current : [...current, subgenero]
+                                  );
+                                  setSelectedTipoObra((current) => [
+                                    ...current,
+                                    ...tiposObra.filter((tipo) => !current.includes(tipo)),
+                                  ]);
+                                  if (!selectedGeneros.includes(genero)) {
+                                    setSelectedGeneros((current) => [...current, genero]);
+                                  }
+                                }
                               }}
                               style={{
                                 marginRight: 8,
@@ -1414,17 +1385,26 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                                       const nextTiposObra = selectedTipo
                                         ? selectedTipoObra.filter((item) => item !== tipo)
                                         : [...selectedTipoObra, tipo];
-                                      const subgeneroCompleto = tiposObra.length > 0 &&
-                                        tiposObra.every((item) => nextTiposObra.includes(item));
-                                      const nextSubgeneros = subgeneroCompleto
+                                      const hasSelectedTypesInSubgenero = tiposObra.some((item) =>
+                                        nextTiposObra.includes(item)
+                                      );
+                                      const nextSubgeneros = hasSelectedTypesInSubgenero
                                         ? selectedSubgeneros.includes(subgenero)
                                           ? selectedSubgeneros
                                           : [...selectedSubgeneros, subgenero]
                                         : selectedSubgeneros.filter((item) => item !== subgenero);
+                                      const hasSelectedDescendantsInGenero =
+                                        subgeneros.some((item) => nextSubgeneros.includes(item)) ||
+                                        tiposGenero.some((item) => nextTiposObra.includes(item));
 
                                       setSelectedTipoObra(nextTiposObra);
                                       setSelectedSubgeneros(nextSubgeneros);
-                                      setSelectedGeneros(getGenerosForSelections(nextSubgeneros, nextTiposObra));
+                                      setSelectedGeneros((current) => {
+                                        if (hasSelectedDescendantsInGenero) {
+                                          return current.includes(genero) ? current : [...current, genero];
+                                        }
+                                        return current.filter((item) => item !== genero);
+                                      });
                                     }}
                                   >
                                     <input
@@ -1616,18 +1596,20 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
       'Proyecto contratado': ['Obra Negociada', 'Pre-Inicio', 'Inicio'],
       'Proyecto de inversión': ['Pre-Plan', 'Plan', 'Proyecto'],
     };
-    const getTiposProyectoForEtapas = (etapasSeleccionadas) =>
-      Object.entries(etapasPorTipo)
-        .filter(([, etapasTipo]) =>
-          etapasTipo.some((etapa) => etapasSeleccionadas.includes(etapa))
-        )
-        .map(([tipo]) => tipo);
-    const setEtapasWithParents = (updater) => {
+    const setEtapasWithParent = (tipo, updater) => {
       const nextEtapas = typeof updater === 'function'
         ? updater(selectedEtapas)
         : updater;
+      const etapasTipo = etapasPorTipo[tipo] || [];
+      const hasSelectedChildren = etapasTipo.some((etapa) => nextEtapas.includes(etapa));
+
       setSelectedEtapas(nextEtapas);
-      setSelectedTiposProyecto(getTiposProyectoForEtapas(nextEtapas));
+      setSelectedTiposProyecto((current) => {
+        if (hasSelectedChildren) {
+          return current.includes(tipo) ? current : [...current, tipo];
+        }
+        return current.filter((item) => item !== tipo);
+      });
     };
     return (
       <>
@@ -1772,11 +1754,11 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
           <VStack align="stretch" spacing={2}>
             {['Proyecto contratado', 'Proyecto de inversión'].map((tipo) => {
               const etapas = etapasPorTipo[tipo] || [];
-              const tipoSelected = etapas.length > 0 &&
+              const parentSelected = selectedTiposProyecto.includes(tipo);
+              const tipoSelected = parentSelected &&
                 etapas.every((etapa) => selectedEtapas.includes(etapa));
-              const tipoPartiallySelected = !tipoSelected &&
-                etapas.some((etapa) => selectedEtapas.includes(etapa));
-              const tipoActive = tipoSelected || tipoPartiallySelected;
+              const tipoPartiallySelected = parentSelected && !tipoSelected;
+              const tipoActive = parentSelected;
               const expanded = expandedTipoProyecto === tipo;
 
               return (
@@ -1803,15 +1785,22 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                       onClick={(e) => {
                         e.stopPropagation();
                         setExpandedTipoProyecto(tipo);
-                        const nextEtapas = tipoActive
-                          ? selectedEtapas.filter((etapa) => !etapas.includes(etapa))
-                          : [
-                              ...selectedEtapas,
-                              ...etapas.filter((etapa) => !selectedEtapas.includes(etapa)),
-                            ];
-
-                        setSelectedEtapas(nextEtapas);
-                        setSelectedTiposProyecto(getTiposProyectoForEtapas(nextEtapas));
+                        if (tipoSelected) {
+                          setSelectedTiposProyecto((current) =>
+                            current.filter((item) => item !== tipo)
+                          );
+                          setSelectedEtapas((current) =>
+                            current.filter((etapa) => !etapas.includes(etapa))
+                          );
+                        } else {
+                          setSelectedTiposProyecto((current) =>
+                            current.includes(tipo) ? current : [...current, tipo]
+                          );
+                          setSelectedEtapas((current) => [
+                            ...current,
+                            ...etapas.filter((etapa) => !current.includes(etapa)),
+                          ]);
+                        }
                       }}
                       style={{
                         marginRight: 8,
@@ -1850,7 +1839,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                         etapas,
                         `Etapa - ${tipo}`,
                         selectedEtapas,
-                        setEtapasWithParents,
+                        (updater) => setEtapasWithParent(tipo, updater),
                         true
                       )}
                     </Box>
