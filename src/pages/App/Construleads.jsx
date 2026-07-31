@@ -23,6 +23,7 @@ import PanelResumen from './PanelResumen';
 import Mapa from './Mapa';
 import DownloadPanel from './DownloadPanel';
 import FichaTecnicaModal from './FichaTecnicaModal';
+import WelcomeExperience from './WelcomeExperience';
 import { obtenerObrasProgresivas } from '../../api/obras';
 import {
   iniciarDescargaReporte,
@@ -693,6 +694,10 @@ export default function Construleads() {
         {...fichaTecnica}
         onClose={closeFicha}
         onDownload={handleDownloadFicha}
+      />
+      <WelcomeExperience
+        userId={user.idUsuario}
+        userName={user.nombreUsuario}
       />
     </Box>
   );
