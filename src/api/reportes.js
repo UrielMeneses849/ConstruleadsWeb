@@ -228,21 +228,69 @@ export async function solicitarFichaDatos({ userId, sessionId, obraKey, signal }
   if (!userId || !sessionId) throw new Error('La sesión del usuario no está disponible.');
   if (!obraKey) throw new Error('La obra seleccionada no tiene una clave válida.');
 
-  const configuredBaseUrl = String(import.meta.env.VITE_FICHA_API_URL || '').replace(/\/$/, '');
-  const endpoint = configuredBaseUrl
-    ? `${configuredBaseUrl}/api/fichas/${encodeURIComponent(obraKey)}`
-    : `/api/fichas/${encodeURIComponent(obraKey)}`;
-  const response = await fetch(endpoint, {
+  const body = new URLSearchParams({
+    sId_usuario: String(userId),
+    sId_session: String(sessionId),
+    sClave_obras: String(obraKey),
+    sTk: CONSTRULEADS_TOKEN,
+  });
+  const response = await fetch(`${CONSTRULEADS_WS_BASE_URL}/ws_cl_sobrasficha`, {
+    method: 'POST',
     headers: {
-      'X-User-Id': String(userId),
-      'X-Session-Id': String(sessionId),
+      'Content-Type': 'application/x-www-form-urlencoded',
     },
+    body,
     signal,
   });
-  const payload = await response.json().catch(() => ({}));
+
   if (!response.ok) {
-    throw new Error(payload.detail || payload.message || `No fue posible consultar la ficha (HTTP ${response.status}).`);
+    throw new Error(`No fue posible consultar la ficha (HTTP ${response.status}).`);
   }
-  if (!payload?.obra) throw new Error('El servicio no devolvió información de la ficha.');
-  return payload.obra;
+
+  const responseText = await response.text();
+  const xml = new DOMParser().parseFromString(responseText, 'text/xml');
+  if (xml.querySelector('parsererror')) {
+    throw new Error('El servicio devolvió una ficha con formato inválido.');
+  }
+
+  const serviceRow = xml.getElementsByTagName('row')[0];
+  const serviceMessage = serviceRow?.getAttribute('Mensaje') || serviceRow?.getAttribute('mensaje') || '';
+  const obraNode = xml.getElementsByTagName('OBRAS')[0];
+  if (!obraNode) throw new Error(serviceMessage || 'No se encontró la ficha solicitada.');
+
+  const text = (node, tag) => node?.getElementsByTagName(tag)[0]?.textContent?.trim() || '';
+  const fields = {
+    proy_clave: 'proy_clave', proy_nombre: 'proy_descripcioncorta',
+    proy_fechacierre: 'proy_fechacierre',
+    proy_tipoproyectodescripcion: 'proy_tipoproyectodescripcion',
+    proy_fecha_inicio: 'proy_fechainicio', proy_fecha_fin: 'proy_fechatermino',
+    proy_localizacion: 'proy_localizacion', proy_inversion: 'proy_inversion',
+    proy_etapa: 'proy_etapa', esta_descripcion: 'esta_descripcion',
+    muni_descripcion: 'muni_descripcion', sector: 'proy_sectordescripcion',
+    tipo_obra: 'tiob_descripcion', subgenero: 'suge_descripcion',
+    genero: 'gene_descripcion', desa_descripcion: 'desa_descripcion',
+    descripcion: 'proy_descripcionlarga', acabados: 'acabados',
+    observaciones: 'observaciones', descripcionextra: 'descripcionextra',
+    superficie: 'proy_superficie_construida', caracteristicas: 'caracteristicas',
+    actualizacion: 'actualizacion', concurso: 'concurso',
+  };
+  const obra = Object.fromEntries(
+    Object.entries(fields).map(([key, tag]) => [key, text(obraNode, tag)])
+  );
+  obra.cias_normalizadas = Array.from(obraNode.getElementsByTagName('CIA')).map((company) => ({
+    nombre: text(company, 'comp_razon_social'),
+    rol: text(company, 'roco_descripcion'),
+    direccion: text(company, 'sucu_calle'),
+    telefono1: text(company, 'sucu_telefono1'),
+    telefono2: text(company, 'sucu_telefono2'),
+    telefono3: text(company, 'sucu_telefono3'),
+    contactos: Array.from(company.getElementsByTagName('CONTACTO')).map((contact) => ({
+      puesto: text(contact, 'cont_puesto'),
+      nombre: [text(contact, 'cont_nombre'), text(contact, 'cont_paterno'), text(contact, 'cont_materno')]
+        .filter(Boolean).join(' '),
+      email: text(contact, 'cont_email'),
+    })),
+  }));
+
+  return obra;
 }
