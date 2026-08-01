@@ -1,8 +1,6 @@
-const normalizeText = (value = '') =>
-  String(value)
-    .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+// La información ya está normalizada por el ETL. El worker sólo limpia los
+// espacios exteriores; no debe quitar acentos ni reescribir etiquetas.
+const cleanText = (value = '') => String(value).trim();
 
 function decodeXml(value = '') {
   return String(value)
@@ -53,12 +51,8 @@ function parseObras(xml = '') {
   const fragments = String(xml).match(/<datos(?:\s[^>]*)?>[\s\S]*?<\/datos>/gi) || [];
   return fragments.map((fragment, index) => {
     const clave = getValue(fragment, 'Clave_Proyecto');
-    const region = normalizeText(getValue(fragment, 'Region'));
-    const estadoValue = normalizeText(getValue(fragment, 'Estado_Proyecto'));
-    const estadoComparable = estadoValue.toLowerCase();
-    const estado = estadoComparable === 'edo. de mexico' || estadoComparable === 'edo de mexico'
-      ? 'Estado de Mexico'
-      : estadoValue;
+    const region = cleanText(getValue(fragment, 'Region'));
+    const estado = cleanText(getValue(fragment, 'Estado_Proyecto'));
     const inversion = parseNumber(getValue(fragment, 'Inversion'));
     const superficie = parseNumber(getValue(fragment, 'Sup_Construida'));
     const lat = parseNumber(getValue(fragment, 'proy_ubicacionlatitud'));
@@ -81,16 +75,16 @@ function parseObras(xml = '') {
     return {
       id: clave || `${lat}-${lng}-${index}`,
       clave,
-      proyecto: normalizeText(getValue(fragment, 'Proyecto')),
+      proyecto: cleanText(getValue(fragment, 'Proyecto')),
       region,
       estado,
-      genero: normalizeText(getValue(fragment, 'Genero')),
-      subgenero: normalizeText(getValue(fragment, 'Subgenero')),
-      tipoObra: normalizeText(getValue(fragment, 'Tipo_Obra')),
-      tipoDesarrollo: normalizeText(getValue(fragment, 'Tipo_Desarrollo')),
-      tipoProyecto: normalizeText(getValue(fragment, 'Tipo_Proyecto')),
-      etapa: normalizeText(getValue(fragment, 'Etapa')),
-      sector: normalizeText(getValue(fragment, 'Sector')),
+      genero: cleanText(getValue(fragment, 'Genero')),
+      subgenero: cleanText(getValue(fragment, 'Subgenero')),
+      tipoObra: cleanText(getValue(fragment, 'Tipo_Obra')),
+      tipoDesarrollo: cleanText(getValue(fragment, 'Tipo_Desarrollo')),
+      tipoProyecto: cleanText(getValue(fragment, 'Tipo_Proyecto')),
+      etapa: cleanText(getValue(fragment, 'Etapa')),
+      sector: cleanText(getValue(fragment, 'Sector')),
       inversion,
       superficie,
       fechaPublicacion,

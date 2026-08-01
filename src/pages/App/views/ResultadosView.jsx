@@ -337,14 +337,9 @@ function ResultadosView({
             obra.Fecha_Publicacion
         ),
 
-      tipo:
-        obra.tipoProyecto ||
-        obra.Tipo_Proyecto ||
-        obra.TIPO_PROYECTO ||
-        obra.tipo_proyecto ||
-        obra.TipoProyecto ||
-        obra.tipoproyecto ||
-        '-',
+      // El parser ya expone el valor canónico entregado por el WS. La tabla no
+      // debe traducirlo, corregirlo ni reconstruirlo con aliases.
+      tipo: obra.tipoProyecto || '-',
 
       compania:
         obra.compania ||

@@ -124,6 +124,13 @@ function normalizeText(value) {
     return 'estado de mexico';
   }
 
+  // Variantes históricas observadas en catálogos de estados. Esta tolerancia
+  // existe sólo al comparar filtros; el texto original del WS no se modifica.
+  const compact = normalized.replace(/[\s._-]+/g, '');
+  if (compact === 'aguascaliente' || compact === 'aguascalientes') {
+    return 'aguascalientes';
+  }
+
   return normalized;
 }
 

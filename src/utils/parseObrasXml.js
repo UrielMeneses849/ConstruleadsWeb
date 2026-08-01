@@ -3,24 +3,18 @@ export function parseObrasXml(xmlText) {
   const xml = parser.parseFromString(xmlText, 'text/xml');
   const items = xml.getElementsByTagName('datos');
 
-  const normalizeText = (value = '') =>
-    String(value)
-      .trim()
+  // Los valores del WS ya pasaron por ETL. Conservamos exactamente sus
+  // acentos y sólo retiramos espacios exteriores para no alterar lo visible.
+  const cleanText = (value = '') => String(value).trim();
+
+  // Los nombres de tags sí se comparan de forma tolerante, sin modificar datos.
+  const normalizeTagName = (value = '') =>
+    cleanText(value)
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
 
-  const normalizeTagName = (value = '') => normalizeText(value).toLowerCase();
-
-  const normalizeEstado = (value = '') => {
-    const normalized = normalizeText(value);
-    const comparable = normalized.toLowerCase();
-
-    if (comparable === 'edo. de mexico' || comparable === 'edo de mexico') {
-      return 'Estado de Mexico';
-    }
-
-    return normalized;
-  };
+  const cleanEstado = (value = '') => cleanText(value);
 
   const normalizeDate = (value = '') => String(value).trim();
 
@@ -149,16 +143,16 @@ export function parseObrasXml(xmlText) {
     obras[index] = {
       id: clave || `${lat}-${lng}-${index}`,
       clave,
-      proyecto: normalizeText(proyectoRaw),
-      region: normalizeText(regionRaw),
-      estado: normalizeEstado(estadoRaw),
-      genero: normalizeText(generoRaw),
-      subgenero: normalizeText(subgeneroRaw),
-      tipoObra: normalizeText(tipoObraRaw),
-      tipoDesarrollo: normalizeText(tipoDesarrolloRaw),
-      tipoProyecto: normalizeText(tipoProyectoRaw),
-      etapa: normalizeText(etapaRaw),
-      sector: normalizeText(sectorRaw),
+      proyecto: cleanText(proyectoRaw),
+      region: cleanText(regionRaw),
+      estado: cleanEstado(estadoRaw),
+      genero: cleanText(generoRaw),
+      subgenero: cleanText(subgeneroRaw),
+      tipoObra: cleanText(tipoObraRaw),
+      tipoDesarrollo: cleanText(tipoDesarrolloRaw),
+      tipoProyecto: cleanText(tipoProyectoRaw),
+      etapa: cleanText(etapaRaw),
+      sector: cleanText(sectorRaw),
       inversion,
       superficie,
       fechaPublicacion: normalizeDate(fechaPublicacion),

@@ -13,11 +13,18 @@ const DEBUG_MAPA = false;
 const AUTO_FIT_INITIAL_BOUNDS = false;
 
 function normalizeText(value) {
-  return String(value || '')
+  const normalized = String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim();
+
+  const compact = normalized.replace(/[\s._-]+/g, '');
+  if (compact === 'aguascaliente' || compact === 'aguascalientes') {
+    return 'aguascalientes';
+  }
+
+  return normalized;
 }
 
 function matchesTextList(value, list = []) {
@@ -625,9 +632,7 @@ debugLog(
 useEffect(() => {
     let cancelled = false;
 
-    const apiKey =
-      import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
-      'AIzaSyAEgrLrVP-Cy2cEPyXPvRcfioV87vX1Hls';
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     if (!apiKey) return;
 
     const formatInvestment = (value) => {
