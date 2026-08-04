@@ -10,6 +10,15 @@ import "./index.css";
 
 import { system } from "./theme";
 
+// Claves heredadas de prototipos anteriores que no deben persistir.
+localStorage.removeItem("cl_admin_users");
+localStorage.removeItem("cl_download_history");
+localStorage.removeItem("cl_color_mode");
+for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+  const key = localStorage.key(index);
+  if (key?.startsWith("cl_suite_welcome_v1:")) localStorage.removeItem(key);
+}
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
    <BrowserRouter basename="/ConstruleadsWeb">

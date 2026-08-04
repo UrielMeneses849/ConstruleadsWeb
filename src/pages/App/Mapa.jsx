@@ -15,8 +15,7 @@ import {
 const DEBUG_MAPA = false;
 const AUTO_FIT_INITIAL_BOUNDS = false;
 const FILTER_FIT_MAX_ZOOM = 14;
-const FILTER_FIT_PADDING = 16;
-const FILTER_FIT_ZOOM_BOOST = 0.6;
+const FILTER_FIT_PADDING = Object.freeze({ top: 52, right: 52, bottom: 84, left: 52 });
 
 function normalizeText(value) {
   const normalized = String(value || '')
@@ -63,6 +62,7 @@ function Mapa({
   obras = [],
   filtros = {},
   isDataReady = true,
+  fitInitialBounds = false,
   onFilteredData,
   onViewFicha,
 }) {
@@ -998,7 +998,7 @@ useEffect(() => {
       activeMarkerKeysRef.current = nextMarkerKeys;
 
       if (
-        hasRenderedMarkerSetRef.current &&
+        (hasRenderedMarkerSetRef.current || fitInitialBounds) &&
         markerSetChanged &&
         markers.length &&
         mapInstanceRef.current
@@ -1013,15 +1013,24 @@ useEffect(() => {
           mapInstanceRef.current.setZoom(FILTER_FIT_MAX_ZOOM);
         } else if (!bounds.isEmpty()) {
           const activeMap = mapInstanceRef.current;
-          const zoomGuard = window.google.maps.event.addListenerOnce(activeMap, 'idle', () => {
-            const fittedZoom = activeMap.getZoom() || 0;
-            activeMap.setZoom(Math.min(
-              fittedZoom + FILTER_FIT_ZOOM_BOOST,
-              FILTER_FIT_MAX_ZOOM
+          const ensureEveryPointIsVisible = (attempt = 0) => {
+            const visibleBounds = activeMap.getBounds();
+            const allVisible = visibleBounds && markers.every((marker) => (
+              !marker.position || visibleBounds.contains(marker.position)
             ));
+            if (allVisible || attempt >= 3) return;
+
+            const currentZoom = activeMap.getZoom();
+            if (!Number.isFinite(currentZoom)) return;
+            window.google.maps.event.addListenerOnce(activeMap, 'idle', () => {
+              ensureEveryPointIsVisible(attempt + 1);
+            });
+            activeMap.setZoom(currentZoom - 0.5);
+          };
+          window.google.maps.event.addListenerOnce(activeMap, 'idle', () => {
+            ensureEveryPointIsVisible();
           });
           activeMap.fitBounds(bounds, FILTER_FIT_PADDING);
-          window.setTimeout(() => window.google.maps.event.removeListener(zoomGuard), 1200);
         }
       }
       hasRenderedMarkerSetRef.current = true;
@@ -1065,7 +1074,7 @@ useEffect(() => {
       window.clearTimeout(updateTimer);
       markerUpdateTokenRef.current += 1;
     };
-  }, [filteredObras, isDataReady]);
+  }, [filteredObras, fitInitialBounds, isDataReady]);
 
   return (
     <Box

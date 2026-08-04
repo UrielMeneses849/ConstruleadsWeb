@@ -41,6 +41,67 @@ const loadGraficasView = () => import('./views/GraficasView');
 const Resultados = lazy(loadResultadosView);
 const GraficasView = lazy(loadGraficasView);
 
+function readPersistedFilters() {
+  try {
+    const saved = JSON.parse(
+      localStorage.getItem('construleads-filters') ||
+      localStorage.getItem('construleads-filtros') ||
+      '{}'
+    );
+
+    return {
+      regiones: saved.selectedRegiones || saved.regiones || [],
+      estados: saved.selectedEstados || saved.estados || [],
+      generos: saved.selectedGeneros || saved.generos || [],
+      subgeneros: saved.selectedSubgeneros || saved.subgeneros || [],
+      sectores: saved.selectedSectores || saved.sectores || [],
+      etapas: saved.selectedEtapas || saved.etapas || [],
+      desarrollos: saved.selectedDesarrollos || saved.desarrollos || [],
+      tipoObra: saved.selectedTipoObra || saved.tipoObra || [],
+      tiposProyecto: saved.selectedTiposProyecto || saved.tiposProyecto || [],
+      periodoIndex: saved.periodoIndex ?? -1,
+      fechaInicio: saved.dateRangeStart || saved.fechaInicio || '',
+      fechaFin: saved.dateRangeEnd || saved.fechaFin || '',
+      hasDateRangeFilter: saved.hasDateRangeFilter === true,
+      fechaConsulta:
+        saved.fechaSeleccionada ||
+        saved.fechaConsulta ||
+        saved.selectedValues?.['Tipo de fecha'] ||
+        'Fecha de publicación',
+      surfaceMin: saved.hasSurfaceRangeFilter
+        ? saved.surfaceMin ?? saved.superficieMin ?? null
+        : null,
+      surfaceMax: saved.hasSurfaceRangeFilter
+        ? saved.surfaceMax ?? saved.superficieMax ?? null
+        : null,
+      investmentMin: saved.hasInvestmentRangeFilter
+        ? saved.investmentMin ?? saved.inversionMin ?? null
+        : null,
+      investmentMax: saved.hasInvestmentRangeFilter
+        ? saved.investmentMax ?? saved.inversionMax ?? null
+        : null,
+    };
+  } catch {
+    return {};
+  }
+}
+
+function hasMeaningfulFilters(filters = {}) {
+  const arrayKeys = [
+    'regiones', 'estados', 'generos', 'subgeneros', 'sectores',
+    'etapas', 'desarrollos', 'tipoObra', 'tiposProyecto',
+  ];
+  return (
+    arrayKeys.some((key) => Array.isArray(filters[key]) && filters[key].length > 0) ||
+    Number(filters.periodoIndex ?? -1) >= 0 ||
+    filters.hasDateRangeFilter === true ||
+    (filters.investmentMin !== null && filters.investmentMin !== undefined) ||
+    (filters.investmentMax !== null && filters.investmentMax !== undefined) ||
+    (filters.surfaceMin !== null && filters.surfaceMin !== undefined) ||
+    (filters.surfaceMax !== null && filters.surfaceMax !== undefined)
+  );
+}
+
 function ViewLoader({ label }) {
   return (
     <Flex h="100%" align="center" justify="center">
@@ -117,13 +178,21 @@ export default function Construleads() {
     user = {};
   }
 
-  const [filtros, setFiltros] = useState({});
+  const [filtros, setFiltros] = useState(readPersistedFilters);
   const [obras, setObras] = useState([]);
   const [mapPreviewObras, setMapPreviewObras] = useState([]);
   const [, setLoadingObras] = useState(true);
   const filteredObras = useMemo(
     () => filterObrasByFilters(obras, filtros),
     [obras, filtros]
+  );
+  const filteredMapPreviewObras = useMemo(
+    () => filterObrasByFilters(mapPreviewObras, filtros),
+    [mapPreviewObras, filtros]
+  );
+  const hasActiveMapFilters = useMemo(
+    () => hasMeaningfulFilters(filtros),
+    [filtros]
   );
   const [selectedResultObras, setSelectedResultObras] = useState([]);
   const selectionResetToken = 0;
@@ -142,7 +211,7 @@ export default function Construleads() {
   const canvasSize = `${100 / interfaceScale}%`;
   const canvasViewportHeight = `${100 / interfaceScale}vh`;
   const [colorMode, setColorMode] = useState(() =>
-    localStorage.getItem('cl_color_mode') || 'light'
+    sessionStorage.getItem('cl_color_mode') || 'light'
   );
   const isDarkMode = colorMode === 'dark';
   const sidebarWidth = 'clamp(240px, 18vw, 272px)';
@@ -180,7 +249,7 @@ export default function Construleads() {
       };
 
   useEffect(() => {
-    localStorage.setItem('cl_color_mode', colorMode);
+    sessionStorage.setItem('cl_color_mode', colorMode);
   }, [colorMode]);
 
   useEffect(() => {
@@ -653,9 +722,10 @@ export default function Construleads() {
             <Box className={activeView === 'mapa' ? 'cl-view-enter' : undefined}
               display={activeView === 'mapa' ? 'block' : 'none'} h="100%" minH="0" pb="50px">
               <Mapa
-                obras={obras.length ? filteredObras : mapPreviewObras}
+                obras={obras.length ? filteredObras : filteredMapPreviewObras}
                 filtros={PREFILTERED_MAP_FILTERS}
                 isDataReady={obras.length > 0}
+                fitInitialBounds={hasActiveMapFilters}
                 isDarkMode={isDarkMode}
                 onViewFicha={handleViewFicha}
               />

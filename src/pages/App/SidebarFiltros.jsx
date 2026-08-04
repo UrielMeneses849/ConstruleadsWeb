@@ -745,6 +745,17 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
           surfaceMax: resolvedSurfaceMax,
           investmentMin: resolvedInvestmentMin,
           investmentMax: resolvedInvestmentMax,
+          hasDateRangeFilter: Boolean(
+            dateRangeStart &&
+            dateRangeEnd &&
+            (dateRangeStart !== dateBounds.min || dateRangeEnd !== dateBounds.max)
+          ),
+          hasSurfaceRangeFilter:
+            resolvedSurfaceMin > surfaceBounds.min ||
+            resolvedSurfaceMax < surfaceBounds.max,
+          hasInvestmentRangeFilter:
+            resolvedInvestmentMin > investmentBounds.min ||
+            resolvedInvestmentMax < investmentBounds.max,
           selectedValues,
         })
       );
@@ -769,6 +780,12 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     resolvedSurfaceMax,
     resolvedInvestmentMin,
     resolvedInvestmentMax,
+    dateBounds.min,
+    dateBounds.max,
+    surfaceBounds.min,
+    surfaceBounds.max,
+    investmentBounds.min,
+    investmentBounds.max,
     selectedValues,
   ]);
 

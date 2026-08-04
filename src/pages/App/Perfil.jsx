@@ -8,6 +8,7 @@ import {
   FiMapPin, FiPlus, FiSearch, FiSettings, FiShield, FiUser, FiUsers, FiX,
 } from 'react-icons/fi';
 import { iniciarDescargaReporte } from '../../api/reportes';
+import { getDownloadHistory } from '../../utils/downloadHistory';
 import {
   obtenerUsuariosAdministrador,
   validarUsuarioAdministrador,
@@ -29,12 +30,6 @@ const GROUP_LABELS = {
   etapas: 'Etapas',
   desarrollos: 'Desarrollos',
 };
-const SAMPLE_DOWNLOADS = [
-  { id: 1, date: '08 jun 2026 · 10:45', type: 'Excel', name: 'Reporte de obras — Centro', size: '12.4 MB', url: '' },
-  { id: 2, date: '06 jun 2026 · 16:12', type: 'PDF', name: 'Ficha de proyecto — CL-24891', size: '2.8 MB', url: '' },
-  { id: 3, date: '28 may 2026 · 09:30', type: 'Excel', name: 'Prospección industrial — Mayo', size: '8.1 MB', url: '' },
-];
-
 const emptyAccess = () => Object.fromEntries(Object.keys(PROFILE_GROUPS).map((key) => [key, []]));
 const emptyForm = () => ({
   name: '', email: '', phone: '', company: '', role: 'Consultor', status: 'Activo', access: emptyAccess(),
@@ -190,7 +185,7 @@ export default function Perfil() {
   const [users, setUsers] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [usersError, setUsersError] = useState('');
-  const [downloads] = useState(() => loadLocal('cl_download_history', SAMPLE_DOWNLOADS));
+  const [downloads] = useState(getDownloadHistory);
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState(undefined);
   const [isLeaving, setIsLeaving] = useState(false);

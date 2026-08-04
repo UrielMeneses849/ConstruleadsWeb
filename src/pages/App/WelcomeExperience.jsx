@@ -8,7 +8,7 @@ export default function WelcomeExperience({ userId, userName }) {
   const storageKey = `cl_suite_welcome_v1:${userId || 'guest'}`;
   const [isVisible, setIsVisible] = useState(() => {
     try {
-      return localStorage.getItem(storageKey) !== 'seen';
+      return sessionStorage.getItem(storageKey) !== 'seen';
     } catch {
       return false;
     }
@@ -18,7 +18,7 @@ export default function WelcomeExperience({ userId, userName }) {
     if (!isVisible) return undefined;
 
     try {
-      localStorage.setItem(storageKey, 'seen');
+      sessionStorage.setItem(storageKey, 'seen');
     } catch {
       // La experiencia no debe interrumpir el acceso si el almacenamiento está bloqueado.
     }

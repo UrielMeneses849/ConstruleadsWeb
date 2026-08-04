@@ -13,6 +13,7 @@ import {
   iniciarDescargaReporte,
   solicitarReporte,
 } from '../../api/reportes';
+import { addDownloadHistoryItem } from '../../utils/downloadHistory';
 
 const downloadOptions = [
   { value: 'pdf_obras', label: 'PDF - Obras' },
@@ -156,21 +157,17 @@ export default function DownloadPanel({
         });
         if (estimatedProgressTimer) window.clearInterval(estimatedProgressTimer);
         estimatedProgressTimer = null;
-        const history = JSON.parse(localStorage.getItem('cl_download_history') || '[]');
         const now = new Date();
-        localStorage.setItem('cl_download_history', JSON.stringify([
-          {
-            id: Date.now(),
-            date: new Intl.DateTimeFormat('es-MX', {
-              day: '2-digit', month: 'short', year: 'numeric',
-              hour: '2-digit', minute: '2-digit',
-            }).format(now),
-            type: 'PDF',
-            name: `PDF — Gráficas · ${obrasParaDescargar.length} obras`,
-            url: '',
-          },
-          ...history,
-        ].slice(0, 100)));
+        addDownloadHistoryItem({
+          id: Date.now(),
+          date: new Intl.DateTimeFormat('es-MX', {
+            day: '2-digit', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit',
+          }).format(now),
+          type: 'PDF',
+          name: `PDF — Gráficas · ${obrasParaDescargar.length} obras`,
+          url: '',
+        });
         setDownloadProgress(100);
         setDownloadStage('Descarga lista');
         setNotification({ type: 'success', message: 'PDF de gráficas generado correctamente.' });
@@ -207,22 +204,18 @@ export default function DownloadPanel({
       setDownloadProgress(72);
       setDownloadStage('Descargando archivo…');
       const fileUrls = reportResponses.map(({ fileUrl }) => fileUrl);
-      const history = JSON.parse(localStorage.getItem('cl_download_history') || '[]');
       const now = new Date();
       const reportName = selectedOption.label.replace(' - ', ' — ');
-      localStorage.setItem('cl_download_history', JSON.stringify([
-        {
-          id: Date.now(),
-          date: new Intl.DateTimeFormat('es-MX', {
-            day: '2-digit', month: 'short', year: 'numeric',
-            hour: '2-digit', minute: '2-digit',
-          }).format(now),
-          type: isExcel ? 'Excel' : 'PDF',
-          name: `${reportName} · ${obrasParaDescargar.length} obras`,
-          url: fileUrls[0],
-        },
-        ...history,
-      ].slice(0, 100)));
+      addDownloadHistoryItem({
+        id: Date.now(),
+        date: new Intl.DateTimeFormat('es-MX', {
+          day: '2-digit', month: 'short', year: 'numeric',
+          hour: '2-digit', minute: '2-digit',
+        }).format(now),
+        type: isExcel ? 'Excel' : 'PDF',
+        name: `${reportName} · ${obrasParaDescargar.length} obras`,
+        url: fileUrls[0],
+      });
       await iniciarDescargaReporte(
         fileUrls,
         `construleads-${selectedOption.value}-${Date.now()}`,
