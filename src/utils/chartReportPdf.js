@@ -16,6 +16,8 @@ const MUTED = { r: 0.42, g: 0.45, b: 0.5 };
 const BORDER = { r: 0.89, g: 0.9, b: 0.92 };
 const PANEL = { r: 0.975, g: 0.978, b: 0.982 };
 const BAR = { r: 0.58, g: 0.65, b: 0.75 };
+const CHIP_FILL = { r: 1, g: 0.955, b: 0.935 };
+const CHIP_BORDER = { r: 1, g: 0.73, b: 0.64 };
 const METRICS = [
   { key: 'proyectos', label: 'Proyectos', suffix: '' },
   { key: 'inversion', label: 'Inversión', suffix: 'MDP' },
@@ -106,22 +108,142 @@ function inferCompany(user = {}) {
   return user.nombreUsuario || 'Cliente Construleads';
 }
 
-function getFiltersLabel(filtros = {}) {
-  const pieces = [];
+function getFilterChips(filtros = {}) {
+  const chips = [];
   const append = (label, value) => {
     const values = Array.isArray(value) ? value : value ? [value] : [];
-    if (values.length) pieces.push(`${label}: ${values.join(', ')}`);
+    if (values.length) chips.push({ label, value: values.join(', ') });
   };
 
   append('Región', filtros.regiones || filtros.selectedRegiones);
+  append('Estado', filtros.estados || filtros.selectedEstados);
   append('Género', filtros.generos || filtros.selectedGeneros);
+  append('Subgénero', filtros.subgeneros || filtros.selectedSubgeneros);
+  append('Tipo de obra', filtros.tipoObra || filtros.selectedTipoObra);
+  append('Tipo de proyecto', filtros.tiposProyecto || filtros.selectedTiposProyecto);
   append('Sector', filtros.sectores || filtros.selectedSectores);
+  append('Etapa', filtros.etapas || filtros.selectedEtapas);
   append('Desarrollo', filtros.desarrollos || filtros.selectedDesarrollos);
-  if (filtros.fechaInicio && filtros.fechaFin) {
-    pieces.push(`${filtros.fechaInicio} a ${filtros.fechaFin}`);
+
+  const periodLabels = ['Hoy', '1 día', '7 días', '1 mes', '3 meses', '6 meses'];
+  const periodIndex = Number(filtros.periodoIndex ?? -1);
+  const hasPeriod = periodIndex >= 0 && periodIndex < periodLabels.length;
+  const hasCustomDates = filtros.hasDateRangeFilter === true;
+  const dateCriterion = getSelectedDateField(filtros);
+  if (hasPeriod || hasCustomDates || dateCriterion !== 'Fecha de publicación') {
+    append('Tipo de fecha', dateCriterion);
+  }
+  if (hasPeriod) append('Periodo', periodLabels[periodIndex]);
+  if (hasCustomDates && filtros.fechaInicio && filtros.fechaFin) {
+    append('Rango', `${filtros.fechaInicio} a ${filtros.fechaFin}`);
   }
 
-  return pieces.length ? pieces.join('  ·  ') : 'Selección completa';
+  const investmentMin = Number(filtros.investmentMin);
+  const investmentMax = Number(filtros.investmentMax);
+  if (
+    filtros.investmentMin !== null &&
+    filtros.investmentMin !== undefined &&
+    filtros.investmentMax !== null &&
+    filtros.investmentMax !== undefined &&
+    Number.isFinite(investmentMin) &&
+    Number.isFinite(investmentMax)
+  ) {
+    append('Inversión', `${formatNumber(investmentMin / 1_000_000)} a ${formatNumber(investmentMax / 1_000_000)} MDP`);
+  }
+
+  const surfaceMin = Number(filtros.surfaceMin);
+  const surfaceMax = Number(filtros.surfaceMax);
+  if (
+    filtros.surfaceMin !== null &&
+    filtros.surfaceMin !== undefined &&
+    filtros.surfaceMax !== null &&
+    filtros.surfaceMax !== undefined &&
+    Number.isFinite(surfaceMin) &&
+    Number.isFinite(surfaceMax)
+  ) {
+    append('Superficie', `${formatNumber(surfaceMin)} a ${formatNumber(surfaceMax)} m²`);
+  }
+
+  return chips;
+}
+
+function drawFilterChips({ page, chips, fonts, rgb }) {
+  const startX = 116;
+  const maxX = 802;
+  const rowY = [496, 477];
+  const height = 15;
+  const gap = 5;
+  let x = startX;
+  let row = 0;
+  let hidden = 0;
+
+  drawText(page, chips.length ? 'Filtros aplicados' : 'Sin filtros aplicados', {
+    x: 40,
+    y: 500,
+    size: 7.1,
+    color: rgbValue(chips.length ? INK : MUTED, rgb),
+  }, chips.length ? fonts.semiBold : fonts.regular);
+
+  for (let index = 0; index < chips.length; index += 1) {
+    const chip = chips[index];
+    const fullText = `${chip.label}: ${chip.value}`;
+    let visibleText = fullText;
+    let textWidth = fonts.regular.widthOfTextAtSize(visibleText, 6.2);
+    const maxChipWidth = 250;
+
+    while (textWidth + 16 > maxChipWidth && visibleText.length > chip.label.length + 5) {
+      visibleText = `${visibleText.slice(0, -2).trim()}…`;
+      textWidth = fonts.regular.widthOfTextAtSize(visibleText, 6.2);
+    }
+
+    const width = Math.max(48, textWidth + 16);
+    if (x + width > maxX) {
+      row += 1;
+      x = startX;
+    }
+    if (row >= rowY.length) {
+      hidden = chips.length - index;
+      break;
+    }
+
+    drawRoundedPanel(page, {
+      x,
+      y: rowY[row],
+      width,
+      height,
+      radius: 7.5,
+      fill: rgbValue(CHIP_FILL, rgb),
+      border: rgbValue(CHIP_BORDER, rgb),
+    });
+    drawText(page, visibleText, {
+      x: x + 8,
+      y: rowY[row] + 4.4,
+      size: 6.2,
+      color: rgbValue(INK, rgb),
+    }, fonts.regular);
+    x += width + gap;
+  }
+
+  if (hidden > 0) {
+    const text = `+${hidden} filtros`;
+    const width = fonts.semiBold.widthOfTextAtSize(text, 6.2) + 16;
+    const fallbackRow = rowY.length - 1;
+    const fallbackX = 40;
+    drawRoundedFill(page, {
+      x: fallbackX,
+      y: rowY[fallbackRow],
+      width,
+      height,
+      radius: 7.5,
+      color: rgbValue(BORDER, rgb),
+    });
+    drawText(page, text, {
+      x: fallbackX + 8,
+      y: rowY[fallbackRow] + 4.4,
+      size: 6.2,
+      color: rgbValue(INK, rgb),
+    }, fonts.semiBold);
+  }
 }
 
 function buildPageDefinitions(obras, filtros) {
@@ -485,7 +607,7 @@ export async function generateChartsPdf({
     dateStyle: 'long',
     timeStyle: 'short',
   }).format(new Date());
-  const filterLabel = getFiltersLabel(filtros);
+  const filterChips = getFilterChips(filtros);
 
   definitions.forEach((definition, pageIndex) => {
     if (signal?.aborted) throw abortError();
@@ -540,25 +662,20 @@ export async function generateChartsPdf({
       thickness: 1,
       color: rgbValue(BORDER, rgb),
     });
-    drawText(page, truncate(filterLabel, 120), {
-      x: 40,
-      y: pageHeight - 82,
-      size: 7.2,
-      color: rgbValue(MUTED, rgb),
-    }, fonts.regular);
     drawText(page, `${formatNumber(obras.length)} proyectos en la selección`, {
       x: 646,
       y: pageHeight - 82,
       size: 7.2,
       color: rgbValue(MUTED, rgb),
     }, fonts.bold);
+    drawFilterChips({ page, chips: filterChips, fonts, rgb });
 
     const cardWidth = 374;
-    const cardHeight = 202;
+    const cardHeight = 190;
     const cardGap = 14;
     const metricPositions = [
-      { x: 40, y: 278 },
-      { x: 40 + cardWidth + cardGap, y: 278 },
+      { x: 40, y: 266 },
+      { x: 40 + cardWidth + cardGap, y: 266 },
       { x: (PAGE_SIZE[0] - cardWidth) / 2, y: 54 },
     ];
 

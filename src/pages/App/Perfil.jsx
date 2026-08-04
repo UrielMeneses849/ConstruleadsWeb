@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import {
-  Box, Button, Flex, Heading, HStack, Input, SimpleGrid, Stack, Text,
+  Box, Button, Flex, Heading, HStack, Input, SimpleGrid, Spinner, Stack, Text,
 } from '@chakra-ui/react';
 import {
   FiArrowLeft, FiCheck, FiChevronRight, FiDownload, FiEdit2, FiFileText,
   FiMapPin, FiPlus, FiSearch, FiSettings, FiShield, FiUser, FiUsers, FiX,
 } from 'react-icons/fi';
 import { iniciarDescargaReporte } from '../../api/reportes';
+import {
+  obtenerUsuariosAdministrador,
+  validarUsuarioAdministrador,
+} from '../../api/perfil';
 
 const ACCENT = '#FF653F';
 const NAVY = '#252525';
@@ -25,23 +29,6 @@ const GROUP_LABELS = {
   etapas: 'Etapas',
   desarrollos: 'Desarrollos',
 };
-const DEFAULT_USERS = [
-  {
-    id: 1, name: 'María Fernanda López', email: 'maria.lopez@cemix.com',
-    company: 'CEMIX', role: 'Consultor', status: 'Activo', lastAccess: 'Hoy, 09:15',
-    access: { zonas: ['Centro'], tiposObra: ['Industrial'], sectores: ['Privado'], etapas: ['Proyecto'], desarrollos: ['Ampliación'] },
-  },
-  {
-    id: 2, name: 'Jorge Ramírez Ponce', email: 'jorge.ramirez@posadas.com',
-    company: 'POSADAS', role: 'Consultor', status: 'Activo', lastAccess: 'Ayer, 16:40',
-    access: { zonas: ['Centro', 'Sureste'], tiposObra: ['Edificación'], sectores: ['Privado'], etapas: ['Proyecto', 'Construcción'], desarrollos: ['Remodelación'] },
-  },
-  {
-    id: 3, name: 'Carolina Molina Ruíz', email: 'carolina@holcim.com',
-    company: 'HOLCIM', role: 'Consultor', status: 'Suspendido', lastAccess: '05 jun, 09:15',
-    access: { zonas: [], tiposObra: [], sectores: [], etapas: [], desarrollos: [] },
-  },
-];
 const SAMPLE_DOWNLOADS = [
   { id: 1, date: '08 jun 2026 · 10:45', type: 'Excel', name: 'Reporte de obras — Centro', size: '12.4 MB', url: '' },
   { id: 2, date: '06 jun 2026 · 16:12', type: 'PDF', name: 'Ficha de proyecto — CL-24891', size: '2.8 MB', url: '' },
@@ -193,42 +180,78 @@ function UserModal({ initial, onClose, onSave }) {
   );
 }
 
-function ProfileSummary({ access }) {
-  return (
-    <Flex gap={1.5} wrap="wrap">
-      {Object.entries(access || {}).flatMap(([group, values]) =>
-        values.slice(0, 1).map((value) => (
-          <Text key={`${group}-${value}`} fontSize="10px" px={2} py={1} bg="#F2F2F2" color="#666666" borderRadius="full">
-            {value}
-          </Text>
-        )))}
-    </Flex>
-  );
-}
-
 export default function Perfil() {
   const navigate = useNavigate();
   const authenticated = localStorage.getItem('cl_authenticated') === 'true';
   const sessionUser = useMemo(() => loadLocal('construleadsUser', {}), []);
-  const isAdmin = true;
+  const [isAdmin, setIsAdmin] = useState(null);
+  const [adminError, setAdminError] = useState('');
   const [active, setActive] = useState('cuenta');
-  const [users, setUsers] = useState(() => loadLocal('cl_admin_users', DEFAULT_USERS));
+  const [users, setUsers] = useState([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [usersError, setUsersError] = useState('');
   const [downloads] = useState(() => loadLocal('cl_download_history', SAMPLE_DOWNLOADS));
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState(undefined);
+  const [isLeaving, setIsLeaving] = useState(false);
 
   useEffect(() => { document.title = 'Mi cuenta | Construleads'; }, []);
-  useEffect(() => { localStorage.setItem('cl_admin_users', JSON.stringify(users)); }, [users]);
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadAdminAccess() {
+      try {
+        const result = await validarUsuarioAdministrador({ signal: controller.signal });
+        setIsAdmin(result.isAdmin);
+        if (!result.isAdmin) setActive('cuenta');
+      } catch (error) {
+        if (error?.name === 'AbortError') return;
+        setIsAdmin(false);
+        setAdminError('No pudimos validar los permisos administrativos en este momento.');
+        setActive('cuenta');
+      }
+    }
+
+    void loadAdminAccess();
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    if (!isAdmin) return undefined;
+    const controller = new AbortController();
+
+    async function loadUsers() {
+      try {
+        setIsLoadingUsers(true);
+        setUsersError('');
+        setUsers(await obtenerUsuariosAdministrador({ signal: controller.signal }));
+      } catch (error) {
+        if (error?.name !== 'AbortError') {
+          setUsersError('No fue posible cargar los usuarios. Intenta nuevamente.');
+        }
+      } finally {
+        if (!controller.signal.aborted) setIsLoadingUsers(false);
+      }
+    }
+
+    void loadUsers();
+    return () => controller.abort();
+  }, [isAdmin]);
   if (!authenticated) return <Navigate to="/" replace />;
 
   const name = sessionUser.nombreUsuario || 'Adriana Osorio';
   const filteredUsers = users.filter((item) =>
-    `${item.name} ${item.email} ${item.company}`.toLowerCase().includes(query.toLowerCase()));
+    `${item.userId} ${item.name} ${item.email} ${item.phone} ${item.company}`
+      .toLowerCase().includes(query.toLowerCase()));
   const tabs = [
     { id: 'cuenta', label: 'Mi perfil', icon: FiUser },
-    { id: 'usuarios', label: 'Usuarios y permisos', icon: FiUsers },
+    ...(isAdmin ? [{ id: 'usuarios', label: 'Usuarios y permisos', icon: FiUsers }] : []),
     { id: 'descargas', label: 'Historial de descargas', icon: FiDownload },
   ];
+  const goBack = () => {
+    setIsLeaving(true);
+    window.setTimeout(() => navigate('/construleads'), 220);
+  };
   const saveUser = (form) => {
     const serializedForm = { ...form, accessXml: accessToXml(form.access) };
     if (editing?.id) setUsers((current) => current.map((item) => item.id === editing.id ? { ...item, ...serializedForm } : item));
@@ -237,116 +260,204 @@ export default function Perfil() {
   };
 
   return (
-    <Box minH="100vh" bg="#F5F5F5" color={NAVY} p={{ base: 0, md: 4 }}>
-      <Box maxW="1480px" mx="auto">
-        <Flex bg="white" border="1px solid #E8E8E8" borderRadius={{ base: 0, md: '18px' }} px={{ base: 4, md: 6 }}
-          h="72px" align="center" justify="space-between" boxShadow="0 8px 28px rgba(20,20,20,.05)">
+    <Box h="100vh" bg="#F3F3F1" color={NAVY} p={{ base: 0, md: 4 }} overflow="hidden">
+      <style>{`
+        @keyframes cl-profile-enter {
+          from { opacity: 0; transform: translate3d(0, 14px, 0) scale(.992); }
+          to { opacity: 1; transform: none; }
+        }
+        @keyframes cl-profile-leave {
+          from { opacity: 1; transform: none; }
+          to { opacity: 0; transform: translate3d(0, 10px, 0) scale(.994); }
+        }
+        @keyframes cl-profile-panel {
+          from { opacity: 0; transform: translate3d(10px, 0, 0); }
+          to { opacity: 1; transform: none; }
+        }
+        .cl-profile-shell { animation: cl-profile-enter 420ms cubic-bezier(.22, 1, .36, 1) both; }
+        .cl-profile-shell.is-leaving { animation: cl-profile-leave 220ms ease both; }
+        .cl-profile-panel { animation: cl-profile-panel 300ms cubic-bezier(.22, 1, .36, 1) both; }
+        .cl-profile-scroll { scrollbar-width: thin; scrollbar-color: #D5D2CE transparent; }
+        .cl-profile-scroll::-webkit-scrollbar { width: 7px; }
+        .cl-profile-scroll::-webkit-scrollbar-track { background: transparent; }
+        .cl-profile-scroll::-webkit-scrollbar-thumb { background: #D5D2CE; border-radius: 999px; }
+        @media (prefers-reduced-motion: reduce) {
+          .cl-profile-shell, .cl-profile-shell.is-leaving, .cl-profile-panel { animation: none; }
+        }
+      `}</style>
+      <Flex className={`cl-profile-shell${isLeaving ? ' is-leaving' : ''}`} maxW="1520px" mx="auto"
+        h="100%" minH="0" direction="column">
+        <Flex bg="rgba(255,255,255,.92)" backdropFilter="blur(18px)" border="1px solid rgba(25,25,25,.08)"
+          borderRadius={{ base: 0, md: '22px' }} px={{ base: 4, md: 6 }} h="76px" align="center"
+          justify="space-between" boxShadow="0 14px 42px rgba(20,20,20,.06)" flexShrink="0">
           <HStack gap={4}>
-            <Button size="sm" variant="ghost" onClick={() => navigate('/construleads')} color={NAVY}><FiArrowLeft /> Volver</Button>
+            <Button size="sm" variant="ghost" onClick={goBack} color={NAVY} borderRadius="full"
+              _hover={{ bg: '#F1F1EF', transform: 'translateX(-2px)' }} transition="all .2s ease">
+              <FiArrowLeft /> Volver
+            </Button>
             <Box h="28px" w="1px" bg="#E6E6E6" display={{ base: 'none', md: 'block' }} />
-            <Text fontWeight="700">Construleads <Box as="span" color={ACCENT}>BIMSA</Box></Text>
+            <Text fontWeight="750" letterSpacing="-.02em">Construleads <Box as="span" color={ACCENT}>BIMSA</Box></Text>
           </HStack>
           <HStack gap={3}>
             <Box textAlign="right" display={{ base: 'none', sm: 'block' }}>
               <Text fontSize="12px" fontWeight="700">{name}</Text>
-              <Text fontSize="10px" color="#888888">{isAdmin ? 'Administrador' : 'Cliente'}</Text>
+              <Text fontSize="10px" color="#888888">
+                {isAdmin === null ? 'Validando acceso…' : isAdmin ? 'Administrador' : 'Cliente'}
+              </Text>
             </Box>
-            <Flex w="38px" h="38px" bg={NAVY} color="white" borderRadius="12px" align="center" justify="center" fontWeight="700">{initials(name)}</Flex>
+            <Flex w="40px" h="40px" bg="#5E5E5B" color="white" borderRadius="13px" border="1px solid #4C4C49"
+              align="center" justify="center" fontWeight="700" boxShadow="0 8px 18px rgba(20,20,20,.12)">{initials(name)}</Flex>
           </HStack>
         </Flex>
 
-        <Flex mt={{ base: 0, md: 5 }} gap={5} align="stretch" direction={{ base: 'column', lg: 'row' }}>
-          <Box bg="white" color={NAVY} border="1px solid #E8E8E8" w={{ base: '100%', lg: '245px' }}
-            borderRadius={{ base: 0, md: '16px' }} p={4} flexShrink="0">
-            <Text color="#999999" fontSize="10px" fontWeight="700" letterSpacing=".16em">ADMINISTRACIÓN</Text>
-            <Heading fontSize="23px" mt={2}>Hola, {name.split(' ')[0]}</Heading>
+        <Flex mt={{ base: 0, md: 5 }} gap={5} align="stretch" direction={{ base: 'column', lg: 'row' }}
+          flex="1" minH="0" overflow="hidden">
+          <Box bg="rgba(255,255,255,.94)" color={NAVY} border="1px solid rgba(25,25,25,.08)" w={{ base: '100%', lg: '260px' }}
+            borderRadius={{ base: 0, md: '20px' }} p={5} flexShrink="0" boxShadow="0 14px 38px rgba(20,20,20,.035)"
+            h={{ base: 'auto', lg: '100%' }} overflow="hidden">
+            <Text color={ACCENT} fontSize="10px" fontWeight="800" letterSpacing=".16em">MI CUENTA</Text>
+            <Heading fontSize="24px" mt={2} letterSpacing="-.035em">Hola, {name.split(' ')[0]}</Heading>
             <Text fontSize="12px" color="#777777" mt={1}>Gestiona tu cuenta y accesos.</Text>
             <Stack mt={7} gap={2}>
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
                   <Flex key={tab.id} as="button" onClick={() => setActive(tab.id)} align="center" gap={3} p={3}
-                    borderRadius="9px" bg={active === tab.id ? '#FFF0EA' : 'transparent'}
+                    borderRadius="12px" bg={active === tab.id ? '#FFF0EA' : 'transparent'}
                     color={active === tab.id ? ACCENT : '#555555'}
-                    borderLeft={`2px solid ${active === tab.id ? ACCENT : 'transparent'}`}
-                    _hover={{ bg: '#F7F7F7' }} textAlign="left">
+                    border={`1px solid ${active === tab.id ? '#FFD8CB' : 'transparent'}`}
+                    boxShadow={active === tab.id ? '0 8px 20px rgba(255,101,63,.08)' : 'none'}
+                    _hover={{ bg: active === tab.id ? '#FFF0EA' : '#F7F7F5', transform: 'translateX(2px)' }}
+                    transition="all .2s ease" textAlign="left">
                     <Icon /><Text fontSize="12px" fontWeight="600">{tab.label}</Text>
                   </Flex>
                 );
               })}
             </Stack>
-            <Box mt={8} p={4} border="1px solid #EAEAEA" bg="#FAFAFA" borderRadius="11px">
+            {adminError && <Text mt={5} fontSize="10px" color="#A0442E">{adminError}</Text>}
+            <Box mt={8} p={4} border="1px solid #EAE7E3" bg="linear-gradient(145deg, #FBFAF8, #F6F4F1)" borderRadius="14px">
               <FiShield color={ACCENT} />
               <Text fontSize="11px" fontWeight="700" mt={2}>Control de datos</Text>
               <Text color="#999999" fontSize="10px" mt={1}>Los permisos definen qué campos recibe cada usuario.</Text>
             </Box>
           </Box>
 
-          <Box bg="white" border="1px solid #E8E8E8" borderRadius={{ base: 0, md: '18px' }} p={{ base: 5, md: 7 }} minH="680px" flex="1">
+          <Box bg="rgba(255,255,255,.96)" border="1px solid rgba(25,25,25,.08)" borderRadius={{ base: 0, md: '20px' }}
+            p={{ base: 5, md: 7 }} flex="1" minH="0" overflowY="auto" overscrollBehavior="contain"
+            className="cl-profile-scroll" boxShadow="0 18px 46px rgba(20,20,20,.04)">
+            <Box key={active} className="cl-profile-panel">
             {active === 'usuarios' && (
               <>
                 <Flex justify="space-between" align={{ base: 'start', md: 'center' }} gap={4} direction={{ base: 'column', md: 'row' }}>
                   <Box>
                     <Text color={ACCENT} fontSize="11px" fontWeight="700" letterSpacing=".12em">ADMINISTRACIÓN</Text>
                     <Heading fontSize={{ base: '24px', md: '30px' }} mt={1}>Usuarios y accesos</Heading>
-                    <Text color="#777777" fontSize="13px" mt={1}>Crea cuentas y controla la información visible para cada una.</Text>
+                    <Text color="#777777" fontSize="13px" mt={1}>Consulta las cuentas asociadas a tu administración.</Text>
                   </Box>
                   <Button bg={ACCENT} color="white" _hover={{ bg: '#E95734' }} onClick={() => setEditing(null)}><FiPlus /> Nuevo usuario</Button>
                 </Flex>
                 <Flex mt={7} bg="#F7F7F7" border="1px solid #E7E7E7" borderRadius="12px" align="center" px={4} maxW="440px">
                   <FiSearch color="#999999" /><Input value={query} onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Buscar por usuario, correo o empresa" border="0" _focus={{ boxShadow: 'none' }} fontSize="12px" />
+                    placeholder="Buscar por ID, usuario, correo o empresa" border="0" _focus={{ boxShadow: 'none' }} fontSize="12px" />
                 </Flex>
                 <Stack mt={5} gap={2}>
-                  {filteredUsers.map((item) => (
-                    <Box key={item.id} p={3} border="1px solid #EDEDED" borderRadius="13px"
+                  {isLoadingUsers && (
+                    <Flex minH="220px" align="center" justify="center" direction="column" gap={3} color="#777777">
+                      <Spinner color={ACCENT} thickness="3px" />
+                      <Text fontSize="12px">Consultando usuarios y permisos…</Text>
+                    </Flex>
+                  )}
+                  {!isLoadingUsers && usersError && (
+                    <Flex minH="180px" align="center" justify="center" direction="column" gap={2}
+                      bg="#FFF7F4" border="1px solid #FFD8CB" borderRadius="16px" color="#8D3B27">
+                      <FiUsers size={22} />
+                      <Text fontSize="12px" fontWeight="700">{usersError}</Text>
+                    </Flex>
+                  )}
+                  {!isLoadingUsers && !usersError && filteredUsers.map((item) => (
+                    <Box key={item.id} p={4} border="1px solid #ECEAE7" borderRadius="15px" bg="#FFFFFF"
                       display="grid"
-                      gridTemplateColumns={{ base: '1fr', lg: 'minmax(280px, .85fr) 120px minmax(280px, 1.2fr) 86px 36px' }}
+                      gridTemplateColumns={{ base: '1fr', xl: 'minmax(250px, 1.15fr) 90px minmax(150px, .7fr) minmax(140px, .7fr) 82px 36px' }}
                       columnGap={{ base: 3, lg: 4 }} rowGap={3} alignItems="center"
-                      _hover={{ borderColor: '#FFC9B8', boxShadow: '0 6px 18px rgba(20,20,20,.04)' }}>
+                      _hover={{ borderColor: '#FFC9B8', boxShadow: '0 10px 24px rgba(20,20,20,.055)', transform: 'translateY(-1px)' }}
+                      transition="all .2s ease">
                       <Flex align="center" gap={3} minW="0">
-                        <Flex w="42px" h="42px" bg="#F0F0F0" borderRadius="11px" align="center"
+                        <Flex w="44px" h="44px" bg="linear-gradient(145deg, #F3F2F0, #E9E7E4)" borderRadius="12px" align="center"
                           justify="center" fontWeight="700" flexShrink="0">{initials(item.name)}</Flex>
                         <Box minW="0">
                           <Text fontSize="13px" fontWeight="700" truncate>{item.name}</Text>
                           <Text fontSize="11px" color="#888888" truncate>{item.email}</Text>
                         </Box>
                       </Flex>
-                      <Box pl={{ base: '54px', lg: 0 }}>
-                        <Text fontSize="9px" color="#999999" fontWeight="600" letterSpacing=".06em">EMPRESA</Text>
+                      <Box pl={{ base: '56px', xl: 0 }}>
+                        <Text fontSize="9px" color="#999999" fontWeight="700" letterSpacing=".06em">ID USUARIO</Text>
+                        <Text fontSize="12px" fontWeight="700">{item.userId || '—'}</Text>
+                      </Box>
+                      <Box pl={{ base: '56px', xl: 0 }}>
+                        <Text fontSize="9px" color="#999999" fontWeight="700" letterSpacing=".06em">EMPRESA</Text>
                         <Text fontSize="12px" fontWeight="700" truncate>{item.company}</Text>
                       </Box>
-                      <Box pl={{ base: '54px', lg: 0 }} minW="0"><ProfileSummary access={item.access} /></Box>
+                      <Box pl={{ base: '56px', xl: 0 }}>
+                        <Text fontSize="9px" color="#999999" fontWeight="700" letterSpacing=".06em">TELÉFONO</Text>
+                        <Text fontSize="12px" fontWeight="600">{item.phone || 'Sin teléfono'}</Text>
+                      </Box>
                       <Text fontSize="10px" px={2.5} py={1} borderRadius="full" color={item.status === 'Activo' ? '#15803D' : '#B91C1C'}
                         bg={item.status === 'Activo' ? '#EAF8EF' : '#FDECEC'} justifySelf={{ base: 'start', lg: 'center' }}
-                        ml={{ base: '54px', lg: 0 }}>{item.status}</Text>
+                        ml={{ base: '56px', xl: 0 }}>{item.status}</Text>
                       <Button size="sm" variant="ghost" justifySelf={{ base: 'end', lg: 'center' }}
                         aria-label={`Editar ${item.name}`} onClick={() => setEditing(item)}><FiSettings /></Button>
                     </Box>
                   ))}
+                  {!isLoadingUsers && !usersError && !filteredUsers.length && (
+                    <Flex minH="180px" align="center" justify="center" direction="column" gap={2} color="#888888">
+                      <FiSearch size={22} />
+                      <Text fontSize="12px">No encontramos usuarios con esa búsqueda.</Text>
+                    </Flex>
+                  )}
                 </Stack>
-                <Text fontSize="11px" color="#8A8A8A" mt={4}>{filteredUsers.length} usuarios mostrados</Text>
+                {!isLoadingUsers && !usersError && (
+                  <Text fontSize="11px" color="#8A8A8A" mt={4}>{filteredUsers.length} usuarios mostrados</Text>
+                )}
               </>
             )}
 
             {active === 'cuenta' && (
               <>
                 <Text color={ACCENT} fontSize="11px" fontWeight="700" letterSpacing=".12em">INFORMACIÓN PERSONAL</Text>
-                <Heading fontSize="30px" mt={1}>Mi perfil</Heading>
+                <Heading fontSize={{ base: '28px', md: '34px' }} mt={1} letterSpacing="-.04em">Mi perfil</Heading>
                 <Text color="#777777" fontSize="13px" mt={1}>Información asociada a tu cuenta Construleads.</Text>
-                <Flex mt={7} p={6} bg="#F8F8F8" borderRadius="18px" align="center" gap={5}>
-                  <Flex w="76px" h="76px" bg={NAVY} color="white" borderRadius="20px" align="center" justify="center" fontSize="22px" fontWeight="700">{initials(name)}</Flex>
-                  <Box><Heading fontSize="20px">{name}</Heading><Text color="#777777" fontSize="12px">{isAdmin ? 'Administrador BIMSA' : 'Cliente Construleads'}</Text></Box>
-                  <Button ml="auto" variant="outline" borderColor="#FFB49D" color={ACCENT} display={{ base: 'none', md: 'flex' }}><FiEdit2 /> Editar</Button>
+                <Flex mt={7} p={{ base: 5, md: 7 }} bg="linear-gradient(135deg, #F7F6F4 0%, #EFEDE9 100%)"
+                  color={NAVY} border="1px solid #E2DFDA" borderLeft="4px solid #FF653F" borderRadius="20px"
+                  align="center" gap={5} position="relative" overflow="hidden" boxShadow="0 14px 34px rgba(40,40,36,.07)">
+                  <Box position="absolute" right="-70px" top="-100px" w="240px" h="240px" borderRadius="full"
+                    border="38px solid rgba(255,101,63,.07)" />
+                  <Flex w={{ base: '64px', md: '78px' }} h={{ base: '64px', md: '78px' }}
+                    bg="#666662" border="1px solid #555551" color="white" borderRadius="19px"
+                    align="center" justify="center" fontSize="22px" fontWeight="700" flexShrink="0">
+                    {initials(name)}
+                  </Flex>
+                  <Box position="relative">
+                    <Heading fontSize={{ base: '18px', md: '23px' }} letterSpacing="-.025em">{name}</Heading>
+                    <HStack mt={1.5} gap={2}>
+                      <Box w="7px" h="7px" borderRadius="full" bg={isAdmin === null ? '#A3A39F' : ACCENT} />
+                      <Text color="#73736F" fontSize="12px">
+                        {isAdmin === null ? 'Validando acceso…' : isAdmin ? 'Administrador BIMSA' : 'Cliente Construleads'}
+                      </Text>
+                    </HStack>
+                  </Box>
+                  <Button ml="auto" variant="outline" bg="white" borderColor="#FF9D80" color={ACCENT}
+                    _hover={{ bg: '#FFF0EA', borderColor: ACCENT }} display={{ base: 'none', md: 'flex' }} position="relative">
+                    <FiEdit2 /> Editar
+                  </Button>
                 </Flex>
-                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4} mt={5}>
+                <SimpleGrid columns={{ base: 1, md: 3 }} gap={4} mt={5}>
                   {[
                     ['Correo electrónico', sessionUser.email || sessionUser.correo || 'usuario@empresa.com'],
-                    ['Identificador', sessionUser.idUsuario || 'N/D'],
-                    ['Tipo de acceso', isAdmin ? 'Administrador' : 'Consultor'],
+                    ['Tipo de acceso', isAdmin === null ? 'Validando…' : isAdmin ? 'Administrador' : 'Consultor'],
                     ['Estado de cuenta', 'Activo'],
                   ].map(([label, value]) => (
-                    <Box key={label} border="1px solid #E8E8E8" borderRadius="13px" p={4}>
+                    <Box key={label} border="1px solid #E8E6E3" borderRadius="15px" p={5} bg="#FCFCFB"
+                      _hover={{ borderColor: '#FFD0C1', transform: 'translateY(-1px)' }} transition="all .2s ease">
                       <Text color="#8A8A8A" fontSize="10px" fontWeight="700">{label.toUpperCase()}</Text>
                       <Text fontWeight="600" fontSize="13px" mt={1}>{value}</Text>
                     </Box>
@@ -359,14 +470,16 @@ export default function Perfil() {
               <>
                 <Text color={ACCENT} fontSize="11px" fontWeight="700" letterSpacing=".12em">ACTIVIDAD</Text>
                 <Heading fontSize="30px" mt={1}>Historial de descargas</Heading>
-                <Text color="#777777" fontSize="13px" mt={1}>Consulta y vuelve a abrir los reportes generados en esta cuenta.</Text>
+                <Text color="#777777" fontSize="13px" mt={1}>Consulta y vuelve a abrir los reportes disponibles en esta cuenta.</Text>
                 <Stack mt={7} gap={2}>
                   {downloads.length ? downloads.map((item) => (
                     <Flex key={item.id} p={4} border="1px solid #EDEDED" borderRadius="14px" align="center" gap={4}>
                       <Flex w="42px" h="42px" bg={item.type === 'PDF' ? '#FFF0EA' : '#EAF8EF'} color={item.type === 'PDF' ? ACCENT : '#15803D'}
                         borderRadius="12px" align="center" justify="center"><FiFileText /></Flex>
                       <Box flex="1"><Text fontSize="13px" fontWeight="700">{item.name}</Text><Text fontSize="11px" color="#888888">{item.date}</Text></Box>
-                      <Text fontSize="11px" color="#777777" display={{ base: 'none', md: 'block' }}>{item.size}</Text>
+                      {item.size && item.size !== 'Generado' && (
+                        <Text fontSize="11px" color="#777777" display={{ base: 'none', md: 'block' }}>{item.size}</Text>
+                      )}
                       <Text fontSize="10px" px={2.5} py={1} bg="#F3F3F3" borderRadius="full">{item.type}</Text>
                       <Button
                         size="sm"
@@ -390,9 +503,10 @@ export default function Perfil() {
                 </Flex>
               </>
             )}
+            </Box>
           </Box>
         </Flex>
-      </Box>
+      </Flex>
       {editing !== undefined && <UserModal initial={editing} onClose={() => setEditing(undefined)} onSave={saveUser} />}
     </Box>
   );

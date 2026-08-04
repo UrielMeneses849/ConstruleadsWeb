@@ -838,6 +838,11 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
   const hasSurfaceRangeFilter =
     resolvedSurfaceMin > surfaceBounds.min ||
     resolvedSurfaceMax < surfaceBounds.max;
+  const hasDateRangeFilter = Boolean(
+    dateRangeStart &&
+    dateRangeEnd &&
+    (dateRangeStart !== dateBounds.min || dateRangeEnd !== dateBounds.max)
+  );
 
   const filtrosActivos = {
     regiones: selectionForPayload(selectedRegiones, allRegionesCount),
@@ -863,6 +868,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
       desde: dateRangeStart,
       hasta: dateRangeEnd,
     },
+    hasDateRangeFilter,
     fechaConsulta: fechaSeleccionada,
     surfaceMin: hasSurfaceRangeFilter ? superficieMin : null,
     surfaceMax: hasSurfaceRangeFilter ? superficieMax : null,

@@ -7,10 +7,16 @@ import {
   Text,
 } from '@chakra-ui/react';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
-import { MarkerClusterer } from '@googlemaps/markerclusterer';
+import {
+  MarkerClusterer,
+  SuperClusterAlgorithm,
+} from '@googlemaps/markerclusterer';
 
 const DEBUG_MAPA = false;
 const AUTO_FIT_INITIAL_BOUNDS = false;
+const FILTER_FIT_MAX_ZOOM = 14;
+const FILTER_FIT_PADDING = 16;
+const FILTER_FIT_ZOOM_BOOST = 0.6;
 
 function normalizeText(value) {
   const normalized = String(value || '')
@@ -74,10 +80,12 @@ function Mapa({
   const markerClusterRef = useRef(null);
   const markerElementsRef = useRef([]);
   const markerCacheRef = useRef(new Map());
+  const activeMarkerKeysRef = useRef(new Set());
   const markerUpdateTokenRef = useRef(0);
   const onFilteredDataRef = useRef(onFilteredData);
   const lastPublishedCount = useRef(-1);
   const didFitInitialBoundsRef = useRef(false);
+  const hasRenderedMarkerSetRef = useRef(false);
   const debugLog = () => {};
 
   const showMapLoader = isMapLoading || !isDataReady;
@@ -660,6 +668,7 @@ useEffect(() => {
       }
 
       markerElementsRef.current = [];
+      activeMarkerKeysRef.current = new Set();
     };
 
     const createClusterContent = (count) => {
@@ -679,13 +688,6 @@ useEffect(() => {
         fontSize: '12px',
         fontWeight: '700',
         boxSizing: 'border-box',
-        opacity: '0',
-        transform: 'scale(.92)',
-        transition: 'opacity 180ms ease, transform 220ms cubic-bezier(.22, 1, .36, 1)',
-      });
-      requestAnimationFrame(() => {
-        content.style.opacity = '1';
-        content.style.transform = 'scale(1)';
       });
       return content;
     };
@@ -816,6 +818,7 @@ useEffect(() => {
         zoom: 5.8,
         mapTypeId: 'roadmap',
         mapId: 'DEMO_MAP_ID',
+        isFractionalZoomEnabled: true,
         fullscreenControl: false,
         mapTypeControl: false,
         streetViewControl: false,
@@ -828,6 +831,10 @@ useEffect(() => {
       markerClusterRef.current = new MarkerClusterer({
         map,
         markers: [],
+        algorithm: new SuperClusterAlgorithm({
+          radius: 80,
+          maxZoom: 17,
+        }),
         renderer: {
           render: renderCluster,
         },
@@ -898,13 +905,12 @@ useEffect(() => {
 
       const startedAt = DEBUG_MAPA ? performance.now() : 0;
       const markers = [];
+      const markerKeys = [];
       let builtMarkers = 0;
       const chunkSize = filteredObras.length > 1000 ? 600 : filteredObras.length;
       let markerBatch = [];
       let renderedPreview = false;
       let pendingClusterRender = false;
-
-      cleanupMarkers();
 
       for (let index = 0; index < filteredObras.length; index += 1) {
         if (markerUpdateTokenRef.current !== updateToken) return;
@@ -923,7 +929,10 @@ useEffect(() => {
 
         if (marker) {
           markers.push(marker);
-          markerBatch.push(marker);
+          markerKeys.push(key);
+          if (!activeMarkerKeysRef.current.has(key)) {
+            markerBatch.push(marker);
+          }
         }
 
         const completesBatch =
@@ -952,6 +961,22 @@ useEffect(() => {
 
       if (markerUpdateTokenRef.current !== updateToken) return;
 
+      const nextMarkerKeys = new Set(markerKeys);
+      const markerSetChanged =
+        nextMarkerKeys.size !== activeMarkerKeysRef.current.size ||
+        markerKeys.some((key) => !activeMarkerKeysRef.current.has(key));
+      const removedMarkers = [];
+      activeMarkerKeysRef.current.forEach((key) => {
+        if (nextMarkerKeys.has(key)) return;
+        const marker = markerCacheRef.current.get(key);
+        if (marker) removedMarkers.push(marker);
+      });
+
+      if (removedMarkers.length && markerClusterRef.current) {
+        markerClusterRef.current.removeMarkers(removedMarkers, true);
+        pendingClusterRender = true;
+      }
+
       if (markerBatch.length && markerClusterRef.current) {
         markerClusterRef.current.addMarkers(markerBatch, true);
         pendingClusterRender = true;
@@ -970,6 +995,36 @@ useEffect(() => {
       }
 
       markerElementsRef.current = markers;
+      activeMarkerKeysRef.current = nextMarkerKeys;
+
+      if (
+        hasRenderedMarkerSetRef.current &&
+        markerSetChanged &&
+        markers.length &&
+        mapInstanceRef.current
+      ) {
+        const bounds = new window.google.maps.LatLngBounds();
+        markers.forEach((marker) => {
+          if (marker.position) bounds.extend(marker.position);
+        });
+
+        if (markers.length === 1) {
+          mapInstanceRef.current.setCenter(markers[0].position);
+          mapInstanceRef.current.setZoom(FILTER_FIT_MAX_ZOOM);
+        } else if (!bounds.isEmpty()) {
+          const activeMap = mapInstanceRef.current;
+          const zoomGuard = window.google.maps.event.addListenerOnce(activeMap, 'idle', () => {
+            const fittedZoom = activeMap.getZoom() || 0;
+            activeMap.setZoom(Math.min(
+              fittedZoom + FILTER_FIT_ZOOM_BOOST,
+              FILTER_FIT_MAX_ZOOM
+            ));
+          });
+          activeMap.fitBounds(bounds, FILTER_FIT_PADDING);
+          window.setTimeout(() => window.google.maps.event.removeListener(zoomGuard), 1200);
+        }
+      }
+      hasRenderedMarkerSetRef.current = true;
 
       if (AUTO_FIT_INITIAL_BOUNDS && !didFitInitialBoundsRef.current && markers.length && mapInstanceRef.current) {
         const bounds = new window.google.maps.LatLngBounds();
