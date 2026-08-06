@@ -16,6 +16,22 @@ const DEBUG_MAPA = false;
 const AUTO_FIT_INITIAL_BOUNDS = false;
 const FILTER_FIT_MAX_ZOOM = 14;
 const FILTER_FIT_PADDING = Object.freeze({ top: 52, right: 52, bottom: 84, left: 52 });
+const MAP_MIN_ZOOM = 4;
+const MAP_MAX_ZOOM = 18;
+const MAP_DEFAULT_CENTER = Object.freeze({ lat: 23.6, lng: -102.0 });
+const MEXICO_MAP_BOUNDS = Object.freeze({
+  north: 34.9,
+  south: 12.0,
+  west: -119.0,
+  east: -84.0,
+});
+
+function isCoordinateInsideMexicoMap(lat, lng) {
+  return lat >= MEXICO_MAP_BOUNDS.south &&
+    lat <= MEXICO_MAP_BOUNDS.north &&
+    lng >= MEXICO_MAP_BOUNDS.west &&
+    lng <= MEXICO_MAP_BOUNDS.east;
+}
 
 function normalizeText(value) {
   const normalized = String(value || '')
@@ -712,7 +728,11 @@ useEffect(() => {
       const latNum = Number(obra.lat);
       const lonNum = Number(obra.lng);
 
-      if (!Number.isFinite(latNum) || !Number.isFinite(lonNum) || latNum === 0 || lonNum === 0) {
+      if (
+        !Number.isFinite(latNum) ||
+        !Number.isFinite(lonNum) ||
+        !isCoordinateInsideMexicoMap(latNum, lonNum)
+      ) {
         return null;
       }
 
@@ -814,8 +834,14 @@ useEffect(() => {
       if (cancelled || !mapRef.current) return;
 
       const map = new Map(mapRef.current, {
-        center: { lat: 23.6, lng: -102.0 },
+        center: MAP_DEFAULT_CENTER,
         zoom: 5.8,
+        minZoom: MAP_MIN_ZOOM,
+        maxZoom: MAP_MAX_ZOOM,
+        restriction: {
+          latLngBounds: MEXICO_MAP_BOUNDS,
+          strictBounds: false,
+        },
         mapTypeId: 'roadmap',
         mapId: 'DEMO_MAP_ID',
         isFractionalZoomEnabled: true,
@@ -861,7 +887,25 @@ useEffect(() => {
         if (window.google?.maps?.event) {
           window.google.maps.event.trigger(map, 'resize');
         }
-        map.setCenter({ lat: 23.6, lng: -102.0 });
+        map.setCenter(MAP_DEFAULT_CENTER);
+      });
+
+      map.addListener('idle', () => {
+        const zoom = Number(map.getZoom());
+        if (!Number.isFinite(zoom) || zoom < MAP_MIN_ZOOM) {
+          map.setZoom(MAP_MIN_ZOOM);
+        }
+
+        const center = map.getCenter();
+        const lat = center?.lat();
+        const lng = center?.lng();
+        if (
+          !Number.isFinite(lat) ||
+          !Number.isFinite(lng) ||
+          !isCoordinateInsideMexicoMap(lat, lng)
+        ) {
+          map.setCenter(MAP_DEFAULT_CENTER);
+        }
       });
 
       map.addListener('click', () => {

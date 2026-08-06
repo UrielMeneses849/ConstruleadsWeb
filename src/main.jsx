@@ -21,7 +21,7 @@ for (let index = localStorage.length - 1; index >= 0; index -= 1) {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-   <BrowserRouter basename="/ConstruleadsWeb">
+   <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <ChakraProvider value={system}>
         <App />
       </ChakraProvider>

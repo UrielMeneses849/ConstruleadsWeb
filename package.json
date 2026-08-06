@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:test": "vite build --mode test --outDir dist-test",
+    "preview:test": "vite preview --outDir dist-test",
     "lint": "eslint .",
     "preview": "vite preview",
     "deploy": "gh-pages -d dist"

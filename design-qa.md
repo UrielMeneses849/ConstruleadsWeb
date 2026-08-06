@@ -29,6 +29,7 @@
 - La selección actual de Gráficas vive exclusivamente en una tarjeta naranja diferenciada del panel inferior y se actualiza con los cruces gráficos.
 - Proyectos y Licitaciones comparten una retícula de seis columnas con anchos idénticos y la misma coordenada de origen inferior.
 - Gráficas usa una retícula compacta de seis columnas que antepone Selección actual sin desplazar los anchos semánticos de Proyectos, Inversión, Estados, Superficie y Fecha.
+- El mapa impide zoom mundial, restringe la cámara al territorio operativo y descarta coordenadas geográficas fuera de México antes del clustering.
 - Licitaciones reutiliza la misma transición de entrada de las vistas de Proyectos, respetando reducción de movimiento.
 - ESLint de los archivos nuevos/modificados de Licitaciones y shell: aprobado.
 - Build de producción: aprobado.
