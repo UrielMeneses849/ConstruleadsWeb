@@ -14,7 +14,7 @@ export function parseObrasXml(xmlText) {
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase();
 
-  const cleanEstado = (value = '') => cleanText(value);
+  const cleanEstado = (value = '') => cleaText(value);
 
   const normalizeDate = (value = '') => String(value).trim();
 

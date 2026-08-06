@@ -243,7 +243,7 @@ function getSavedRangeValue(savedFiltersValue, fallback = null) {
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
-const estadosPorRegion = {
+const ESTADOS_POR_REGION_CATALOG = {
   Oeste: ['Jalisco', 'Colima', 'Michoacán', 'Nayarit', 'Aguascalientes'],
   Noroeste: ['Baja California', 'Baja California Sur', 'Sonora', 'Sinaloa', 'Chihuahua', 'Durango'],
   Centro: ['Ciudad de México', 'Estado de México', 'Hidalgo', 'Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],
@@ -380,7 +380,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     };
   }, []);
 
-  const subgenerosPorGenero = {
+  const SUBGENEROS_POR_GENERO_CATALOG = {
     Vivienda: {
       Lujo: [
         'Condominios de Lujo',
@@ -465,6 +465,103 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     },
   };
 
+  const estadosPorRegion = useMemo(() => {
+    const grouped = new Map();
+    obras.forEach((obra) => {
+      const estado = String(obra.estado || '').trim();
+      if (!estado) return;
+      const regionFromData = String(obra.region || '').trim();
+      const inferredRegion = Object.entries(ESTADOS_POR_REGION_CATALOG).find(([, estados]) => (
+        estados.some((item) => normalizeFilterLabel(item) === normalizeFilterLabel(estado))
+      ))?.[0];
+      const region = regionFromData || inferredRegion || 'Sin región';
+      const regionKey = normalizeFilterLabel(region);
+      if (!grouped.has(regionKey)) grouped.set(regionKey, { label: region, estados: new Map() });
+      grouped.get(regionKey).estados.set(normalizeFilterLabel(estado), estado);
+    });
+    return Object.fromEntries([...grouped.values()].map(({ label, estados }) => [
+      label,
+      [...estados.values()].sort((a, b) => a.localeCompare(b, 'es')),
+    ]));
+  }, [obras]);
+
+  const subgenerosPorGenero = useMemo(() => {
+    const grouped = new Map();
+    obras.forEach((obra) => {
+      const genero = String(obra.genero || '').trim();
+      const subgenero = String(obra.subgenero || '').trim();
+      const tipoObra = String(obra.tipoObra || '').trim();
+      if (!genero) return;
+      const generoKey = normalizeFilterLabel(genero);
+      if (!grouped.has(generoKey)) grouped.set(generoKey, { label: genero, subgeneros: new Map() });
+      if (!subgenero) return;
+      const subgeneros = grouped.get(generoKey).subgeneros;
+      const subgeneroKey = normalizeFilterLabel(subgenero);
+      if (!subgeneros.has(subgeneroKey)) subgeneros.set(subgeneroKey, { label: subgenero, tipos: new Map() });
+      if (tipoObra) subgeneros.get(subgeneroKey).tipos.set(normalizeFilterLabel(tipoObra), tipoObra);
+    });
+    return Object.fromEntries([...grouped.values()].map(({ label, subgeneros }) => [
+      label,
+      Object.fromEntries([...subgeneros.values()].map(({ label: subLabel, tipos }) => [
+        subLabel,
+        [...tipos.values()].sort((a, b) => a.localeCompare(b, 'es')),
+      ])),
+    ]));
+  }, [obras]);
+
+  const dynamicOptions = useMemo(() => {
+    const unique = (key) => {
+      const values = new Map();
+      obras.forEach((obra) => {
+        const value = String(obra[key] || '').trim();
+        if (value) values.set(normalizeFilterLabel(value), value);
+      });
+      return [...values.values()].sort((a, b) => a.localeCompare(b, 'es'));
+    };
+    const etapasPorTipo = {};
+    obras.forEach((obra) => {
+      const tipo = String(obra.tipoProyecto || '').trim();
+      const etapa = String(obra.etapa || '').trim();
+      if (!tipo) return;
+      if (!etapasPorTipo[tipo]) etapasPorTipo[tipo] = new Map();
+      if (etapa) etapasPorTipo[tipo].set(normalizeFilterLabel(etapa), etapa);
+    });
+    return {
+      sectores: unique('sector'),
+      desarrollos: unique('tipoDesarrollo'),
+      tiposProyecto: unique('tipoProyecto'),
+      etapasPorTipo: Object.fromEntries(Object.entries(etapasPorTipo).map(([tipo, etapas]) => [tipo, [...etapas.values()]])),
+    };
+  }, [obras]);
+
+  useEffect(() => {
+    if (!obras.length) return;
+    const keepAvailable = (selected, available) => {
+      const normalizedAvailable = new Set(available.map(normalizeFilterLabel));
+      return selected.filter((value) => normalizedAvailable.has(normalizeFilterLabel(value)));
+    };
+    const availableSubgeneros = Object.values(subgenerosPorGenero).flatMap((group) => Object.keys(group));
+    const availableTiposObra = Object.values(subgenerosPorGenero)
+      .flatMap((group) => Object.values(group).flat());
+
+    const cleanupTimer = window.setTimeout(() => {
+      setSelectedRegiones((current) => keepAvailable(current, Object.keys(estadosPorRegion)));
+      setSelectedEstados((current) => keepAvailable(current, Object.values(estadosPorRegion).flat()));
+      setSelectedGeneros((current) => keepAvailable(current, Object.keys(subgenerosPorGenero)));
+      setSelectedSubgeneros((current) => keepAvailable(current, availableSubgeneros));
+      setSelectedTipoObra((current) => keepAvailable(current, availableTiposObra));
+      setSelectedSectores((current) => keepAvailable(current, dynamicOptions.sectores));
+      setSelectedTiposProyecto((current) => keepAvailable(current, dynamicOptions.tiposProyecto));
+      setSelectedEtapas((current) => keepAvailable(current, Object.values(dynamicOptions.etapasPorTipo).flat()));
+      setSelectedDesarrollos((current) => keepAvailable(current, dynamicOptions.desarrollos));
+    }, 0);
+    return () => window.clearTimeout(cleanupTimer);
+  }, [dynamicOptions, estadosPorRegion, obras.length, subgenerosPorGenero]);
+
+  // Conservamos el catálogo únicamente como referencia de orden/compatibilidad;
+  // ninguna opción se muestra si no existe en el XML recibido.
+  void SUBGENEROS_POR_GENERO_CATALOG;
+
   const filtros = [
     {
       label: 'Tipo de fecha',
@@ -489,27 +586,19 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     },
     {
       label: 'Región',
-      options: ['Oeste', 'Noroeste', 'Centro', 'Sureste', 'Noreste'],
+      options: Object.keys(estadosPorRegion),
       multi: true,
       group: 'principales',
     },
     {
       label: 'Género',
-      options: [
-        'Vivienda',
-        'Industrial',
-        'Edificacion',
-        'Infraestructura'
-      ],
+      options: Object.keys(subgenerosPorGenero),
       multi: true,
       group: 'principales',
     },
     {
       label: 'Tipo de proyecto',
-      options: [
-        'Proyecto contratado',
-        'Proyecto de inversión'
-      ],
+      options: dynamicOptions.tiposProyecto,
       multi: true,
       group: 'principales',
     },
@@ -537,28 +626,13 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
 
     {
       label: 'Etapa',
-      options: [
-        'Inicio',
-        'Obra Negociada',
-        'Pre-Inicio',
-        'Plan',
-        'Proyecto',
-        'Pre-Plan',
-      ],
+      options: Object.values(dynamicOptions.etapasPorTipo).flat(),
       multi: true,
       group: 'avanzados',
     },
     {
       label: 'Tipo desarrollo',
-      options: [
-        'Obra Nueva',
-        'Ampliación',
-        'Rehabilitación',
-        'Mantenimiento',
-        'Remodelación',
-        'Adecuación',
-        'Terminación',
-      ],
+      options: dynamicOptions.desarrollos,
       multi: true,
       group: 'avanzados',
     },
@@ -569,7 +643,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     },
     {
       label: 'Sector',
-      options: ['Privado', 'Gobierno'],
+      options: dynamicOptions.sectores,
       multi: true,
       group: 'principales',
     },
@@ -866,14 +940,14 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     estados: selectionForPayload(selectedEstados, allEstadosCount),
     generos: selectionForPayload(selectedGeneros, allGenerosCount),
     subgeneros: selectionForPayload(selectedSubgeneros, allSubgenerosCount),
-    sectores: selectionForPayload(selectedSectores, 2),
-    etapas: selectionForPayload(selectedEtapas, 6),
-    desarrollos: selectionForPayload(selectedDesarrollos, 7),
+    sectores: selectionForPayload(selectedSectores, dynamicOptions.sectores.length),
+    etapas: selectionForPayload(selectedEtapas, Object.values(dynamicOptions.etapasPorTipo).flat().length),
+    desarrollos: selectionForPayload(selectedDesarrollos, dynamicOptions.desarrollos.length),
     tipoObra: selectionForPayload(selectedTipoObra, allTiposObraCount),
     tipoObraSeleccionados: selectionForPayload(selectedTipoObra, allTiposObraCount),
     tiposObra: selectionForPayload(selectedTipoObra, allTiposObraCount),
     tiposObraFiltro: selectionForPayload(selectedTipoObra, allTiposObraCount),
-    tiposProyecto: selectionForPayload(selectedTiposProyecto, 2),
+    tiposProyecto: selectionForPayload(selectedTiposProyecto, dynamicOptions.tiposProyecto.length),
     investmentMin: hasInvestmentRangeFilter ? resolvedInvestmentMin : null,
     investmentMax: hasInvestmentRangeFilter ? resolvedInvestmentMax : null,
     periodoIndex,
@@ -1040,7 +1114,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
   }
 
   function renderRegionAccordion() {
-    const regiones = ['Oeste', 'Noroeste', 'Centro', 'Sureste', 'Noreste'];
+    const regiones = Object.keys(estadosPorRegion);
 
     return (
       <FilterAccordion
@@ -1192,7 +1266,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
   }
 
   function renderGeneroAccordion() {
-    const generos = ['Vivienda', 'Industrial', 'Edificacion', 'Infraestructura'];
+    const generos = Object.keys(subgenerosPorGenero);
 
     return (
       <FilterAccordion
@@ -1615,10 +1689,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
 
   // Accordions for Principales
   function renderPrincipales() {
-    const etapasPorTipo = {
-      'Proyecto contratado': ['Obra Negociada', 'Pre-Inicio', 'Inicio'],
-      'Proyecto de inversión': ['Pre-Plan', 'Plan', 'Proyecto'],
-    };
+    const etapasPorTipo = dynamicOptions.etapasPorTipo;
     const setEtapasWithParent = (tipo, updater) => {
       const nextEtapas = typeof updater === 'function'
         ? updater(selectedEtapas)
@@ -1775,7 +1846,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
           onToggle={() => toggleAccordion('Tipo de proyecto')}
         >
           <VStack align="stretch" spacing={2}>
-            {['Proyecto contratado', 'Proyecto de inversión'].map((tipo) => {
+            {dynamicOptions.tiposProyecto.map((tipo) => {
               const etapas = etapasPorTipo[tipo] || [];
               const parentSelected = selectedTiposProyecto.includes(tipo);
               const tipoSelected = parentSelected &&
@@ -1880,7 +1951,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
           onToggle={() => toggleAccordion('Sector')}
         >
           {renderOptionsWithSearch(
-            ['Privado', 'Gobierno'],
+            dynamicOptions.sectores,
             'Sector',
             selectedSectores,
             setSelectedSectores,
@@ -2426,15 +2497,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
           {renderPrincipales()}
           {renderSimpleAccordion(
             'Tipo desarrollo',
-            [
-              'Obra Nueva',
-              'Ampliación',
-              'Rehabilitación',
-              'Mantenimiento',
-              'Remodelación',
-              'Adecuación',
-              'Terminación',
-            ],
+            dynamicOptions.desarrollos,
             selectedDesarrollos,
             setSelectedDesarrollos,
             true

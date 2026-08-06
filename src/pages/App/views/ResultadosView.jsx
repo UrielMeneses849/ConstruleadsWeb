@@ -630,7 +630,7 @@ function ResultadosView({
   };
 
   const renderHeaderCell = (field, label) => (
-    <Flex align="center" justify="center" gap={1}>
+    <Flex align="center" justify="flex-start" gap={1}>
       <Text
         fontSize="12px"
         fontWeight="700"
@@ -1128,6 +1128,41 @@ function ResultadosView({
             {dateFields.includes(filterMenu)
               ? renderDateFilter(filterMenu)
               : renderOptionFilter(filterMenu)}
+            <Flex
+              position="sticky"
+              bottom="-12px"
+              mt={3}
+              mx="-12px"
+              mb="-12px"
+              px={3}
+              py={2.5}
+              justify="space-between"
+              align="center"
+              bg={ui.surface}
+              borderTop={`1px solid ${ui.border}`}
+            >
+              <Button
+                size="xs"
+                variant="ghost"
+                color={ui.text}
+                onClick={() => {
+                  setColumnFilters((current) => ({ ...current, [filterMenu]: [] }));
+                  setFilterSearch((current) => ({ ...current, [filterMenu]: '' }));
+                  setPage(1);
+                }}
+              >
+                Limpiar
+              </Button>
+              <Button
+                size="xs"
+                bg="#FF653F"
+                color="white"
+                _hover={{ bg: '#E85A37' }}
+                onClick={() => setFilterMenu(null)}
+              >
+                Listo
+              </Button>
+            </Flex>
           </div>
         )}
       </Box>

@@ -6,12 +6,17 @@ import {
   Heading,
   Text,
   Flex,
-  useMediaQuery,
+  Grid,
 } from '@chakra-ui/react';
 import { getSelectedDateField } from '../../utils/filterObras';
 
-export default function PanelResumen({ obras = [], filtros = {}, variant = 'sidebar' }) {
-const [isCompactWidth] = useMediaQuery('(max-width: 1600px)');
+export default function PanelResumen({
+  obras = [],
+  filtros = {},
+  variant = 'sidebar',
+  showCurrentSelection = false,
+  currentSelectionCount = 0,
+}) {
 const selectedDateField = useMemo(
   () => getSelectedDateField(filtros),
   [filtros]
@@ -44,6 +49,11 @@ obras.forEach((o) => {
 const estadosConProyectos = Object.keys(estadosMap).length;
 
 const metricasDinamicas = [
+  ...(showCurrentSelection ? [{
+    valor: numberFormatter.format(currentSelectionCount),
+    label: 'Selección actual',
+    highlighted: true,
+  }] : []),
   {
     valor: numberFormatter.format(totalProyectos),
     label: 'Proyectos'
@@ -66,17 +76,25 @@ const metricasDinamicas = [
 
 if (variant === 'map') {
   return (
-    <Flex align="stretch" gap={1.5} w="100%" flexWrap="nowrap">
+    <Grid
+      alignItems="stretch"
+      gap={1.5}
+      w="max-content"
+      maxW="100%"
+      templateColumns={showCurrentSelection
+        ? '110px 132px 190px 132px 160px 190px'
+        : 'var(--cl-summary-columns)'}
+      overflowX="hidden"
+    >
       {metricasDinamicas.map((item) => (
         <Box
           key={item.label}
-          flex="0 0 auto"
-          w="max-content"
-          bg="var(--cl-surface)"
-          border="1px solid var(--cl-border)"
+          minW="0"
+          border={item.highlighted ? '1px solid rgba(255,101,63,.62)' : '1px solid var(--cl-border)'}
           borderRadius="10px"
           boxShadow="var(--cl-shadow)"
           color="var(--cl-text)"
+          bg={item.highlighted ? 'rgba(255,101,63,.10)' : 'var(--cl-surface)'}
           minH="60px"
           px={3}
           py={1.5}
@@ -92,11 +110,12 @@ if (variant === 'map') {
             top={0}
             bottom={0}
             w="3px"
+            bg={item.highlighted ? '#FF653F' : 'transparent'}
           />
 
           <Flex align="center" gap={2} mb={1}>
             <Text
-              fontSize={isCompactWidth ? '10px' : '11px'}
+              fontSize="10px"
               fontWeight="700"
               color="var(--cl-text-muted)"
               lineHeight="1"
@@ -108,8 +127,8 @@ if (variant === 'map') {
 
           <HStack spacing={1.5} align="baseline" whiteSpace="nowrap">
             <Text
-              fontSize={isCompactWidth ? (item.label === 'Superficie' ? '13px' : '14px') : (item.label === 'Superficie' ? '15px' : '17px')}
-              fontWeight="500"
+              fontSize="14px"
+              fontWeight="600"
               lineHeight="1.1"
               color="var(--cl-text-strong)"
               whiteSpace="nowrap"
@@ -118,7 +137,7 @@ if (variant === 'map') {
             </Text>
             {item.suffix && (
               <Text
-                fontSize={isCompactWidth ? '10px' : '11px'}
+                fontSize="10px"
                 fontWeight="500"
                 color="var(--cl-text-muted)"
                 whiteSpace="nowrap"
@@ -130,8 +149,7 @@ if (variant === 'map') {
         </Box>
       ))}
       <Box
-        flex="0 0 auto"
-        w="max-content"
+        minW="0"
         bg="var(--cl-surface)"
         border="1px solid var(--cl-border)"
         borderRadius="10px"
@@ -144,7 +162,7 @@ if (variant === 'map') {
         justifyContent="center"
       >
         <Text
-          fontSize={isCompactWidth ? '10px' : '11px'}
+          fontSize="10px"
           color="var(--cl-text-muted)"
           fontWeight="700"
           lineHeight="1"
@@ -154,16 +172,16 @@ if (variant === 'map') {
         </Text>
         <Text
           mt={1}
-          fontSize={isCompactWidth ? '14px' : '17px'}
+          fontSize="14px"
           lineHeight="1.1"
           color="var(--cl-text-strong)"
-          fontWeight="500"
+          fontWeight="600"
           whiteSpace="nowrap"
         >
           {selectedDateLabel}
         </Text>
       </Box>
-    </Flex>
+    </Grid>
   );
 }
 

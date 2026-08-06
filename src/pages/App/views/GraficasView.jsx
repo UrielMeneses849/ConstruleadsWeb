@@ -961,7 +961,7 @@ function LegacyGraficasView({ obras = [], filtros = {} }) {
 void LegacyGraficasView;
 /* eslint-enable react-hooks/set-state-in-effect */
 
-export default function GraficasView({ obras = [], filtros = {} }) {
+export default function GraficasView({ obras = [], filtros = {}, onSelectionCountChange }) {
   const filteredObras = useMemo(() => filterObrasByFilters(obras, filtros), [obras, filtros]);
   const selectedDateField = useMemo(() => getSelectedDateField(filtros), [filtros]);
   const [generoMetric, setGeneroMetric] = useState('proyectos');
@@ -1013,27 +1013,15 @@ export default function GraficasView({ obras = [], filtros = {} }) {
   const companiaData = useMemo(() => aggregateObrasByMetric(chartSources.compania, 'compania', companiaMetric).filter((i) => i.key !== 'Sin dato'), [chartSources.compania, companiaMetric]);
   const totalProyectos = selectedObras.length;
 
+  useEffect(() => {
+    onSelectionCountChange?.(totalProyectos);
+  }, [onSelectionCountChange, totalProyectos]);
+
   const sumValues = (items) => items.reduce((total, item) => total + item.value, 0);
 
   return (
     <Box flex="1" minH="0" h="100%" overflowY="auto" overflowX="hidden" pb={{ base: '95px', lg: '72px' }} pr={2}>
-      <Box px={2} pt={2} pb={2}>
-        <Flex align="flex-start" justify="space-between" gap={4} mb={3} wrap="wrap">
-          <Box minW="0">
-            <Text fontSize={{ base: '22px', xl: '26px' }} fontWeight="700" color="var(--cl-text-strong)" lineHeight="1.1">Gráficas</Text>
-            <Text mt={1} fontSize="13px" color="var(--cl-text-muted)" lineHeight="1.2">
-              Resumen visual de proyectos por género, región, fecha y compañía.
-            </Text>
-          </Box>
-          <Box bg="var(--cl-surface)" border="1px solid var(--cl-border)" borderRadius="12px" px={4} py={3} minW="160px">
-            <Text fontSize="11px" color="var(--cl-text-muted)" fontWeight="600">Selección actual</Text>
-            <HStack spacing={1.5} align="baseline">
-              <Text fontSize="22px" fontWeight="400" color="var(--cl-text-strong)" lineHeight="1.1">{formatInteger(totalProyectos)}</Text>
-              <Text fontSize="12px" fontWeight="400" color="var(--cl-text-muted)">proyectos</Text>
-            </HStack>
-          </Box>
-        </Flex>
-
+      <Box px={2} pt={1} pb={2}>
         {appliedSelections.length > 0 && (
           <Flex mb={4} gap={2} align="center" flexWrap="wrap">
             {appliedSelections.map((selection) => (

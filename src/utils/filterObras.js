@@ -302,9 +302,15 @@ export function filterObrasByFilters(obras = [], filtros = {}) {
     );
   }
 
-  if (!tipoObra.length && !subgeneros.length && generos.length) {
+  if (generos.length) {
     resultado = resultado.filter((obra) =>
       matchesTextList(obra.genero, generos)
+    );
+  }
+
+  if (subgeneros.length) {
+    resultado = resultado.filter((obra) =>
+      matchesTextList(obra.subgenero, subgeneros)
     );
   }
 
@@ -326,23 +332,15 @@ export function filterObrasByFilters(obras = [], filtros = {}) {
     );
   }
 
-  if (!etapas.length && tiposProyecto.length) {
+  if (tiposProyecto.length) {
     resultado = resultado.filter((obra) =>
       matchesTextList(obra.tipoProyecto, tiposProyecto)
     );
   }
 
-  if (!tipoObra.length && subgeneros.length) {
-    const tiposObraPermitidos = subgeneros.flatMap(
-      (subgenero) => TIPO_OBRA_POR_SUBGENERO[subgenero] || []
-    );
-
-    if (tiposObraPermitidos.length) {
-      resultado = resultado.filter((obra) =>
-        matchesTextList(obra.tipoObra, tiposObraPermitidos)
-      );
-    }
-  }
+  // El catálogo histórico ya no define las opciones visibles ni el filtrado;
+  // la comparación se hace contra los valores reales normalizados del XML.
+  void TIPO_OBRA_POR_SUBGENERO;
 
   const investmentMinPesos = parseFilterNumber(filtros.investmentMin ?? filtros.inversionMin, 0);
   const investmentMaxPesos = parseFilterNumber(filtros.investmentMax ?? filtros.inversionMax, null);

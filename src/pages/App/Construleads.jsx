@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useCallback, useMemo } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 import {
   Box,
@@ -12,6 +12,9 @@ import {
 } from '@chakra-ui/react';
 
 import {
+  FiBarChart2,
+  FiList,
+  FiMapPin,
   FiMoon,
   FiSun,
   FiSettings,
@@ -40,6 +43,7 @@ const loadResultadosView = () => import('./views/ResultadosView');
 const loadGraficasView = () => import('./views/GraficasView');
 const Resultados = lazy(loadResultadosView);
 const GraficasView = lazy(loadGraficasView);
+const LicitacionesView = lazy(() => import('../../features/licitaciones/LicitacionesView'));
 
 function readPersistedFilters() {
   try {
@@ -160,6 +164,8 @@ function getInitials(name = '') {
 
 export default function Construleads() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isLicitacionesModule = location.pathname.includes('/licitaciones');
   const [useCompactScale] = useMediaQuery(
     '(min-width: 1100px) and (max-width: 1366px) and (max-height: 900px)'
   );
@@ -195,6 +201,7 @@ export default function Construleads() {
     [filtros]
   );
   const [selectedResultObras, setSelectedResultObras] = useState([]);
+  const [graphSelectionCount, setGraphSelectionCount] = useState(0);
   const selectionResetToken = 0;
   const [activeView, setActiveView] = useState('mapa');
   const [mountedViews, setMountedViews] = useState({
@@ -253,6 +260,8 @@ export default function Construleads() {
   }, [colorMode]);
 
   useEffect(() => {
+    if (isLicitacionesModule) return undefined;
+
     let isActive = true;
     const abortController = new AbortController();
 
@@ -315,7 +324,7 @@ export default function Construleads() {
       isActive = false;
       abortController.abort();
     };
-  }, [user.idUsuario]);
+  }, [isLicitacionesModule, user.idUsuario]);
 
   const changeView = useCallback((nextView) => {
     setMountedViews((current) => (
@@ -323,6 +332,16 @@ export default function Construleads() {
     ));
     setActiveView(nextView);
   }, []);
+
+  const openProjectView = useCallback((nextView) => {
+    changeView(nextView);
+    navigate(`/construleads/proyectos/${nextView}`);
+  }, [changeView, navigate]);
+
+  useEffect(() => {
+    const routeView = location.pathname.match(/\/proyectos\/(mapa|resultados|graficas)\/?$/)?.[1];
+    if (routeView) changeView(routeView);
+  }, [changeView, location.pathname]);
 
   const handleLogout = useCallback(() => {
     localStorage.removeItem('cl_authenticated');
@@ -444,6 +463,7 @@ export default function Construleads() {
         '--cl-input-bg': appColors.inputBg,
         '--cl-shadow': appColors.shadow,
         '--cl-sidebar-width': sidebarWidth,
+        '--cl-summary-columns': '132px 190px 132px 160px 190px 120px',
       }}
     >
       <Flex
@@ -477,61 +497,46 @@ export default function Construleads() {
           spacing={1}
           flex="1"
           justify="flex-start"
+          overflowX="auto"
         >
           <Box
+            as="button"
+            type="button"
             px={3}
-            h="44px"
+            h="38px"
             display="flex"
             alignItems="center"
-            bg="transparent"
-            
+            borderRadius="9px"
+            bg={!isLicitacionesModule ? 'rgba(255,255,255,.2)' : 'transparent'}
             color="white"
-            borderBottom={activeView === 'mapa' ? '3px solid white' : '3px solid transparent'}
-            fontWeight={activeView === 'mapa' ? '600' : '500'}
-            cursor="pointer"
-            fontSize="14px"
+            fontWeight="700"
+            fontSize="13px"
+            whiteSpace="nowrap"
             transition="all 180ms ease"
-            _hover={{ bg: 'rgba(255,255,255,.14)', color: 'white' }}
-            onClick={() => changeView('mapa')}
+            _hover={{ bg: 'rgba(255,255,255,.24)' }}
+            onClick={() => openProjectView(activeView)}
           >
-            Mapa
+            Proyectos
           </Box>
 
           <Box
+            as="button"
+            type="button"
             px={3}
-            h="44px"
+            h="38px"
             display="flex"
             alignItems="center"
-            bg="transparent"
+            borderRadius="9px"
+            bg={isLicitacionesModule ? 'rgba(255,255,255,.2)' : 'transparent'}
             color="white"
-            borderBottom={activeView === 'resultados' ? '3px solid white' : '3px solid transparent'}
-            fontWeight={activeView === 'resultados' ? '600' : '500'}
-            cursor="pointer"
-            fontSize="14px"
+            fontWeight="700"
+            fontSize="13px"
+            whiteSpace="nowrap"
             transition="all 180ms ease"
-            _hover={{ bg: 'rgba(255,255,255,.14)', color: 'white' }}
-            onPointerEnter={() => { void loadResultadosView(); }}
-            onClick={() => changeView('resultados')}
+            _hover={{ bg: 'rgba(255,255,255,.24)' }}
+            onClick={() => navigate('/construleads/licitaciones')}
           >
-            Resultados
-          </Box>
-
-          <Box
-            px={3}
-            h="44px"
-            display="flex"
-            alignItems="center"
-            color="white"
-            cursor="pointer"
-            fontSize="14px"
-            fontWeight={activeView === 'graficas' ? '600' : '500'}
-            borderBottom={activeView === 'graficas' ? '3px solid white' : '3px solid transparent'}
-            transition="all 180ms ease"
-            _hover={{ bg: 'rgba(255,255,255,.14)' }}
-            onPointerEnter={() => { void loadGraficasView(); }}
-            onClick={() => changeView('graficas')}
-          >
-            Gráficas
+            Licitaciones
           </Box>
 
           {/* <Box
@@ -647,16 +652,36 @@ export default function Construleads() {
           </Box>
         </HStack>
       </Flex>
+      <style>{`
+        @keyframes cl-view-enter {
+          0% { opacity: 0; transform: translate3d(18px, 0, 0); }
+          65% { opacity: 1; transform: translate3d(-2px, 0, 0); }
+          100% { opacity: 1; transform: none; }
+        }
+        .cl-view-enter {
+          animation: cl-view-enter 360ms cubic-bezier(.22, 1, .36, 1) both;
+          backface-visibility: hidden;
+        }
+        @media (prefers-reduced-motion: reduce) { .cl-view-enter { animation: none; } }
+      `}</style>
       <Flex
         gap={3}
         height={usesScaledCanvas
-          ? `calc(${canvasViewportHeight} - 116px)`
-          : 'calc(100vh - 116px)'}
+          ? `calc(${canvasViewportHeight} - 96px)`
+          : 'calc(100vh - 96px)'}
         minH="0"
         overflow="hidden"
         align="stretch"
         flexDirection="row"
       >
+        {isLicitacionesModule ? (
+          <Box className="cl-view-enter" flex="1" minW="0" minH="0" h="100%" position="relative">
+            <Suspense fallback={<ViewLoader label="licitaciones" />}>
+              <LicitacionesView user={user} />
+            </Suspense>
+          </Box>
+        ) : (
+        <>
         <Box position="relative" flexShrink={0} h="100%">
           <SidebarFiltros
             obras={obras}
@@ -673,6 +698,45 @@ export default function Construleads() {
           display="flex"
           flexDirection="column"
         >
+          <Flex
+            h="44px"
+            mb={1}
+            px={3}
+            align="center"
+            gap={1}
+            bg={appColors.surface}
+            border="1px solid var(--cl-border)"
+            borderRadius="10px"
+            overflowX="auto"
+            flexShrink={0}
+          >
+            {[
+              { key: 'mapa', label: 'Mapa', icon: FiMapPin, preload: null },
+              { key: 'resultados', label: 'Resultados', icon: FiList, preload: loadResultadosView },
+              { key: 'graficas', label: 'Gráficas', icon: FiBarChart2, preload: loadGraficasView },
+            ].map(({ key, label, icon, preload }) => (
+              <Flex
+                as="button"
+                type="button"
+                key={key}
+                h="43px"
+                px={3}
+                align="center"
+                gap={2}
+                color={activeView === key ? '#FF653F' : 'var(--cl-text)'}
+                fontSize="12px"
+                fontWeight={activeView === key ? '700' : '600'}
+                borderBottom={activeView === key ? '2px solid #FF653F' : '2px solid transparent'}
+                whiteSpace="nowrap"
+                onPointerEnter={() => { if (preload) void preload(); }}
+                onClick={() => openProjectView(key)}
+                _hover={{ color: '#FF653F', bg: 'var(--cl-hover)' }}
+              >
+                <Box as={icon} boxSize="15px" />
+                {label}
+              </Flex>
+            ))}
+          </Flex>
           <Box
             position="fixed"
             left={`calc(var(--cl-sidebar-width) + 24px)`}
@@ -693,6 +757,8 @@ export default function Construleads() {
                   obras={filteredObras}
                   filtros={filtros}
                   variant="map"
+                  showCurrentSelection={activeView === 'graficas'}
+                  currentSelectionCount={graphSelectionCount}
                 />
               </Box>
               <Box flexShrink={0}>
@@ -706,21 +772,9 @@ export default function Construleads() {
             </Flex>
           </Box>
 
-          <Box flex="1" minH="0" position="relative" mt={activeView === 'resultados' ? 0 : 3}>
-            <style>{`
-              @keyframes cl-view-enter {
-                0% { opacity: 0; transform: translate3d(18px, 0, 0); }
-                65% { opacity: 1; transform: translate3d(-2px, 0, 0); }
-                100% { opacity: 1; transform: none; }
-              }
-              .cl-view-enter {
-                animation: cl-view-enter 360ms cubic-bezier(.22, 1, .36, 1) both;
-                backface-visibility: hidden;
-              }
-              @media (prefers-reduced-motion: reduce) { .cl-view-enter { animation: none; } }
-            `}</style>
+          <Box flex="1" minH="0" position="relative">
             <Box className={activeView === 'mapa' ? 'cl-view-enter' : undefined}
-              display={activeView === 'mapa' ? 'block' : 'none'} h="100%" minH="0" pb="50px">
+              display={activeView === 'mapa' ? 'block' : 'none'} h="100%" minH="0" pb="68px">
               <Mapa
                 obras={obras.length ? filteredObras : filteredMapPreviewObras}
                 filtros={PREFILTERED_MAP_FILTERS}
@@ -733,13 +787,13 @@ export default function Construleads() {
 
             {mountedViews.resultados && (
               <Box className={activeView === 'resultados' ? 'cl-view-enter' : undefined}
-                display={activeView === 'resultados' ? 'block' : 'none'} h="100%" minH="0" pb="50px">
+                display={activeView === 'resultados' ? 'block' : 'none'} h="100%" minH="0" pb="68px">
                 <Suspense fallback={<ViewLoader label="resultados" />}>
                   <Resultados
                     obras={filteredObras}
                     onSelectionChange={handleResultsSelectionChange}
                     selectionResetToken={selectionResetToken}
-                    onGoToMap={() => changeView('mapa')}
+                    onGoToMap={() => openProjectView('mapa')}
                     onViewFicha={handleViewFicha}
                   />
                 </Suspense>
@@ -748,17 +802,20 @@ export default function Construleads() {
 
             {mountedViews.graficas && (
               <Box className={activeView === 'graficas' ? 'cl-view-enter' : undefined}
-                display={activeView === 'graficas' ? 'block' : 'none'} h="100%" minH="0" pb="50px">
+                display={activeView === 'graficas' ? 'block' : 'none'} h="100%" minH="0" pb="68px">
                 <Suspense fallback={<ViewLoader label="gráficas" />}>
                   <GraficasView
                     obras={obras}
                     filtros={filtros}
+                    onSelectionCountChange={setGraphSelectionCount}
                   />
                 </Suspense>
               </Box>
             )}
           </Box>
         </Box>
+        </>
+        )}
       </Flex>
       <FichaTecnicaModal
         {...fichaTecnica}
