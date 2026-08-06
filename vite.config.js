@@ -5,4 +5,14 @@ import react from '@vitejs/plugin-react'
 export default defineConfig(({ mode }) => ({
   base: mode === 'test' ? '/ConstruleadsTest/' : '/ConstruleadsWeb/',
   plugins: [react()],
+  server: {
+    proxy: {
+      '/bimsa-ws': {
+        target: 'https://www.construleads.com',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/bimsa-ws/, '/ws_new_cl'),
+      },
+    },
+  },
 }))

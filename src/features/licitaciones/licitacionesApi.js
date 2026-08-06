@@ -18,7 +18,6 @@ export async function obtenerLicitaciones({ userId, sessionId, signal } = {}) {
   if (cached) return cached;
   const response = await fetch(`${CONSTRULEADS_WS_BASE_URL}/ws_cl_licitaciones`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       sId_usuario: String(userId),
       sId_session: String(sessionId),

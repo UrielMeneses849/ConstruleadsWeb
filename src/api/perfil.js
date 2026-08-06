@@ -22,9 +22,6 @@ function getSessionCredentials() {
 async function requestProfileService(method, signal) {
   const response = await fetch(`${CONSTRULEADS_WS_BASE_URL}/${method}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
     body: new URLSearchParams(getSessionCredentials()),
     signal,
   });

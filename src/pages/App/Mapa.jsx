@@ -15,7 +15,8 @@ import {
 const DEBUG_MAPA = false;
 const AUTO_FIT_INITIAL_BOUNDS = false;
 const FILTER_FIT_MAX_ZOOM = 14;
-const FILTER_FIT_PADDING = Object.freeze({ top: 52, right: 52, bottom: 84, left: 52 });
+const FILTER_FIT_PADDING = Object.freeze({ top: 22, right: 22, bottom: 42, left: 22 });
+const FILTER_FIT_SAFETY_ZOOM = 0.06;
 const MAP_MIN_ZOOM = 4;
 const MAP_MAX_ZOOM = 18;
 const MAP_DEFAULT_CENTER = Object.freeze({ lat: 23.6, lng: -102.0 });
@@ -31,6 +32,44 @@ function isCoordinateInsideMexicoMap(lat, lng) {
     lat <= MEXICO_MAP_BOUNDS.north &&
     lng >= MEXICO_MAP_BOUNDS.west &&
     lng <= MEXICO_MAP_BOUNDS.east;
+}
+
+function getCameraForPositions(positions, width, height, padding) {
+  if (!positions.length || width <= 0 || height <= 0) return null;
+
+  const toWorldPoint = ({ lat, lng }) => {
+    const sinLatitude = Math.sin((Math.max(-85, Math.min(85, lat)) * Math.PI) / 180);
+    return {
+      x: (lng + 180) / 360,
+      y: 0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (4 * Math.PI),
+    };
+  };
+  const worldPoints = positions.map(toWorldPoint);
+  const xs = worldPoints.map((point) => point.x);
+  const ys = worldPoints.map((point) => point.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const spanX = Math.max(maxX - minX, 1 / (256 * (2 ** FILTER_FIT_MAX_ZOOM)));
+  const spanY = Math.max(maxY - minY, 1 / (256 * (2 ** FILTER_FIT_MAX_ZOOM)));
+  const availableWidth = Math.max(1, width - padding.left - padding.right);
+  const availableHeight = Math.max(1, height - padding.top - padding.bottom);
+  const zoomX = Math.log2(availableWidth / (256 * spanX));
+  const zoomY = Math.log2(availableHeight / (256 * spanY));
+  // El mapa admite zoom fraccional. Conservar el valor exacto evita regalar
+  // hasta un nivel completo de zoom cuando hay varias entidades seleccionadas.
+  // El pequeño margen protege el cuerpo de los pines situados en los extremos.
+  const zoom = Math.max(
+    MAP_MIN_ZOOM,
+    Math.min(FILTER_FIT_MAX_ZOOM, Math.min(zoomX, zoomY) - FILTER_FIT_SAFETY_ZOOM)
+  );
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+  const centerLng = centerX * 360 - 180;
+  const centerLat = (Math.atan(Math.sinh(Math.PI * (1 - 2 * centerY))) * 180) / Math.PI;
+
+  return { center: { lat: centerLat, lng: centerLng }, zoom };
 }
 
 function normalizeText(value) {
@@ -78,6 +117,7 @@ function Mapa({
   obras = [],
   filtros = {},
   isDataReady = true,
+  isVisible = true,
   fitInitialBounds = false,
   onFilteredData,
   onViewFicha,
@@ -98,6 +138,8 @@ function Mapa({
   const markerCacheRef = useRef(new Map());
   const activeMarkerKeysRef = useRef(new Set());
   const markerUpdateTokenRef = useRef(0);
+  const fitRequestTokenRef = useRef(0);
+  const cameraAnimationFrameRef = useRef(null);
   const onFilteredDataRef = useRef(onFilteredData);
   const lastPublishedCount = useRef(-1);
   const didFitInitialBoundsRef = useRef(false);
@@ -654,6 +696,7 @@ debugLog(
   }, [obras, filtros]);
 
 useEffect(() => {
+    if (!isVisible) return undefined;
     let cancelled = false;
 
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -737,13 +780,24 @@ useEffect(() => {
       }
 
       const markerContent = document.createElement('div');
+      markerContent.setAttribute('aria-label', `Proyecto ${obra?.clave || obra?.proyecto || ''}`.trim());
+      markerContent.innerHTML = `
+        <svg width="30" height="38" viewBox="0 0 30 38" aria-hidden="true" focusable="false">
+          <path
+            d="M15 1.5C7.82 1.5 2 7.18 2 14.18c0 9.22 10.6 20.01 12.15 21.54a1.2 1.2 0 0 0 1.7 0C17.4 34.19 28 23.4 28 14.18 28 7.18 22.18 1.5 15 1.5Z"
+            fill="#FF5A36"
+            stroke="#FFFFFF"
+            stroke-width="2.5"
+          />
+          <circle cx="15" cy="14" r="5.25" fill="#FFFFFF" />
+          <circle cx="15" cy="14" r="2.25" fill="#FF5A36" />
+        </svg>`;
       Object.assign(markerContent.style, {
-        width: '18px',
-        height: '18px',
-        borderRadius: '50%',
-        background: '#FFF5EB',
-        border: '3px solid #FF653F',
-        boxSizing: 'border-box',
+        width: '30px',
+        height: '38px',
+        display: 'block',
+        filter: 'drop-shadow(0 2px 3px rgba(83, 35, 21, 0.34))',
+        transform: 'translateY(1px)',
       });
 
       const marker = new window.google.maps.marker.AdvancedMarkerElement({
@@ -835,7 +889,7 @@ useEffect(() => {
 
       const map = new Map(mapRef.current, {
         center: MAP_DEFAULT_CENTER,
-        zoom: 5.8,
+        zoom: 5,
         minZoom: MAP_MIN_ZOOM,
         maxZoom: MAP_MAX_ZOOM,
         restriction: {
@@ -928,6 +982,10 @@ useEffect(() => {
 
       const updateToken = markerUpdateTokenRef.current + 1;
       markerUpdateTokenRef.current = updateToken;
+      if (cameraAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(cameraAnimationFrameRef.current);
+        cameraAnimationFrameRef.current = null;
+      }
 
       selectedProjectRef.current = null;
       setSelectedProject(null);
@@ -1047,34 +1105,76 @@ useEffect(() => {
         markers.length &&
         mapInstanceRef.current
       ) {
-        const bounds = new window.google.maps.LatLngBounds();
-        markers.forEach((marker) => {
-          if (marker.position) bounds.extend(marker.position);
-        });
+        const fitRequestToken = fitRequestTokenRef.current + 1;
+        fitRequestTokenRef.current = fitRequestToken;
+        const validPositions = filteredObras.reduce((positions, obra) => {
+          const lat = Number(obra?.lat);
+          const lng = Number(obra?.lng);
+          if (Number.isFinite(lat) && Number.isFinite(lng) && isCoordinateInsideMexicoMap(lat, lng)) {
+            positions.push({ lat, lng });
+          }
+          return positions;
+        }, []);
+        await new Promise((resolve) => window.setTimeout(resolve, 220));
+        if (
+          markerUpdateTokenRef.current !== updateToken ||
+          fitRequestTokenRef.current !== fitRequestToken ||
+          !mapRef.current ||
+          !mapInstanceRef.current
+        ) return;
 
-        if (markers.length === 1) {
-          mapInstanceRef.current.setCenter(markers[0].position);
-          mapInstanceRef.current.setZoom(FILTER_FIT_MAX_ZOOM);
-        } else if (!bounds.isEmpty()) {
-          const activeMap = mapInstanceRef.current;
-          const ensureEveryPointIsVisible = (attempt = 0) => {
-            const visibleBounds = activeMap.getBounds();
-            const allVisible = visibleBounds && markers.every((marker) => (
-              !marker.position || visibleBounds.contains(marker.position)
-            ));
-            if (allVisible || attempt >= 3) return;
-
-            const currentZoom = activeMap.getZoom();
-            if (!Number.isFinite(currentZoom)) return;
-            window.google.maps.event.addListenerOnce(activeMap, 'idle', () => {
-              ensureEveryPointIsVisible(attempt + 1);
-            });
-            activeMap.setZoom(currentZoom - 0.5);
+        const camera = getCameraForPositions(
+          validPositions,
+          mapRef.current.clientWidth,
+          mapRef.current.clientHeight,
+          FILTER_FIT_PADDING
+        );
+        if (camera) {
+          const map = mapInstanceRef.current;
+          const startCenter = map.getCenter();
+          const startZoom = Number(map.getZoom());
+          const from = {
+            lat: Number(startCenter?.lat()),
+            lng: Number(startCenter?.lng()),
+            zoom: Number.isFinite(startZoom) ? startZoom : MAP_MIN_ZOOM,
           };
-          window.google.maps.event.addListenerOnce(activeMap, 'idle', () => {
-            ensureEveryPointIsVisible();
-          });
-          activeMap.fitBounds(bounds, FILTER_FIT_PADDING);
+          const distance = Math.hypot(camera.center.lat - from.lat, camera.center.lng - from.lng);
+          const zoomDistance = Math.abs(camera.zoom - from.zoom);
+          const duration = Math.min(950, Math.max(560, 500 + distance * 12 + zoomDistance * 45));
+          const startedAt = performance.now();
+          const easeInOutCubic = (progress) => progress < 0.5
+            ? 4 * progress * progress * progress
+            : 1 - ((-2 * progress + 2) ** 3) / 2;
+
+          const animateCamera = (now) => {
+            if (
+              markerUpdateTokenRef.current !== updateToken ||
+              fitRequestTokenRef.current !== fitRequestToken ||
+              !mapInstanceRef.current
+            ) {
+              cameraAnimationFrameRef.current = null;
+              return;
+            }
+
+            const progress = Math.min(1, (now - startedAt) / duration);
+            const eased = easeInOutCubic(progress);
+            mapInstanceRef.current.moveCamera({
+              center: {
+                lat: from.lat + (camera.center.lat - from.lat) * eased,
+                lng: from.lng + (camera.center.lng - from.lng) * eased,
+              },
+              zoom: from.zoom + (camera.zoom - from.zoom) * eased,
+            });
+
+            if (progress < 1) {
+              cameraAnimationFrameRef.current = window.requestAnimationFrame(animateCamera);
+            } else {
+              mapInstanceRef.current.moveCamera(camera);
+              cameraAnimationFrameRef.current = null;
+            }
+          };
+
+          cameraAnimationFrameRef.current = window.requestAnimationFrame(animateCamera);
         }
       }
       hasRenderedMarkerSetRef.current = true;
@@ -1106,6 +1206,9 @@ useEffect(() => {
         setMapLoadingMessage('Cargando mapa y preparando obras...');
         await createMap();
         if (cancelled) return;
+        if (window.google?.maps?.event && mapInstanceRef.current) {
+          window.google.maps.event.trigger(mapInstanceRef.current, 'resize');
+        }
         await updateMarkers();
       } catch {
         setMapLoadingMessage('No se pudo cargar el mapa. Intenta recargar la página.');
@@ -1116,9 +1219,14 @@ useEffect(() => {
     return () => {
       cancelled = true;
       window.clearTimeout(updateTimer);
+      if (cameraAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(cameraAnimationFrameRef.current);
+        cameraAnimationFrameRef.current = null;
+      }
       markerUpdateTokenRef.current += 1;
+      fitRequestTokenRef.current += 1;
     };
-  }, [filteredObras, fitInitialBounds, isDataReady]);
+  }, [filteredObras, fitInitialBounds, isDataReady, isVisible]);
 
   return (
     <Box

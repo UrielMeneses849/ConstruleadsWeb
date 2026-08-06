@@ -1,5 +1,4 @@
-const TOKEN =
-  "AS79s834925MPSUoXTKSDF56945v4FDG954ASD6Gt5G5HS965498d6548f546g65AD";
+import { CONSTRULEADS_TOKEN as TOKEN, CONSTRULEADS_WS_BASE_URL } from './obras.js';
 
 export async function loginByEmail(email) {
   const ipResponse = await fetch(
@@ -15,13 +14,9 @@ export async function loginByEmail(email) {
   });
 
   const response = await fetch(
-    "https://www.construleads.com/ws_new_cl/ws_cl.asmx/ws_cl_login",
+    `${CONSTRULEADS_WS_BASE_URL}/ws_cl_login`,
     {
       method: "POST",
-      headers: {
-        "Content-Type":
-          "application/x-www-form-urlencoded",
-      },
       body,
     }
   );
@@ -55,13 +50,9 @@ export async function validarCodigo(email, codigo) {
   });
 
   const response = await fetch(
-    "https://www.construleads.com/ws_new_cl/ws_cl.asmx/ws_cl_codigo",
+    `${CONSTRULEADS_WS_BASE_URL}/ws_cl_codigo`,
     {
       method: "POST",
-      headers: {
-        "Content-Type":
-          "application/x-www-form-urlencoded",
-      },
       body,
     }
   );

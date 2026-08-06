@@ -73,9 +73,6 @@ export async function solicitarReporte({
 
   const response = await fetch(`${CONSTRULEADS_WS_BASE_URL}/${method}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
     body,
     signal,
   });
@@ -236,9 +233,6 @@ export async function solicitarFichaDatos({ userId, sessionId, obraKey, signal }
   });
   const response = await fetch(`${CONSTRULEADS_WS_BASE_URL}/ws_cl_sobrasficha`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
     body,
     signal,
   });

@@ -187,7 +187,7 @@ export default function Construleads() {
   const [filtros, setFiltros] = useState(readPersistedFilters);
   const [obras, setObras] = useState([]);
   const [mapPreviewObras, setMapPreviewObras] = useState([]);
-  const [, setLoadingObras] = useState(true);
+  const [loadingObras, setLoadingObras] = useState(true);
   const filteredObras = useMemo(
     () => filterObrasByFilters(obras, filtros),
     [obras, filtros]
@@ -778,7 +778,8 @@ export default function Construleads() {
               <Mapa
                 obras={obras.length ? filteredObras : filteredMapPreviewObras}
                 filtros={PREFILTERED_MAP_FILTERS}
-                isDataReady={obras.length > 0}
+                isDataReady={!loadingObras}
+                isVisible={activeView === 'mapa'}
                 fitInitialBounds={hasActiveMapFilters}
                 isDarkMode={isDarkMode}
                 onViewFicha={handleViewFicha}

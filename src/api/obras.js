@@ -1,5 +1,9 @@
 export const CONSTRULEADS_TOKEN = "AS79s834925MPSUoXTKSDF56945v4FDG954ASD6Gt5G5HS965498d6548f546g65AD";
-export const CONSTRULEADS_WS_BASE_URL = "https://www.construleads.com/ws_new_cl/ws_cl.asmx";
+const isLocalDevelopment = typeof window !== "undefined" &&
+  ["localhost", "127.0.0.1"].includes(window.location.hostname);
+export const CONSTRULEADS_WS_BASE_URL = isLocalDevelopment
+  ? "/bimsa-ws/ws_cl.asmx"
+  : "https://www.construleads.com/ws_new_cl/ws_cl.asmx";
 
 export async function obtenerObras() {
   const user = JSON.parse(
@@ -16,10 +20,6 @@ export async function obtenerObras() {
     `${CONSTRULEADS_WS_BASE_URL}/ws_cl_obras`,
     {
       method: "POST",
-      headers: {
-        "Content-Type":
-          "application/x-www-form-urlencoded",
-      },
       body,
     }
   );
@@ -40,39 +40,66 @@ export async function obtenerObrasProgresivas({
     sTk: CONSTRULEADS_TOKEN,
   });
 
-  const response = await fetch(
-    `${CONSTRULEADS_WS_BASE_URL}/ws_cl_obras`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body,
-      signal,
+  const requestController = new AbortController();
+  const handleExternalAbort = () => requestController.abort();
+  signal?.addEventListener("abort", handleExternalAbort, { once: true });
+  const requestTimeout = window.setTimeout(() => requestController.abort(), 60000);
+
+  let response;
+  try {
+    response = await fetch(
+      `${CONSTRULEADS_WS_BASE_URL}/ws_cl_obras`,
+      {
+        method: "POST",
+        body,
+        signal: requestController.signal,
+      }
+    );
+  } catch (error) {
+    window.clearTimeout(requestTimeout);
+    signal?.removeEventListener("abort", handleExternalAbort);
+    if (requestController.signal.aborted && !signal?.aborted) {
+      throw new Error("El servicio de obras tardó demasiado en responder.");
     }
-  );
+    throw error;
+  }
+
+  const finishRequest = () => {
+    window.clearTimeout(requestTimeout);
+    signal?.removeEventListener("abort", handleExternalAbort);
+  };
 
   if (!response.ok) {
+    finishRequest();
     throw new Error(`No fue posible obtener las obras (HTTP ${response.status}).`);
   }
 
-  const isSafari =
-    typeof navigator !== "undefined" &&
-    /safari/i.test(navigator.userAgent) &&
-    !/chrome|chromium|android/i.test(navigator.userAgent);
-  if (isSafari) {
+  // El streaming de respuestas ASMX no se comporta igual en todos los motores.
+  // Conservamos la ruta progresiva en Chrome, donde está verificada, y usamos
+  // response.text() en Edge, Firefox y Safari para garantizar que la respuesta
+  // siempre se cierre y pueda parsearse completa.
+  const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isStableStreamingChrome =
+    /Chrome\//i.test(userAgent) &&
+    !/Edg\//i.test(userAgent) &&
+    !/OPR\//i.test(userAgent);
+  if (!isStableStreamingChrome) {
+    const xml = await response.text();
+    finishRequest();
     return {
       streamed: false,
-      xml: await response.text(),
+      xml,
       fragments: [],
     };
   }
 
   const reader = response.body?.getReader?.();
   if (!reader) {
+    const xml = await response.text();
+    finishRequest();
     return {
       streamed: false,
-      xml: await response.text(),
+      xml,
       fragments: [],
     };
   }
@@ -126,6 +153,7 @@ export async function obtenerObrasProgresivas({
   buffer += decoder.decode();
   extractCompleteRows();
   publishBatch();
+  finishRequest();
 
   return { streamed: true, xml: "", fragments };
 }

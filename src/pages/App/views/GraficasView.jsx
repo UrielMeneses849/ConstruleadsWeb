@@ -5,10 +5,11 @@ import {
   Flex,
   Grid,
   HStack,
+  Input,
   Text,
   VStack,
 } from '@chakra-ui/react';
-import { FiInfo } from 'react-icons/fi';
+import { FiInfo, FiSearch } from 'react-icons/fi';
 
 import {
   aggregateObrasByMetric,
@@ -971,6 +972,7 @@ export default function GraficasView({ obras = [], filtros = {}, onSelectionCoun
   const [monthMetric, setMonthMetric] = useState('proyectos');
   const [companiaMetric, setCompaniaMetric] = useState('proyectos');
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
+  const [companySearch, setCompanySearch] = useState('');
   const [chartSelections, setChartSelections] = useState({
     genero: '', subgenero: '', region: '', estado: '', month: '', compania: '',
   });
@@ -1011,6 +1013,19 @@ export default function GraficasView({ obras = [], filtros = {}, onSelectionCoun
     return String(a.key).localeCompare(String(b.key));
   }), [chartSources.month, monthMetric, selectedDateField]);
   const companiaData = useMemo(() => aggregateObrasByMetric(chartSources.compania, 'compania', companiaMetric).filter((i) => i.key !== 'Sin dato'), [chartSources.compania, companiaMetric]);
+  const filteredCompanyData = useMemo(() => {
+    const query = companySearch
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+    if (!query) return companiaData;
+    return companiaData.filter((item) => String(item.label || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .includes(query));
+  }, [companiaData, companySearch]);
   const totalProyectos = selectedObras.length;
 
   useEffect(() => {
@@ -1048,18 +1063,41 @@ export default function GraficasView({ obras = [], filtros = {}, onSelectionCoun
       {isCompanyModalOpen && (
         <Flex position="fixed" inset="0" zIndex={100} bg="rgba(0,0,0,.68)" align="center" justify="center" p={6} onClick={() => setIsCompanyModalOpen(false)}>
           <Box w="min(760px, 100%)" maxH="82vh" bg="var(--cl-surface)" border="1px solid var(--cl-border)" borderRadius="16px" boxShadow="0 24px 70px rgba(0,0,0,.35)" overflow="hidden" onClick={(e) => e.stopPropagation()}>
-            <Flex px={5} py={4} align="center" justify="space-between" borderBottom="1px solid var(--cl-border)">
-              <Box><Text fontSize="20px" fontWeight="700" color="var(--cl-text-strong)">Todas las compañías</Text><Text fontSize="12px" color="var(--cl-text-muted)">{formatInteger(companiaData.length)} compañías en la selección actual</Text></Box>
+            <Flex px={5} py={4} gap={4} align={{ base: 'stretch', md: 'center' }} direction={{ base: 'column', md: 'row' }} justify="space-between" borderBottom="1px solid var(--cl-border)">
+              <Box flexShrink={0}><Text fontSize="20px" fontWeight="700" color="var(--cl-text-strong)">Todas las compañías</Text><Text fontSize="12px" color="var(--cl-text-muted)">{formatInteger(companiaData.length)} compañías en la selección actual</Text></Box>
+              <Flex flex="1" maxW={{ base: '100%', md: '330px' }} position="relative" align="center">
+                <Box as={FiSearch} position="absolute" left="12px" boxSize="15px" color="var(--cl-text-muted)" pointerEvents="none" />
+                <Input
+                  value={companySearch}
+                  onChange={(event) => setCompanySearch(event.target.value)}
+                  placeholder="Buscar compañía..."
+                  h="38px"
+                  pl="36px"
+                  pr="12px"
+                  borderRadius="10px"
+                  border="1px solid var(--cl-border)"
+                  bg="var(--cl-input-bg)"
+                  color="var(--cl-text-strong)"
+                  fontSize="12px"
+                  _placeholder={{ color: 'var(--cl-text-muted)' }}
+                />
+              </Flex>
               <Button minW="34px" h="34px" p={0} borderRadius="full" bg="var(--cl-input-bg)" onClick={() => setIsCompanyModalOpen(false)}>×</Button>
             </Flex>
             <VStack align="stretch" spacing={1} p={4} maxH="calc(82vh - 86px)" overflowY="auto">
-              {companiaData.map((item, index) => {
+              {filteredCompanyData.map((item, index) => {
                 const selected = normalizeText(chartSelections.compania) === normalizeText(item.key);
                 return <Flex key={item.key} as="button" type="button" w="100%" align="center" justify="space-between" gap={4} px={4} py={3} borderRadius="10px" border="1px solid" borderColor={selected ? 'rgba(255,102,0,.35)' : 'transparent'} bg={selected ? 'rgba(255,102,0,.08)' : 'transparent'} color="var(--cl-text-strong)" cursor="pointer" _hover={{ bg: 'var(--cl-hover)' }} onClick={() => { selectChartValue('compania', item.key); setIsCompanyModalOpen(false); }}>
                   <HStack minW="0" spacing={3}><Box w="8px" h="8px" borderRadius="full" bg={CHART_COLORS[index % CHART_COLORS.length]} /><Text fontSize="13px" fontWeight="600" textAlign="left" noOfLines={2}>{item.label}</Text></HStack>
                   <Text flexShrink={0} fontSize="13px" fontWeight="700">{getDisplayValue(item.value, companiaMetric)} {formatGraphMetricSuffix(companiaMetric)}</Text>
                 </Flex>;
               })}
+              {!filteredCompanyData.length && (
+                <Flex minH="150px" align="center" justify="center" direction="column" gap={1}>
+                  <Text fontSize="13px" fontWeight="600" color="var(--cl-text-strong)">No encontramos compañías</Text>
+                  <Text fontSize="12px" color="var(--cl-text-muted)">Prueba con otro nombre.</Text>
+                </Flex>
+              )}
             </VStack>
           </Box>
         </Flex>
