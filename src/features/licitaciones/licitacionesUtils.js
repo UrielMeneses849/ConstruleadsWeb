@@ -1,4 +1,26 @@
 const EMPTY = 'Sin información';
+export const LICITACION_MISSING_FALLO_VALUE = '__sin_fallo_emitido__';
+export const LICITACION_MISSING_FALLO_LABEL = 'Sin fallo emitido';
+const licitacionCurrencyFormatter = new Intl.NumberFormat('es-MX', {
+  style: 'currency', currency: 'MXN', maximumFractionDigits: 0,
+});
+const licitacionDateFormatter = new Intl.DateTimeFormat('es-MX', {
+  day: '2-digit', month: '2-digit', year: 'numeric',
+});
+
+export function formatLicitacionProvider(value) {
+  const text = String(value ?? '').replace(/\s+/g, ' ').trim();
+  const normalized = normalizeSearchText(text);
+
+  if (
+    !text ||
+    ['sin informacion', 'sin asignacion', 'null', 'n/a', 'na', 'no disponible'].includes(normalized)
+  ) {
+    return 'Sin asignación';
+  }
+
+  return text;
+}
 
 export const BIMSA_REGIONS = {
   Oeste: ['Jalisco', 'Colima', 'Michoacán', 'Nayarit', 'Aguascalientes'],
@@ -47,17 +69,11 @@ export function parseLicitacionAmount(value) {
 
 export function formatLicitacionDate(value, fallback = 'Sin fecha') {
   const date = value instanceof Date ? value : parseLicitacionDate(value);
-  return date
-    ? new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date)
-    : fallback;
+  return date ? licitacionDateFormatter.format(date) : fallback;
 }
 
 export function formatLicitacionAmount(value) {
-  return Number.isFinite(value)
-    ? new Intl.NumberFormat('es-MX', {
-        style: 'currency', currency: 'MXN', maximumFractionDigits: 0,
-      }).format(value)
-    : 'Sin fallo emitido';
+  return Number.isFinite(value) ? licitacionCurrencyFormatter.format(value) : EMPTY;
 }
 
 export function normalizeLicitacion(node) {
@@ -111,7 +127,7 @@ export function normalizeLicitacion(node) {
     fecha_de_apertura: readOptional('fecha_de_apertura'),
     fecha_de_fallo: readOptional('fecha_de_fallo'),
     monto_del_contrato_MXN: amount,
-    proveedor_adjudicado: read('proveedor_adjudicado'),
+    proveedor_adjudicado: formatLicitacionProvider(readOptional('proveedor_adjudicado')),
     RFC_del_proveedor: read('RFC_del_proveedor', 'rfc_del_proveedor'),
     estratificacion_del_proveedor: read('estratificacion_del_proveedor'),
     fecha_de_inicio_del_contrato: readOptional('fecha_de_inicio_del_contrato'),

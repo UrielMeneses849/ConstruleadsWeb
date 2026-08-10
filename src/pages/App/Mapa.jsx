@@ -133,6 +133,7 @@ function Mapa({
   const selectedProjectRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const mapReadyRef = useRef(false);
+  const markerLibraryReadyRef = useRef(false);
   const markerClusterRef = useRef(null);
   const markerElementsRef = useRef([]);
   const markerCacheRef = useRef(new Map());
@@ -883,7 +884,6 @@ useEffect(() => {
       }
 
       const { Map } = await importLibrary('maps');
-      await importLibrary('marker');
 
       if (cancelled || !mapRef.current) return;
 
@@ -1005,11 +1005,19 @@ useEffect(() => {
         return;
       }
 
+      if (!markerLibraryReadyRef.current) {
+        await importLibrary('marker');
+        if (cancelled || !mapInstanceRef.current) return;
+        markerLibraryReadyRef.current = true;
+      }
+
       const startedAt = DEBUG_MAPA ? performance.now() : 0;
       const markers = [];
       const markerKeys = [];
       let builtMarkers = 0;
-      const chunkSize = filteredObras.length > 1000 ? 600 : filteredObras.length;
+      const firstMarkerBatchSize = Math.min(48, filteredObras.length);
+      const markerBatchSize = 400;
+      let nextBatchEnd = firstMarkerBatchSize;
       let markerBatch = [];
       let renderedPreview = false;
       let pendingClusterRender = false;
@@ -1038,8 +1046,7 @@ useEffect(() => {
         }
 
         const completesBatch =
-          chunkSize < filteredObras.length &&
-          ((index + 1) % chunkSize === 0 || index === filteredObras.length - 1);
+          index + 1 >= nextBatchEnd || index === filteredObras.length - 1;
 
         if (completesBatch) {
           if (markerBatch.length && markerClusterRef.current) {
@@ -1057,6 +1064,7 @@ useEffect(() => {
           setMapLoadingMessage(
             `${(index + 1).toLocaleString()} de ${filteredObras.length.toLocaleString()} proyectos`
           );
+          nextBatchEnd += markerBatchSize;
           await new Promise((resolve) => requestAnimationFrame(resolve));
         }
       }

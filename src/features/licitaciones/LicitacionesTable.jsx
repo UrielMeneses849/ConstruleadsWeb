@@ -1,14 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Button, Flex, Text } from '@chakra-ui/react';
 import { FiChevronDown, FiChevronUp, FiEye, FiSliders, FiStar } from 'react-icons/fi';
-import { formatLicitacionAmount, formatLicitacionDate, getUniqueOptions, normalizeSearchText } from './licitacionesUtils';
+import {
+  formatLicitacionAmount,
+  formatLicitacionDate,
+  getUniqueOptions,
+  LICITACION_MISSING_FALLO_LABEL,
+  LICITACION_MISSING_FALLO_VALUE,
+  normalizeSearchText,
+  parseLicitacionAmount,
+} from './licitacionesUtils';
 
 const columns = [
   ['clave', 'Clave', 120], ['expediente', 'Expediente', 180], ['descripcion', 'Descripción', 300],
-  ['institucion_convocante', 'Institución convocante', 240], ['tipo_de_procedimiento', 'Tipo de procedimiento', 180],
-  ['estado', 'Estado', 130], ['monto', 'Monto del contrato (MXN)', 180], ['estatus', 'Estatus', 130],
-  ['proveedor_adjudicado', 'Proveedor adjudicado', 220], ['fecha_de_publicacion', 'F. Publicación', 130],
-  ['fecha_de_fallo', 'F. Fallo', 130],
+  ['institucion_convocante', 'Institución convocante', 240], ['tipo_de_procedimiento', 'Tipo de procedimiento', 190],
+  ['estado', 'Estado', 130], ['monto', 'Monto del contrato (MXN)', 250], ['estatus', 'Estatus', 130],
+  ['proveedor_adjudicado', 'Proveedor adjudicado', 240], ['fecha_de_publicacion', 'Fecha de publicación', 190],
+  ['fecha_de_fallo', 'Fecha de fallo', 160],
 ];
 
 function statusStyle(status) {
@@ -24,9 +32,24 @@ const inputStyle = {
   width: '100%', height: '29px', border: '1px solid var(--cl-border)', borderRadius: '7px',
   background: 'var(--cl-input-bg)', color: 'var(--cl-text)', padding: '0 7px', fontSize: '10px',
 };
+const amountInputFormatter = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 0 });
+
+function clampAmount(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function getAmountStep(min, max) {
+  const span = Math.max(max - min, 0);
+  if (span <= 100) return 1;
+  return Math.max(1, 10 ** Math.max(0, Math.floor(Math.log10(span)) - 2));
+}
+
+function formatAmountInput(value) {
+  return amountInputFormatter.format(value);
+}
 
 export default function LicitacionesTable({
-  allData, pageData, filteredIds, selectedIds, setSelectedIds, favorites, toggleFavorite,
+  allData, amountData, pageData, filteredIds, selectedIds, setSelectedIds, favorites, toggleFavorite,
   onOpenDetail, tableFilters, setTableFilters, sortConfig, setSortConfig,
 }) {
   const [filterMenu, setFilterMenu] = useState(null);
@@ -40,13 +63,21 @@ export default function LicitacionesTable({
     return next;
   });
   const setFilter = (key, value) => setTableFilters((current) => ({ ...current, [key]: value }));
-  const uniqueValues = useMemo(() => columns.reduce((result, [key]) => {
-    if (key === 'monto') {
-      result[key] = [...new Set(allData.map((item) => item.monto_del_contrato_MXN))]
-        .sort((a, b) => (b ?? -Infinity) - (a ?? -Infinity));
-    } else result[key] = getUniqueOptions(allData, key);
-    return result;
-  }, {}), [allData]);
+  const uniqueValues = useMemo(() => (
+    filterMenu && filterMenu !== 'monto' ? getUniqueOptions(allData, filterMenu) : []
+  ), [allData, filterMenu]);
+  const amountBounds = useMemo(() => {
+    if (filterMenu !== 'monto') return null;
+    let min = Infinity;
+    let max = -Infinity;
+    amountData.forEach((item) => {
+      const amount = item.monto_del_contrato_MXN;
+      if (!Number.isFinite(amount)) return;
+      min = Math.min(min, amount);
+      max = Math.max(max, amount);
+    });
+    return Number.isFinite(min) && Number.isFinite(max) ? { min, max } : null;
+  }, [amountData, filterMenu]);
 
   useEffect(() => {
     if (!filterMenu) return undefined;
@@ -66,13 +97,71 @@ export default function LicitacionesTable({
     field,
     direction: current.field === field && current.direction === 'asc' ? 'desc' : 'asc',
   }));
+
+  const renderAmountFilter = () => {
+    if (!amountBounds) return <Text py={3} fontSize="11px" color="var(--cl-text-muted)">No hay montos disponibles con los filtros actuales.</Text>;
+    const minBound = amountBounds.min;
+    const maxBound = amountBounds.max;
+    const rawMin = parseLicitacionAmount(tableFilters.montoMin);
+    const rawMax = parseLicitacionAmount(tableFilters.montoMax);
+    const amountMin = clampAmount(rawMin ?? minBound, minBound, maxBound);
+    const amountMax = Math.max(amountMin, clampAmount(rawMax ?? maxBound, minBound, maxBound));
+    const span = Math.max(maxBound - minBound, 1);
+    const minPercent = ((amountMin - minBound) / span) * 100;
+    const maxPercent = ((amountMax - minBound) / span) * 100;
+    const step = getAmountStep(minBound, maxBound);
+    const updateRange = (nextMin, nextMax) => setTableFilters((current) => ({
+      ...current,
+      montoMin: clampAmount(nextMin, minBound, maxBound),
+      montoMax: clampAmount(Math.max(nextMin, nextMax), minBound, maxBound),
+    }));
+    const readInput = (value, fallback) => {
+      const parsed = parseLicitacionAmount(value);
+      return parsed === null ? fallback : parsed;
+    };
+
+    return <Box>
+      <Flex gap={2} mb={3}>
+        <Box flex="1" minW={0}>
+          <Text fontSize="10px" fontWeight="700" color="var(--cl-text-muted)" mb={1}>Desde</Text>
+          <Flex align="center" h="34px" px={2} border="1px solid var(--cl-border)" borderRadius="7px" bg="var(--cl-input-bg)">
+            <Text fontSize="11px" color="var(--cl-text-muted)" mr={1}>$</Text>
+            <input aria-label="Monto mínimo" inputMode="numeric" value={formatAmountInput(amountMin)}
+              onChange={(event) => updateRange(Math.min(readInput(event.target.value, minBound), amountMax), amountMax)} style={{ ...inputStyle, border: 0, padding: 0, height: '30px', fontWeight: 700 }} />
+          </Flex>
+        </Box>
+        <Box flex="1" minW={0}>
+          <Text fontSize="10px" fontWeight="700" color="var(--cl-text-muted)" mb={1}>Hasta</Text>
+          <Flex align="center" h="34px" px={2} border="1px solid var(--cl-border)" borderRadius="7px" bg="var(--cl-input-bg)">
+            <Text fontSize="11px" color="var(--cl-text-muted)" mr={1}>$</Text>
+            <input aria-label="Monto máximo" inputMode="numeric" value={formatAmountInput(amountMax)}
+              onChange={(event) => updateRange(amountMin, Math.max(readInput(event.target.value, maxBound), amountMin))} style={{ ...inputStyle, border: 0, padding: 0, height: '30px', fontWeight: 700 }} />
+          </Flex>
+        </Box>
+      </Flex>
+      <Box position="relative" h="30px" mt={1}>
+        <Box position="absolute" left={0} right={0} top="13px" h="4px" bg="var(--cl-border)" borderRadius="999px" />
+        <Box position="absolute" top="13px" h="4px" bg="#4B5563" borderRadius="999px" left={`${minPercent}%`} width={`${Math.max(maxPercent - minPercent, 0)}%`} />
+        <input type="range" min={minBound} max={maxBound} step={step} value={amountMin}
+          onChange={(event) => updateRange(Math.min(Number(event.target.value), amountMax), amountMax)} className="licitaciones-amount-min" />
+        <input type="range" min={minBound} max={maxBound} step={step} value={amountMax}
+          onChange={(event) => updateRange(amountMin, Math.max(Number(event.target.value), amountMin))} className="licitaciones-amount-max" />
+      </Box>
+      <Text mt={2} fontSize="10px" color="var(--cl-text-muted)">Límites calculados con los filtros activos.</Text>
+    </Box>;
+  };
+
   const renderFilter = (key, label) => {
     const search = filterSearch[key] || '';
     const selected = Array.isArray(tableFilters[key]) ? tableFilters[key] : [];
-    const displayValue = (value) => key === 'monto'
-      ? formatLicitacionAmount(value)
+    if (key === 'monto') return renderAmountFilter();
+    const displayValue = (value) => value === LICITACION_MISSING_FALLO_VALUE
+      ? LICITACION_MISSING_FALLO_LABEL
       : key.startsWith('fecha_') ? formatLicitacionDate(value) : String(value);
-    const values = (uniqueValues[key] || []).filter((value) => (
+    const availableValues = key === 'fecha_de_fallo'
+      ? [LICITACION_MISSING_FALLO_VALUE, ...uniqueValues]
+      : uniqueValues;
+    const values = availableValues.filter((value) => (
       normalizeSearchText(displayValue(value)).includes(normalizeSearchText(search))
     ));
     const visibleValues = search ? values : values.slice(0, 80);
@@ -99,34 +188,48 @@ export default function LicitacionesTable({
     <style>{`
       .licitaciones-table th, .licitaciones-table td { box-sizing: border-box; }
       .licitaciones-table td { overflow: hidden; }
-      .licitaciones-table th:last-child, .licitaciones-table td:last-child { position: sticky; right: 0; z-index: 4; box-shadow: -1px 0 0 var(--cl-border); overflow: hidden; }
-      .licitaciones-table th:last-child { background: var(--cl-surface-muted); z-index: 8; }
+      .licitaciones-table tbody td:last-child { position: sticky; right: 0; z-index: 4; box-shadow: -1px 0 0 var(--cl-border); overflow: hidden; }
+      .licitaciones-table thead { position: sticky; top: 0; z-index: 40; isolation: isolate; }
+      .licitaciones-table thead th { background: var(--cl-surface-muted); }
+      .licitaciones-table thead th:last-child { position: sticky; right: 0; background: var(--cl-surface-muted); z-index: 60; box-shadow: -1px 0 0 var(--cl-border); }
+      .licitaciones-amount-min, .licitaciones-amount-max { position: absolute; left: 0; top: -2px; width: 100%; appearance: none; background: transparent; pointer-events: none; height: 30px; }
+      .licitaciones-amount-min { z-index: 3; }
+      .licitaciones-amount-max { z-index: 4; }
+      .licitaciones-amount-min::-webkit-slider-thumb, .licitaciones-amount-max::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #4B5563; border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,.16); cursor: pointer; pointer-events: auto; }
+      .licitaciones-amount-min::-webkit-slider-runnable-track, .licitaciones-amount-max::-webkit-slider-runnable-track { height: 4px; background: transparent; }
+      .licitaciones-amount-min::-moz-range-thumb, .licitaciones-amount-max::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #4B5563; border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,.16); cursor: pointer; pointer-events: auto; }
+      .licitaciones-amount-min::-moz-range-track, .licitaciones-amount-max::-moz-range-track { height: 4px; background: transparent; }
     `}</style>
-    <Box as="table" className="licitaciones-table" borderCollapse="separate" borderSpacing={0} tableLayout="fixed" minW="2280px" w="100%" fontSize="11px">
-      <Box as="thead" position="sticky" top={0} zIndex={3} bg="var(--cl-surface-muted)">
+    <Box as="table" className="licitaciones-table" borderCollapse="separate" borderSpacing={0} tableLayout="fixed" minW="2430px" w="100%" fontSize="11px">
+      <Box as="thead" position="sticky" top={0} zIndex={40} bg="var(--cl-surface-muted)">
         <Box as="tr">
           <Box as="th" w="42px" p={2} borderBottom="1px solid var(--cl-border)"><input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Seleccionar todos los resultados filtrados" /></Box>
           <Box as="th" w="44px" p={2} borderBottom="1px solid var(--cl-border)">★</Box>
           {columns.map(([key, label, width]) => <Box as="th" key={label} w={`${width}px`} minW={`${width}px`} p={2.5} textAlign="left" fontSize="10px" color="var(--cl-text-muted)" borderBottom="1px solid var(--cl-border)" position="relative">
-            <Flex align="center" justify="flex-start" gap={1}>
-              <Text fontSize="10px" fontWeight="700" whiteSpace="nowrap" overflow="hidden" textOverflow="ellipsis">{label}</Text>
+            <Flex align="flex-start" justify="flex-start" gap={1}>
+              <Text flex="1" minW={0} fontSize="10px" fontWeight="700" lineHeight="1.3">{label}</Text>
               <Button data-licitacion-filter-trigger size="xs" variant="ghost" minW="20px" w="20px" h="20px" p={0} onClick={(event) => { event.stopPropagation(); setFilterMenu((current) => current === key ? null : key); }} aria-label={`Filtrar ${label}`}><FiSliders size={11} /></Button>
               <Button size="xs" variant="ghost" minW="20px" w="20px" h="20px" p={0} onClick={() => toggleSort(key)} aria-label={`Ordenar ${label}`}>
                 <Flex direction="column"><FiChevronUp size={9} color={sortConfig.field === key && sortConfig.direction === 'asc' ? '#FF653F' : 'currentColor'} /><FiChevronDown size={9} color={sortConfig.field === key && sortConfig.direction === 'desc' ? '#FF653F' : 'currentColor'} /></Flex>
               </Button>
             </Flex>
-            {filterMenu === key && <Box ref={filterMenuRef} position="absolute" top="39px" left="6px" zIndex={30} w="280px" p={3} bg="var(--cl-surface)" border="1px solid var(--cl-border)" borderRadius="10px" boxShadow="var(--cl-shadow)" onClick={(event) => event.stopPropagation()}>
+            {filterMenu === key && <Box ref={filterMenuRef} position="absolute" top="39px" left="6px" zIndex={30} w={key === 'monto' ? '320px' : '280px'} p={3} bg="var(--cl-surface)" border="1px solid var(--cl-border)" borderRadius="10px" boxShadow="var(--cl-shadow)" onClick={(event) => event.stopPropagation()}>
               <Text mb={2} fontSize="10px" fontWeight="700" color="var(--cl-text-strong)">Filtrar {label}</Text>
               {renderFilter(key, label)}
               <Flex justify="space-between" mt={2}><Button size="xs" variant="ghost" onClick={() => {
-                setFilter(key, []);
+                if (key === 'monto') {
+                  setTableFilters((current) => Object.fromEntries(
+                    Object.entries(current).filter(([filterKey]) => !['monto', 'montoMin', 'montoMax'].includes(filterKey)),
+                  ));
+                } else setFilter(key, []);
               }}>Limpiar</Button><Button size="xs" bg="#FF653F" color="white" onClick={() => setFilterMenu(null)}>Listo</Button></Flex>
             </Box>}
           </Box>)}
-          <Box as="th" w="84px" minW="84px" p={2} textAlign="center" borderBottom="1px solid var(--cl-border)">Acciones</Box>
+          <Box as="th" w="104px" minW="104px" p={2} textAlign="center" borderBottom="1px solid var(--cl-border)">Ver detalle</Box>
         </Box>
       </Box>
       <Box as="tbody">
+        {!pageData.length && <Box as="tr"><Box as="td" colSpan={columns.length + 3} p={8} textAlign="center" color="var(--cl-text-muted)">No hay licitaciones que coincidan con los filtros de la tabla.</Box></Box>}
         {pageData.map((item) => {
           const favorite = favorites.has(item.id);
           const rowBg = favorite ? 'color-mix(in srgb, var(--cl-surface) 86%, #D9A514 14%)' : 'var(--cl-surface)';

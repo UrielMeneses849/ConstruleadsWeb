@@ -6,12 +6,18 @@ import LicitacionesSidebar from './LicitacionesSidebar';
 import LicitacionesTable from './LicitacionesTable';
 import LicitacionDrawer from './LicitacionDrawer';
 import LicitacionesSummary from './LicitacionesSummary';
-import { getLicitacionRegion, normalizeSearchText, parseLicitacionAmount, parseLicitacionDate } from './licitacionesUtils';
+import LicitacionesDownloadPanel from './LicitacionesDownloadPanel';
+import {
+  LICITACION_MISSING_FALLO_VALUE,
+  normalizeSearchText,
+  parseLicitacionAmount,
+  parseLicitacionDate,
+} from './licitacionesUtils';
 
-const PAGE_SIZE = 100;
+const PAGE_SIZE = 50;
 const initialSidebarFilters = {
-  dateField: 'fecha_de_publicacion', periodIndex: -1, regions: [], states: [], orders: [],
-  institutions: [], procedures: [], statuses: [], sources: [],
+  dateField: 'fecha_de_publicacion', periodIndex: -1, states: [], orders: [],
+  procedures: [], statuses: [], sources: [], amountMin: null, amountMax: null,
 };
 
 function useDebouncedValue(value, delay = 260) {
@@ -38,6 +44,46 @@ function matchesDateRange(value, from, to) {
   return true;
 }
 
+function getAmountRange(tableFilters = {}) {
+  const min = parseLicitacionAmount(tableFilters.montoMin);
+  const max = parseLicitacionAmount(tableFilters.montoMax);
+  return { min, max };
+}
+
+function matchesTableFilters(item, tableFilters = {}, amountRange) {
+  const textKeys = ['clave', 'expediente', 'descripcion', 'institucion_convocante', 'proveedor_adjudicado'];
+  if (textKeys.some((key) => {
+    const filter = tableFilters[key];
+    if (Array.isArray(filter)) return filter.length > 0 && !selectedIncludes(filter, item[key]);
+    return filter && !normalizeSearchText(item[key]).includes(normalizeSearchText(filter));
+  })) return false;
+
+  if (['tipo_de_procedimiento', 'estado', 'estatus'].some((key) => {
+    const filter = tableFilters[key];
+    const selected = Array.isArray(filter) ? filter : filter ? [filter] : [];
+    return selected.length > 0 && !selectedIncludes(selected, item[key]);
+  })) return false;
+
+  if (Array.isArray(tableFilters.fecha_de_publicacion) && tableFilters.fecha_de_publicacion.length &&
+    !tableFilters.fecha_de_publicacion.includes(item.fecha_de_publicacion)) return false;
+
+  const selectedFallos = Array.isArray(tableFilters.fecha_de_fallo) ? tableFilters.fecha_de_fallo : [];
+  if (selectedFallos.length) {
+    const hasFallo = Boolean(parseLicitacionDate(item.fecha_de_fallo));
+    const matchesFallo = selectedFallos.some((value) => (
+      value === LICITACION_MISSING_FALLO_VALUE ? !hasFallo : value === item.fecha_de_fallo
+    ));
+    if (!matchesFallo) return false;
+  }
+
+  if (amountRange.min !== null && (item.monto_del_contrato_MXN === null || item.monto_del_contrato_MXN < amountRange.min)) return false;
+  if (amountRange.max !== null && (item.monto_del_contrato_MXN === null || item.monto_del_contrato_MXN > amountRange.max)) return false;
+
+  if (!matchesDateRange(item.fecha_de_publicacion, tableFilters.fecha_de_publicacionDesde, tableFilters.fecha_de_publicacionHasta)) return false;
+  if (!matchesDateRange(item.fecha_de_fallo, tableFilters.fecha_de_falloDesde, tableFilters.fecha_de_falloHasta)) return false;
+  return true;
+}
+
 export default function LicitacionesView({ user }) {
   const initialCache = leerLicitacionesCache(user.idUsuario, user.idSession);
   const [data, setData] = useState(() => initialCache || []);
@@ -59,7 +105,16 @@ export default function LicitacionesView({ user }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    obtenerLicitaciones({ userId: user.idUsuario, sessionId: user.idSession, signal: controller.signal })
+    obtenerLicitaciones({
+      userId: user.idUsuario,
+      sessionId: user.idSession,
+      signal: controller.signal,
+      onBatch: (batch) => {
+        if (controller.signal.aborted || !batch.length) return;
+        setData((current) => current.length ? [...current, ...batch] : batch);
+        setLoading(false);
+      },
+    })
       .then(setData)
       .catch((requestError) => { if (requestError?.name !== 'AbortError') setError('No pudimos cargar las licitaciones.'); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
@@ -95,12 +150,10 @@ export default function LicitacionesView({ user }) {
     setRetryToken((value) => value + 1);
   }, []);
 
-  const sidebarFiltered = useMemo(() => data.filter((item) => {
+  const sidebarContext = useMemo(() => data.filter((item) => {
     if (onlyFollowed) return favorites.has(item.id);
-    if (!selectedIncludes(filters.regions, getLicitacionRegion(item))) return false;
     if (!selectedIncludes(filters.states, item.estado)) return false;
     if (!selectedIncludes(filters.orders, item.orden_de_gobierno)) return false;
-    if (!selectedIncludes(filters.institutions, item.institucion_convocante)) return false;
     if (!selectedIncludes(filters.procedures, item.tipo_de_procedimiento)) return false;
     if (!selectedIncludes(filters.statuses, item.estatus)) return false;
     if (!selectedIncludes(filters.sources, item.fuente_del_registro)) return false;
@@ -115,29 +168,44 @@ export default function LicitacionesView({ user }) {
     return true;
   }), [data, favorites, filters, onlyFollowed]);
 
-  const filtered = useMemo(() => sidebarFiltered.filter((item) => {
-    const textKeys = ['clave', 'expediente', 'descripcion', 'institucion_convocante', 'proveedor_adjudicado'];
-    if (textKeys.some((key) => {
-      const filter = debouncedTableFilters[key];
-      if (Array.isArray(filter)) return filter.length > 0 && !selectedIncludes(filter, item[key]);
-      return filter && !normalizeSearchText(item[key]).includes(normalizeSearchText(filter));
-    })) return false;
-    if (['tipo_de_procedimiento', 'estado', 'estatus'].some((key) => {
-      const filter = debouncedTableFilters[key];
-      const selected = Array.isArray(filter) ? filter : filter ? [filter] : [];
-      return selected.length > 0 && !selectedIncludes(selected, item[key]);
-    })) return false;
-    if (Array.isArray(debouncedTableFilters.monto) && debouncedTableFilters.monto.length && !debouncedTableFilters.monto.includes(item.monto_del_contrato_MXN)) return false;
-    if (Array.isArray(debouncedTableFilters.fecha_de_publicacion) && debouncedTableFilters.fecha_de_publicacion.length && !debouncedTableFilters.fecha_de_publicacion.includes(item.fecha_de_publicacion)) return false;
-    if (Array.isArray(debouncedTableFilters.fecha_de_fallo) && debouncedTableFilters.fecha_de_fallo.length && !debouncedTableFilters.fecha_de_fallo.includes(item.fecha_de_fallo)) return false;
-    const min = parseLicitacionAmount(debouncedTableFilters.montoMin);
-    const max = parseLicitacionAmount(debouncedTableFilters.montoMax);
-    if (min !== null && (item.monto_del_contrato_MXN === null || item.monto_del_contrato_MXN < min)) return false;
-    if (max !== null && (item.monto_del_contrato_MXN === null || item.monto_del_contrato_MXN > max)) return false;
-    if (!matchesDateRange(item.fecha_de_publicacion, debouncedTableFilters.fecha_de_publicacionDesde, debouncedTableFilters.fecha_de_publicacionHasta)) return false;
-    if (!matchesDateRange(item.fecha_de_fallo, debouncedTableFilters.fecha_de_falloDesde, debouncedTableFilters.fecha_de_falloHasta)) return false;
-    return true;
-  }), [debouncedTableFilters, sidebarFiltered]);
+  const sidebarAmountBounds = useMemo(() => {
+    let min = Infinity;
+    let max = -Infinity;
+    sidebarContext.forEach((item) => {
+      const amount = item.monto_del_contrato_MXN;
+      if (!Number.isFinite(amount)) return;
+      min = Math.min(min, amount);
+      max = Math.max(max, amount);
+    });
+    return Number.isFinite(min) && Number.isFinite(max) ? { min, max } : null;
+  }, [sidebarContext]);
+
+  const sidebarAmountRange = useMemo(() => {
+    if (!sidebarAmountBounds) return { min: null, max: null, active: false };
+    const { min: lowerBound, max: upperBound } = sidebarAmountBounds;
+    const active = filters.amountMin !== null || filters.amountMax !== null;
+    const min = Math.min(Math.max(Number(filters.amountMin ?? lowerBound), lowerBound), upperBound);
+    const max = Math.max(min, Math.min(Number(filters.amountMax ?? upperBound), upperBound));
+    return { min, max, active };
+  }, [filters.amountMax, filters.amountMin, sidebarAmountBounds]);
+
+  const sidebarFiltered = useMemo(() => {
+    if (!sidebarAmountRange.active) return sidebarContext;
+    return sidebarContext.filter((item) => (
+      Number.isFinite(item.monto_del_contrato_MXN) &&
+      item.monto_del_contrato_MXN >= sidebarAmountRange.min &&
+      item.monto_del_contrato_MXN <= sidebarAmountRange.max
+    ));
+  }, [sidebarAmountRange, sidebarContext]);
+
+  const amountRange = useMemo(
+    () => getAmountRange(debouncedTableFilters),
+    [debouncedTableFilters],
+  );
+  const filtered = useMemo(
+    () => sidebarFiltered.filter((item) => matchesTableFilters(item, debouncedTableFilters, amountRange)),
+    [amountRange, debouncedTableFilters, sidebarFiltered],
+  );
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -167,7 +235,8 @@ export default function LicitacionesView({ user }) {
   if (error) return <Flex h="100%" align="center" justify="center" direction="column" gap={3}><Text fontWeight="700" color="var(--cl-text-strong)">{error}</Text><Button onClick={retry}><FiRefreshCw /> Reintentar</Button></Flex>;
 
   return <Flex h="100%" minH="0" gap={3}>
-    <LicitacionesSidebar data={data} filters={filters} setFilters={updateSidebarFilters} />
+    <LicitacionesSidebar data={data} filters={filters} setFilters={updateSidebarFilters}
+      amountBounds={sidebarAmountBounds} amountRange={sidebarAmountRange} />
     <Flex flex="1" minW={0} minH={0} direction="column" pb="68px">
       <Flex justify="space-between" align="center" mb={3} gap={4} wrap="wrap">
         <Box><Heading fontSize="22px" color="var(--cl-text-strong)">Licitaciones</Heading><Text fontSize="11px" color="var(--cl-text-muted)">{filtered.length.toLocaleString('es-MX')} registros · {metrics.verified.toLocaleString('es-MX')} contratos verificados</Text></Box>
@@ -175,10 +244,10 @@ export default function LicitacionesView({ user }) {
           <Button size="sm" variant={onlyFollowed ? 'solid' : 'outline'} bg={onlyFollowed ? '#FFF4D6' : 'var(--cl-surface)'} color={onlyFollowed ? '#946200' : 'var(--cl-text)'} onClick={toggleOnlyFollowed}><FiStar /> Ver solo seguidas ({favorites.size})</Button>
         </Flex>
       </Flex>
-      {!filtered.length ? <Flex flex="1" border="1px solid var(--cl-border)" borderRadius="12px" align="center" justify="center" direction="column" color="var(--cl-text-muted)">
+      {!sidebarFiltered.length ? <Flex flex="1" border="1px solid var(--cl-border)" borderRadius="12px" align="center" justify="center" direction="column" color="var(--cl-text-muted)">
         <FiStar size={25} /><Text mt={3} fontWeight="700" color="var(--cl-text-strong)">{onlyFollowed ? 'Aún no sigues ninguna licitación.' : 'No encontramos licitaciones con los filtros seleccionados.'}</Text>
         {onlyFollowed && <Text fontSize="11px">Marca la estrella de una fila para darle seguimiento.</Text>}
-      </Flex> : <LicitacionesTable allData={data} pageData={pageData} filteredIds={filtered.map((item) => item.id)} {...{
+      </Flex> : <LicitacionesTable allData={data} amountData={sidebarContext} pageData={pageData} filteredIds={filtered.map((item) => item.id)} {...{
         selectedIds, setSelectedIds, favorites, toggleFavorite, tableFilters,
       }} setTableFilters={updateTableFilters} sortConfig={sortConfig} setSortConfig={setSortConfig} onOpenDetail={setDetail} />}
       <Flex flexShrink={0} justify="space-between" align="center" px={3} py={2.5} bg="var(--cl-surface)" borderX="1px solid var(--cl-border)" borderBottom="1px solid var(--cl-border)" borderRadius="0 0 10px 10px">
@@ -203,6 +272,8 @@ export default function LicitacionesView({ user }) {
           <LicitacionesSummary metrics={metrics} dateLabel={dateLabel} />
         </Box>
       </Box>
+      <LicitacionesDownloadPanel user={user} filteredLicitaciones={filtered}
+        selectedLicitaciones={filtered.filter((item) => selectedIds.has(item.id))} />
     </Flex>
     <LicitacionDrawer item={detail} followed={detail ? favorites.has(detail.id) : false} onToggleFollow={() => detail && toggleFavorite(detail.id)} onClose={() => setDetail(null)} />
   </Flex>;
