@@ -102,6 +102,18 @@ export function parseObrasXml(xmlText) {
     const localizacion = getValue('Localizacion1');
     const descripcion = getValue('Descripcion');
     const compania = getValue('Compania');
+    const rfcCompania = getValue('RFC_Compania', 'RFC_Proveedor', 'RFC');
+    const claveCompania = getValue('Clave_Compania', 'Clave_Empresa', 'Empresa_Clave');
+    const contactoNombre = getValue('Contacto', 'Nombre_Contacto', 'Contacto_Nombre', 'NombreContacto');
+    const contactoCargo = getValue('Cargo_Contacto', 'Puesto_Contacto', 'Contacto_Cargo', 'Puesto');
+    const contactoEmail = getValue('Email_Contacto', 'Correo_Contacto', 'Contacto_Email', 'Email', 'Correo');
+    const contactoTelefono = getValue('Telefono_Contacto', 'Tel_Contacto', 'Contacto_Telefono', 'Telefono', 'Teléfono');
+    const contactoTelefono2 = getValue('Telefono_2', 'Telefono2', 'Contacto_Telefono_2', 'Tel_Contacto_2');
+    const paginaWeb = getValue('Pagina_Web', 'Página_Web', 'Sitio_Web', 'Website', 'Web');
+    const rolCompania = getValue('Rol_Compania', 'Rol_Empresa', 'Empresa_Rol');
+    const linkedinNombre = getValue('LinkedIn_Nombre', 'Linkedin_Nombre', 'Nombre_LinkedIn', 'Nombre_Linkedin');
+    const linkedinCargo = getValue('LinkedIn_Cargo', 'Linkedin_Cargo', 'Cargo_LinkedIn', 'Cargo_Linkedin');
+    const linkedinUrl = getValue('LinkedIn_URL', 'Linkedin_URL', 'URL_LinkedIn', 'URL_Linkedin', 'LinkedIn');
 
     const fechaPublicacion = getText(values, [
       'Fecha_publicacion',
@@ -180,6 +192,18 @@ export function parseObrasXml(xmlText) {
       localizacion,
       descripcion,
       compania,
+      rfcCompania: cleanText(rfcCompania),
+      claveCompania: cleanText(claveCompania),
+      contactoNombre: cleanText(contactoNombre),
+      contactoCargo: cleanText(contactoCargo),
+      contactoEmail: cleanText(contactoEmail),
+      contactoTelefono: cleanText(contactoTelefono),
+      contactoTelefono2: cleanText(contactoTelefono2),
+      paginaWeb: cleanText(paginaWeb),
+      rolCompania: cleanText(rolCompania),
+      linkedinNombre: cleanText(linkedinNombre),
+      linkedinCargo: cleanText(linkedinCargo),
+      linkedinUrl: cleanText(linkedinUrl),
     };
   }
 

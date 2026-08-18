@@ -17,8 +17,8 @@ const formatNumber = (value) => {
 
 function DetailCard({ label, children }) {
   return (
-    <Box bg="#F7F8FA" borderRadius="12px" p={4} minW="0">
-      <Text color="#687386" fontSize="12px" mb={1}>{label}</Text>
+    <Box bg="var(--ft-surface-muted)" borderRadius="12px" p={4} minW="0">
+      <Text color="var(--ft-text-muted)" fontSize="12px" mb={1}>{label}</Text>
       <Text fontSize="14px" fontWeight="500" overflowWrap="anywhere">{children}</Text>
     </Box>
   );
@@ -27,7 +27,7 @@ function DetailCard({ label, children }) {
 function CenteredTagCard({ label, children }) {
   return (
     <Box
-      bg="#F7F8FA"
+      bg="var(--ft-surface-muted)"
       borderRadius="12px"
       p={4}
       minW="0"
@@ -37,7 +37,7 @@ function CenteredTagCard({ label, children }) {
       justifyContent="center"
       textAlign="center"
     >
-      <Text color="#687386" fontSize="12px" mb={2}>{label}</Text>
+      <Text color="var(--ft-text-muted)" fontSize="12px" mb={2}>{label}</Text>
       <Tag>{children}</Tag>
     </Box>
   );
@@ -45,11 +45,11 @@ function CenteredTagCard({ label, children }) {
 
 function DateCard({ startDate, endDate }) {
   return (
-    <Box bg="#F7F8FA" borderRadius="12px" p={4} minW="0">
+    <Box bg="var(--ft-surface-muted)" borderRadius="12px" p={4} minW="0">
       <Grid templateColumns="minmax(130px, 1fr) auto" gap="8px 16px" alignItems="center">
-        <Text color="#687386" fontSize="12px" whiteSpace="nowrap">Fecha inicio probable</Text>
+        <Text color="var(--ft-text-muted)" fontSize="12px" whiteSpace="nowrap">Fecha inicio probable</Text>
         <Text fontSize="13px" fontWeight="500" textAlign="right">{valueOrUnknown(startDate)}</Text>
-        <Text color="#687386" fontSize="12px" whiteSpace="nowrap">Fecha término probable</Text>
+        <Text color="var(--ft-text-muted)" fontSize="12px" whiteSpace="nowrap">Fecha término probable</Text>
         <Text fontSize="13px" fontWeight="500" textAlign="right">{valueOrUnknown(endDate)}</Text>
       </Grid>
     </Box>
@@ -59,7 +59,7 @@ function DateCard({ startDate, endDate }) {
 function SummaryRow({ label, children, emphasis = false }) {
   return (
     <Flex justify="space-between" align="flex-start" gap={4}>
-      <Text color="#687386" fontSize={emphasis ? '14px' : '13px'} flexShrink={0}>{label}</Text>
+      <Text color="var(--ft-text-muted)" fontSize={emphasis ? '14px' : '13px'} flexShrink={0}>{label}</Text>
       <Text
         fontSize={emphasis ? '15px' : '13px'}
         fontWeight={emphasis ? '600' : '500'}
@@ -85,38 +85,38 @@ function Company({ company }) {
   const phones = [company.telefono1, company.telefono2, company.telefono3].filter(Boolean);
   return (
     <Grid templateColumns={{ base: '1fr', lg: 'minmax(230px, .8fr) 1.4fr' }} gap={6} py={5}
-      borderTop="1px solid #ECEEF1" _first={{ borderTop: 0 }}>
+      borderTop="1px solid var(--ft-border)" _first={{ borderTop: 0 }}>
       <Box>
         <Text fontSize="16px" fontWeight="600" mb={3}>{valueOrUnknown(company.nombre)}</Text>
         <Grid templateColumns="82px 1fr" gap="5px 10px" fontSize="13px">
-          <Text color="#687386">Rol</Text><Text>{valueOrUnknown(company.rol)}</Text>
-          <Text color="#687386">Dirección</Text><Text>{valueOrUnknown(company.direccion)}</Text>
+          <Text color="var(--ft-text-muted)">Rol</Text><Text>{valueOrUnknown(company.rol)}</Text>
+          <Text color="var(--ft-text-muted)">Dirección</Text><Text>{valueOrUnknown(company.direccion)}</Text>
           {phones.map((phone, index) => (
             <Box key={`${phone}-${index}`} display="contents">
-              <Text color="#687386">{index ? `Teléfono ${index + 1}` : 'Teléfono'}</Text><Text>{phone}</Text>
+              <Text color="var(--ft-text-muted)">{index ? `Teléfono ${index + 1}` : 'Teléfono'}</Text><Text>{phone}</Text>
             </Box>
           ))}
         </Grid>
       </Box>
       <Box>
-        <Text color="#687386" fontSize="12px" mb={3}>Contactos</Text>
+        <Text color="var(--ft-text-muted)" fontSize="12px" mb={3}>Contactos</Text>
         {company.contactos?.length ? (
           <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
             {company.contactos.map((contact, index) => (
-              <Box key={`${contact.email}-${index}`} bg="#F7F8FA" borderRadius="12px" p={4}>
+              <Box key={`${contact.email}-${index}`} bg="var(--ft-surface-muted)" borderRadius="12px" p={4}>
                 <Text fontWeight="600" fontSize="13px">{valueOrUnknown(contact.puesto)}</Text>
                 <Text fontSize="13px" mt={1}>{valueOrUnknown(contact.nombre)}</Text>
-                {contact.email && <Text color="#687386" fontSize="12px" mt={1}>{contact.email}</Text>}
+                {contact.email && <Text color="var(--ft-text-muted)" fontSize="12px" mt={1}>{contact.email}</Text>}
               </Box>
             ))}
           </SimpleGrid>
-        ) : <Text color="#687386" fontSize="13px">Sin contactos registrados</Text>}
+        ) : <Text color="var(--ft-text-muted)" fontSize="13px">Sin contactos registrados</Text>}
       </Box>
     </Grid>
   );
 }
 
-export default function FichaTecnicaContent({ obra }) {
+export default function FichaTecnicaContent({ obra, isDarkMode = false }) {
   const additional = [
     ['Descripción', obra.descripcion], ['Acabados', obra.acabados],
     ['Observaciones', obra.observaciones], ['Descripción adicional', obra.descripcionextra],
@@ -125,26 +125,27 @@ export default function FichaTecnicaContent({ obra }) {
   ].filter(([, value]) => String(value || '').trim());
 
   return (
-    <Box w="100%" maxW="1380px" mx="auto" p={{ base: 4, md: 7 }} color="#313A4A"
+    <Box w="100%" maxW="1380px" mx="auto" p={{ base: 4, md: 7 }} bg="var(--ft-surface)" color="var(--ft-text)"
       fontFamily="Poppins, sans-serif">
       <Flex justify="space-between" align="flex-start" gap={6} mb={5}>
-        <Image src={`${import.meta.env.BASE_URL}bimsa-logo.png`} alt="Bimsa Reports"
-          w={{ base: '175px', md: '230px' }} h="auto" objectFit="contain" />
+        <Image src={`${import.meta.env.BASE_URL}logo-construleads.svg`} alt="Bimsa Construleads"
+          w={{ base: '175px', md: '230px' }} h="auto" objectFit="contain"
+          filter={isDarkMode ? 'brightness(0) invert(1)' : undefined} />
         <Box textAlign="right">
           <Text fontSize={{ base: '18px', md: '21px' }} fontWeight="500">Ficha Técnica del Proyecto</Text>
-          <Text fontSize="13px" color="#687386">Fecha de publicación: {valueOrUnknown(obra.proy_fechacierre)}</Text>
+          <Text fontSize="13px" color="var(--ft-text-muted)">Fecha de publicación: {valueOrUnknown(obra.proy_fechacierre)}</Text>
           <Flex justify="flex-end" gap={2} mt={3} wrap="wrap">
             <Box bg="#FF570A" color="white" px={3} py={2} borderRadius="8px" fontSize="12px" fontWeight="600">
               {cleanDisplayValue(obra.proy_tipoproyectodescripcion)}
             </Box>
-            <Box bg="#E9ECF1" px={3} py={2} borderRadius="8px" fontSize="12px" fontWeight="600">
+            <Box bg="var(--ft-chip)" px={3} py={2} borderRadius="8px" fontSize="12px" fontWeight="600">
               {valueOrUnknown(obra.proy_clave)}
             </Box>
           </Flex>
         </Box>
       </Flex>
 
-      <Box border="1px solid #E5E7EB" borderLeft="5px solid #FF570A" borderRadius="24px" p={{ base: 4, md: 6 }}>
+      <Box border="1px solid var(--ft-border)" borderLeft="5px solid #FF570A" borderRadius="24px" p={{ base: 4, md: 6 }}>
         <Flex justify="space-between" align="center" gap={3} mb={4}>
           <Text fontSize="22px" fontWeight="400">Información General</Text>
           <Tag>Etapa: {cleanDisplayValue(obra.proy_etapa)}</Tag>
@@ -166,7 +167,7 @@ export default function FichaTecnicaContent({ obra }) {
             </DetailCard></Box>
           </Box>
           <Box
-            bg="#F7F8FA"
+            bg="var(--ft-surface-muted)"
             borderRadius="16px"
             p={5}
             display="flex"
@@ -185,21 +186,21 @@ export default function FichaTecnicaContent({ obra }) {
         </Grid>
       </Box>
 
-      <Box border="1px solid #E5E7EB" borderRadius="24px" p={{ base: 4, md: 6 }} mt={2}>
+      <Box border="1px solid var(--ft-border)" borderRadius="24px" p={{ base: 4, md: 6 }} mt={2}>
         <Text fontSize="22px" mb={1}>Compañías</Text>
         {obra.cias_normalizadas?.length
           ? obra.cias_normalizadas.map((company, index) => <Company key={`${company.nombre}-${index}`} company={company} />)
-          : <Text color="#687386" fontSize="13px" mt={4}>Sin compañías registradas</Text>}
+          : <Text color="var(--ft-text-muted)" fontSize="13px" mt={4}>Sin compañías registradas</Text>}
       </Box>
 
       {additional.length > 0 && (
-        <Box border="1px solid #E5E7EB" borderRadius="24px" p={{ base: 4, md: 6 }} mt={2}>
+        <Box border="1px solid var(--ft-border)" borderRadius="24px" p={{ base: 4, md: 6 }} mt={2}>
           <Text fontSize="22px" mb={5}>Información Adicional</Text>
           <Grid templateColumns="1fr" gap={5}>
             {additional.map(([label, value]) => (
               <Box key={label}>
                 <Text fontWeight="600" fontSize="14px" mb={1}>{label}</Text>
-                <Text color="#525E70" fontSize="13px" whiteSpace="pre-wrap">{value}</Text>
+                <Text color="var(--ft-text-muted)" fontSize="13px" whiteSpace="pre-wrap">{value}</Text>
               </Box>
             ))}
           </Grid>

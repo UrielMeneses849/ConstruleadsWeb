@@ -16,6 +16,8 @@ export default function PanelResumen({
   variant = 'sidebar',
   showCurrentSelection = false,
   currentSelectionCount = 0,
+  leadingMetric = null,
+  metricLabels = {},
 }) {
 const selectedDateField = useMemo(
   () => getSelectedDateField(filtros),
@@ -49,6 +51,11 @@ obras.forEach((o) => {
 const estadosConProyectos = Object.keys(estadosMap).length;
 
 const metricasDinamicas = [
+  ...(leadingMetric ? [{
+    valor: leadingMetric.value,
+    suffix: leadingMetric.suffix,
+    label: leadingMetric.label,
+  }] : []),
   ...(showCurrentSelection ? [{
     valor: numberFormatter.format(currentSelectionCount),
     label: 'Selección actual',
@@ -56,21 +63,21 @@ const metricasDinamicas = [
   }] : []),
   {
     valor: numberFormatter.format(totalProyectos),
-    label: 'Proyectos'
+    label: metricLabels.projects || 'Proyectos'
   },
   {
     valor: `$${compactFormatter.format(inversionTotal / 1000000)}`,
     suffix: 'MDP',
-    label: 'Inversión total'
+    label: metricLabels.investment || 'Inversión total'
   },
   {
     valor: numberFormatter.format(estadosConProyectos),
-    label: 'Estados',
+    label: metricLabels.states || 'Estados',
   },
   {
     valor: numberFormatter.format(superficieTotal),
     suffix: 'm²',
-    label: 'Superficie',
+    label: metricLabels.surface || 'Superficie',
   },
 ];
 
@@ -78,26 +85,25 @@ if (variant === 'map') {
   return (
     <Grid
       alignItems="stretch"
-      gap={1.5}
-      w="max-content"
-      maxW="100%"
-      templateColumns={showCurrentSelection
-        ? '110px 132px 190px 132px 160px 190px'
-        : 'var(--cl-summary-columns)'}
-      overflowX="hidden"
+      gap={2}
+      w="100%"
+      minW="0"
+      templateColumns={`repeat(${metricasDinamicas.length + 1}, minmax(148px, 1fr))`}
+      overflowX="auto"
+      pb={1}
     >
       {metricasDinamicas.map((item) => (
         <Box
           key={item.label}
-          minW="0"
+          minW="148px"
           border={item.highlighted ? '1px solid rgba(255,101,63,.62)' : '1px solid var(--cl-border)'}
           borderRadius="10px"
           boxShadow="var(--cl-shadow)"
           color="var(--cl-text)"
           bg={item.highlighted ? 'rgba(255,101,63,.10)' : 'var(--cl-surface)'}
-          minH="60px"
+          minH="64px"
           px={3}
-          py={1.5}
+          py={2}
           position="relative"
           overflow="hidden"
           display="flex"
@@ -116,7 +122,7 @@ if (variant === 'map') {
           <Flex align="center" gap={2} mb={1}>
             <Text
               fontSize="10px"
-              fontWeight="700"
+              fontWeight="400"
               color="var(--cl-text-muted)"
               lineHeight="1"
               whiteSpace="nowrap"
@@ -127,18 +133,21 @@ if (variant === 'map') {
 
           <HStack spacing={1.5} align="baseline" whiteSpace="nowrap">
             <Text
-              fontSize="14px"
-              fontWeight="600"
+              fontSize="18px"
+              fontWeight="400"
               lineHeight="1.1"
               color="var(--cl-text-strong)"
+              fontVariantNumeric="tabular-nums"
               whiteSpace="nowrap"
+              overflow="hidden"
+              textOverflow="ellipsis"
             >
               {item.valor}
             </Text>
             {item.suffix && (
               <Text
                 fontSize="10px"
-                fontWeight="500"
+                fontWeight="400"
                 color="var(--cl-text-muted)"
                 whiteSpace="nowrap"
               >
@@ -149,14 +158,14 @@ if (variant === 'map') {
         </Box>
       ))}
       <Box
-        minW="0"
+        minW="148px"
         bg="var(--cl-surface)"
         border="1px solid var(--cl-border)"
         borderRadius="10px"
         boxShadow="var(--cl-shadow)"
-        minH="60px"
+        minH="64px"
         px={3}
-        py={1.5}
+        py={2}
         display="flex"
         flexDirection="column"
         justifyContent="center"
@@ -164,7 +173,7 @@ if (variant === 'map') {
         <Text
           fontSize="10px"
           color="var(--cl-text-muted)"
-          fontWeight="700"
+          fontWeight="400"
           lineHeight="1"
           whiteSpace="nowrap"
         >
@@ -172,11 +181,14 @@ if (variant === 'map') {
         </Text>
         <Text
           mt={1}
-          fontSize="14px"
+          fontSize="18px"
           lineHeight="1.1"
           color="var(--cl-text-strong)"
-          fontWeight="600"
+          fontWeight="400"
+          fontVariantNumeric="tabular-nums"
           whiteSpace="nowrap"
+          overflow="hidden"
+          textOverflow="ellipsis"
         >
           {selectedDateLabel}
         </Text>
@@ -218,17 +230,18 @@ if (variant === 'floating') {
               py={2}
             >
               <HStack spacing={1} align="baseline" mb={1}>
-                <Text fontSize="22px" fontWeight="400">
+                <Text fontSize="18px" fontWeight="400" lineHeight="1.1" color="var(--cl-text-strong)" fontVariantNumeric="tabular-nums">
                   {item.valor}
                 </Text>
                 {item.suffix && (
-                  <Text fontWeight="400">{item.suffix}</Text>
+                  <Text fontSize="10px" fontWeight="400" color="var(--cl-text-muted)">{item.suffix}</Text>
                 )}
               </HStack>
 
               <Text
                 w="100%"
-                fontSize="11px"
+                fontSize="10px"
+                fontWeight="400"
                 color="var(--cl-text-muted)"
                 whiteSpace="nowrap"
                 overflow="visible"
@@ -281,16 +294,17 @@ if (variant === 'floating') {
               
               <Box>
                 <HStack spacing={1} align="baseline">
-                  <Text fontSize="18px" fontWeight="400">
+                  <Text fontSize="18px" fontWeight="400" lineHeight="1.1" color="var(--cl-text-strong)" fontVariantNumeric="tabular-nums">
                     {item.valor}
                   </Text>
                   {item.suffix && (
-                    <Text fontWeight="100">{item.suffix}</Text>
+                    <Text fontSize="10px" fontWeight="400" color="var(--cl-text-muted)">{item.suffix}</Text>
                   )}
                 </HStack>
                 <Text
                   mt={1}
-                  fontSize="12px"
+                  fontSize="10px"
+                  fontWeight="400"
                   color="var(--cl-text-muted)"
                   maxW="90px"
                   lineHeight="1.2"

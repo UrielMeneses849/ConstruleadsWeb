@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Button, Flex, Text } from '@chakra-ui/react';
-import { FiChevronDown, FiChevronUp, FiEye, FiSliders, FiStar } from 'react-icons/fi';
+import { FiAlertCircle, FiChevronDown, FiChevronUp, FiEye, FiSliders, FiStar } from 'react-icons/fi';
 import {
   formatLicitacionAmount,
   formatLicitacionDate,
   getUniqueOptions,
   LICITACION_MISSING_FALLO_LABEL,
   LICITACION_MISSING_FALLO_VALUE,
+  LICITACION_UNASSIGNED_LABEL,
   normalizeSearchText,
   parseLicitacionAmount,
 } from './licitacionesUtils';
 
 const columns = [
-  ['clave', 'Clave', 120], ['expediente', 'Expediente', 180], ['descripcion', 'Descripción', 300],
+  ['clave', 'Clave', 300], ['expediente', 'Expediente', 180], ['descripcion', 'Descripción', 300],
   ['institucion_convocante', 'Institución convocante', 240], ['tipo_de_procedimiento', 'Tipo de procedimiento', 190],
   ['estado', 'Estado', 130], ['monto', 'Monto del contrato (MXN)', 250], ['estatus', 'Estatus', 130],
   ['proveedor_adjudicado', 'Proveedor adjudicado', 240], ['fecha_de_publicacion', 'Fecha de publicación', 190],
@@ -99,7 +100,17 @@ export default function LicitacionesTable({
   }));
 
   const renderAmountFilter = () => {
-    if (!amountBounds) return <Text py={3} fontSize="11px" color="var(--cl-text-muted)">No hay montos disponibles con los filtros actuales.</Text>;
+    const missingOption = <Flex as="label" gap={2} align="center" mt={3} px={2.5} py={2} cursor="pointer"
+      border="1px solid" borderColor={tableFilters.montoMissing ? '#FFB39F' : 'var(--cl-border)'} borderRadius="8px"
+      bg={tableFilters.montoMissing ? 'var(--cl-orange-soft)' : 'var(--cl-surface-muted)'}>
+      <input type="checkbox" checked={Boolean(tableFilters.montoMissing)} onChange={() => setTableFilters((current) => {
+        const nextMissing = !current.montoMissing;
+        if (!nextMissing) return { ...current, montoMissing: false };
+        return { ...current, montoMin: undefined, montoMax: undefined, montoMissing: true };
+      })} />
+      <Box><Text fontSize="11px" fontWeight="700">Sin información</Text><Text fontSize="10px" color="var(--cl-text-muted)">Solo registros sin fallo emitido o monto reportado.</Text></Box>
+    </Flex>;
+    if (!amountBounds) return <Box>{missingOption}<Text pt={3} fontSize="11px" color="var(--cl-text-muted)">No hay montos disponibles con los filtros actuales.</Text></Box>;
     const minBound = amountBounds.min;
     const maxBound = amountBounds.max;
     const rawMin = parseLicitacionAmount(tableFilters.montoMin);
@@ -114,6 +125,7 @@ export default function LicitacionesTable({
       ...current,
       montoMin: clampAmount(nextMin, minBound, maxBound),
       montoMax: clampAmount(Math.max(nextMin, nextMax), minBound, maxBound),
+      montoMissing: false,
     }));
     const readInput = (value, fallback) => {
       const parsed = parseLicitacionAmount(value);
@@ -148,6 +160,7 @@ export default function LicitacionesTable({
           onChange={(event) => updateRange(amountMin, Math.max(Number(event.target.value), amountMin))} className="licitaciones-amount-max" />
       </Box>
       <Text mt={2} fontSize="10px" color="var(--cl-text-muted)">Límites calculados con los filtros activos.</Text>
+      {missingOption}
     </Box>;
   };
 
@@ -158,28 +171,48 @@ export default function LicitacionesTable({
     const displayValue = (value) => value === LICITACION_MISSING_FALLO_VALUE
       ? LICITACION_MISSING_FALLO_LABEL
       : key.startsWith('fecha_') ? formatLicitacionDate(value) : String(value);
+    const specialValue = ['estado', 'proveedor_adjudicado'].includes(key) && uniqueValues.includes(LICITACION_UNASSIGNED_LABEL)
+      ? LICITACION_UNASSIGNED_LABEL
+      : null;
     const availableValues = key === 'fecha_de_fallo'
       ? [LICITACION_MISSING_FALLO_VALUE, ...uniqueValues]
-      : uniqueValues;
+      : specialValue
+        ? [specialValue, ...uniqueValues.filter((value) => value !== specialValue)]
+        : uniqueValues;
     const values = availableValues.filter((value) => (
       normalizeSearchText(displayValue(value)).includes(normalizeSearchText(search))
     ));
     const visibleValues = search ? values : values.slice(0, 80);
     const toggleValue = (value) => setTableFilters((current) => {
       const currentValues = Array.isArray(current[key]) ? current[key] : [];
-      return { ...current, [key]: currentValues.includes(value)
-        ? currentValues.filter((item) => item !== value)
-        : [...currentValues, value] };
+      const isExclusiveSpecial = value === LICITACION_UNASSIGNED_LABEL && ['estado', 'proveedor_adjudicado'].includes(key);
+      if (isExclusiveSpecial) {
+        return { ...current, [key]: currentValues.includes(value) ? [] : [value] };
+      }
+      const supportsExclusiveSpecial = ['estado', 'proveedor_adjudicado'].includes(key);
+      const withoutSpecial = supportsExclusiveSpecial
+        ? currentValues.filter((item) => item !== LICITACION_UNASSIGNED_LABEL)
+        : currentValues;
+      return { ...current, [key]: withoutSpecial.includes(value)
+        ? withoutSpecial.filter((item) => item !== value)
+        : [...withoutSpecial, value] };
     });
     return <Box>
       <input autoFocus placeholder={`Buscar ${label.toLowerCase()}...`} value={search}
         onChange={(event) => setFilterSearch((current) => ({ ...current, [key]: event.target.value }))} style={{ ...inputStyle, height: '34px', fontSize: '12px' }} />
       {!search && values.length > visibleValues.length && <Text fontSize="10px" color="var(--cl-text-muted)" mt={2}>Escribe para buscar entre {values.length} opciones.</Text>}
       <Box maxH="230px" overflowY="auto" mt={2}>
-        {visibleValues.map((value) => <Flex as="label" key={`${key}-${String(value)}`} gap={2} align="flex-start" py={1.5} cursor="pointer">
+        {visibleValues.map((value) => {
+          const isUnassigned = value === LICITACION_UNASSIGNED_LABEL && ['estado', 'proveedor_adjudicado'].includes(key);
+          return <Flex as="label" key={`${key}-${String(value)}`} gap={2} align="flex-start" py={isUnassigned ? 2 : 1.5} px={isUnassigned ? 2 : 0} cursor="pointer"
+            border={isUnassigned ? '1px solid' : '1px solid transparent'} borderColor={isUnassigned && selected.includes(value) ? '#FFB39F' : 'transparent'}
+            bg={isUnassigned && selected.includes(value) ? 'var(--cl-orange-soft)' : 'transparent'} borderRadius="8px">
           <input type="checkbox" checked={selected.includes(value)} onChange={() => toggleValue(value)} />
-          <Text fontSize="11px" lineHeight="1.35" color="var(--cl-text)" lineClamp={2}>{displayValue(value)}</Text>
-        </Flex>)}
+          {isUnassigned && <FiAlertCircle size={14} color="#D94E2D" style={{ marginTop: '1px', flexShrink: 0 }} />}
+          <Box><Text fontSize="11px" fontWeight={isUnassigned ? '700' : '400'} lineHeight="1.35" color="var(--cl-text)" lineClamp={2}>{displayValue(value)}</Text>
+            {isUnassigned && <Text fontSize="9px" color="var(--cl-text-muted)">{key === 'estado' ? 'Estado no reportado' : 'Proveedor no reportado'}</Text>}</Box>
+        </Flex>;
+        })}
         {!visibleValues.length && <Text py={3} fontSize="11px" color="var(--cl-text-muted)">Sin opciones coincidentes.</Text>}
       </Box>
     </Box>;
@@ -200,7 +233,7 @@ export default function LicitacionesTable({
       .licitaciones-amount-min::-moz-range-thumb, .licitaciones-amount-max::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #4B5563; border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,.16); cursor: pointer; pointer-events: auto; }
       .licitaciones-amount-min::-moz-range-track, .licitaciones-amount-max::-moz-range-track { height: 4px; background: transparent; }
     `}</style>
-    <Box as="table" className="licitaciones-table" borderCollapse="separate" borderSpacing={0} tableLayout="fixed" minW="2430px" w="100%" fontSize="11px">
+    <Box as="table" className="licitaciones-table" borderCollapse="separate" borderSpacing={0} tableLayout="fixed" minW="2610px" w="100%" fontSize="11px">
       <Box as="thead" position="sticky" top={0} zIndex={40} bg="var(--cl-surface-muted)">
         <Box as="tr">
           <Box as="th" w="42px" p={2} borderBottom="1px solid var(--cl-border)"><input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Seleccionar todos los resultados filtrados" /></Box>
@@ -219,7 +252,7 @@ export default function LicitacionesTable({
               <Flex justify="space-between" mt={2}><Button size="xs" variant="ghost" onClick={() => {
                 if (key === 'monto') {
                   setTableFilters((current) => Object.fromEntries(
-                    Object.entries(current).filter(([filterKey]) => !['monto', 'montoMin', 'montoMax'].includes(filterKey)),
+                    Object.entries(current).filter(([filterKey]) => !['monto', 'montoMin', 'montoMax', 'montoMissing'].includes(filterKey)),
                   ));
                 } else setFilter(key, []);
               }}>Limpiar</Button><Button size="xs" bg="#FF653F" color="white" onClick={() => setFilterMenu(null)}>Listo</Button></Flex>
@@ -240,7 +273,7 @@ export default function LicitacionesTable({
             })} /></Box>
             <Box as="td" p={2} textAlign="center" borderBottom="1px solid var(--cl-border)" borderLeft={favorite ? '2px solid #D9A514' : '2px solid transparent'}>
               <Button size="xs" variant="ghost" color={favorite ? '#C58A00' : 'var(--cl-text-muted)'} onClick={() => toggleFavorite(item.id)} aria-label={favorite ? 'Dejar de seguir' : 'Seguir'}><FiStar fill={favorite ? 'currentColor' : 'none'} /></Button></Box>
-            <Box as="td" p={2.5} fontWeight="700" borderBottom="1px solid var(--cl-border)">{item.clave}</Box>
+            <Box as="td" p={2.5} fontWeight="700" borderBottom="1px solid var(--cl-border)" title={item.clave}><Text whiteSpace="nowrap">{item.clave}</Text></Box>
             <Box as="td" p={2.5} borderBottom="1px solid var(--cl-border)" title={item.expediente}><Text lineClamp={2}>{item.expediente}</Text></Box>
             <Box as="td" p={2.5} borderBottom="1px solid var(--cl-border)" title={item.descripcion}><Text lineClamp={2}>{item.descripcion}</Text></Box>
             <Box as="td" p={2.5} borderBottom="1px solid var(--cl-border)" title={item.institucion_convocante}><Text lineClamp={2}>{item.institucion_convocante}</Text></Box>

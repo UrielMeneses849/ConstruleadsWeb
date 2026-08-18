@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Box, Button, Flex, Stack, Text } from '@chakra-ui/react';
 import { FiChevronDown } from 'react-icons/fi';
-import { getUniqueOptions } from './licitacionesUtils';
+import { getUniqueOptions, LICITACION_UNASSIGNED_LABEL } from './licitacionesUtils';
 
 const DATE_FIELDS = ['fecha_de_publicacion', 'fecha_de_apertura', 'fecha_de_fallo'];
 const DATE_OPTIONS = ['Fecha de publicación', 'Fecha de apertura', 'Fecha de fallo'];
@@ -14,9 +14,22 @@ function getAmountStep(min, max) {
   return Math.max(1, 10 ** Math.max(0, Math.floor(Math.log10(span)) - 2));
 }
 
-function ContractAmountContent({ amountBounds, amountRange, onChange }) {
+function MissingAmountOption({ checked, onChange }) {
+  return <Flex as="label" align="center" gap={2} mt={3} px={2.5} py={2} cursor="pointer"
+    border="1px solid" borderColor={checked ? '#FFB39F' : 'var(--cl-border)'} borderRadius="8px"
+    bg={checked ? 'var(--cl-orange-soft)' : 'var(--cl-surface-muted)'}>
+    <input type="checkbox" checked={checked} onChange={onChange} />
+    <Box>
+      <Text fontSize="11px" fontWeight="700" color="var(--cl-text-strong)">Sin información</Text>
+      <Text fontSize="10px" color="var(--cl-text-muted)">Solo registros sin fallo emitido o monto reportado.</Text>
+    </Box>
+  </Flex>;
+}
+
+function ContractAmountContent({ amountBounds, amountRange, onChange, onToggleMissing }) {
+  const missingOption = <MissingAmountOption checked={Boolean(amountRange?.includeMissing)} onChange={onToggleMissing} />;
   if (!amountBounds || amountRange.min === null || amountRange.max === null) {
-    return <Text p={3} fontSize="11px" color="var(--cl-text-muted)">No hay montos de contrato disponibles.</Text>;
+    return <Box p={3}>{missingOption}<Text mt={3} fontSize="11px" color="var(--cl-text-muted)">No hay montos de contrato disponibles.</Text></Box>;
   }
   const minBound = amountBounds.min;
   const maxBound = amountBounds.max;
@@ -32,7 +45,7 @@ function ContractAmountContent({ amountBounds, amountRange, onChange }) {
   });
 
   return <Box p={3}>
-    <Flex gap={2} mb={3}>
+    <Flex gap={2} mb={3} opacity={amountRange.includeMissing ? 0.45 : 1} transition="opacity 160ms ease">
       <Box flex="1" minW={0}>
         <Text fontSize="10px" fontWeight="700" color="var(--cl-text-muted)" mb={1}>Desde</Text>
         <Flex align="center" h="34px" px={2} border="1px solid var(--cl-border)" borderRadius="7px" bg="var(--cl-input-bg)">
@@ -48,7 +61,7 @@ function ContractAmountContent({ amountBounds, amountRange, onChange }) {
         </Flex>
       </Box>
     </Flex>
-    <Box position="relative" h="30px" mt={1}>
+    <Box position="relative" h="30px" mt={1} opacity={amountRange.includeMissing ? 0.45 : 1} transition="opacity 160ms ease">
       <Box position="absolute" left={0} right={0} top="13px" h="4px" bg="var(--cl-border)" borderRadius="999px" />
       <Box position="absolute" top="13px" h="4px" bg="#4B5563" borderRadius="999px" left={`${minPercent}%`} width={`${Math.max(maxPercent - minPercent, 0)}%`} />
       <input className="licitaciones-sidebar-amount-min" type="range" min={minBound} max={maxBound} step={step} value={min}
@@ -57,6 +70,7 @@ function ContractAmountContent({ amountBounds, amountRange, onChange }) {
         onChange={(event) => update(min, Math.max(Number(event.target.value), min))} aria-label="Monto máximo del contrato" />
     </Box>
     <Text mt={2} fontSize="10px" color="var(--cl-text-muted)">Rango calculado con los filtros anteriores.</Text>
+    {missingOption}
     <style>{`
       .licitaciones-sidebar-amount-min, .licitaciones-sidebar-amount-max { position: absolute; left: 0; top: -2px; width: 100%; height: 30px; appearance: none; background: transparent; pointer-events: none; }
       .licitaciones-sidebar-amount-min { z-index: 3; }
@@ -116,38 +130,60 @@ function SelectContent({ value, options, onChange }) {
   );
 }
 
+function isExclusiveSpecialOption(field, value) {
+  return field === 'states' && value === LICITACION_UNASSIGNED_LABEL;
+}
+
 function MultiContent({ field, options, filters, setFilters }) {
   const selected = filters[field] || [];
-  const toggle = (value) => setFilters((current) => ({
-    ...current,
-    [field]: selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value],
-  }));
+  const toggle = (value) => setFilters((current) => {
+    const currentValues = current[field] || [];
+    if (isExclusiveSpecialOption(field, value)) {
+      return { ...current, [field]: currentValues.includes(value) ? [] : [value] };
+    }
+
+    const withoutSpecial = currentValues.filter((item) => !isExclusiveSpecialOption(field, item));
+    return {
+      ...current,
+      [field]: withoutSpecial.includes(value)
+        ? withoutSpecial.filter((item) => item !== value)
+        : [...withoutSpecial, value],
+    };
+  });
   return (
     <Stack maxH="clamp(220px, 52vh, 560px)" overflowY="auto" p={2} gap={0.5}>
-      {options.map((option) => (
-        <Flex as="label" key={option} gap={2} align="center" px={2} py={1.5} borderRadius="8px" cursor="pointer"
-          _hover={{ bg: 'var(--cl-hover)' }}>
+      {options.map((option) => {
+        const isUnassignedState = isExclusiveSpecialOption(field, option);
+        return <Flex as="label" key={option} gap={2} align="center" px={2} py={isUnassignedState ? 2 : 1.5} borderRadius="8px" cursor="pointer"
+          border={isUnassignedState ? '1px solid' : '1px solid transparent'}
+          borderColor={isUnassignedState && selected.includes(option) ? '#FFB39F' : 'transparent'}
+          bg={isUnassignedState && selected.includes(option) ? 'var(--cl-orange-soft)' : 'transparent'}
+          _hover={{ bg: isUnassignedState ? 'var(--cl-orange-soft)' : 'var(--cl-hover)' }}>
           <input type="checkbox" checked={selected.includes(option)} onChange={() => toggle(option)} />
-          <Text fontSize="11px" color="var(--cl-text)" lineClamp={2}>{option}</Text>
-        </Flex>
-      ))}
+          <Box>
+            <Text fontSize="11px" fontWeight={isUnassignedState ? '700' : '400'} color="var(--cl-text)" lineClamp={2}>{option}</Text>
+            {isUnassignedState && <Text fontSize="9px" color="var(--cl-text-muted)">Estado no reportado</Text>}
+          </Box>
+        </Flex>;
+      })}
     </Stack>
   );
 }
 
-export default function LicitacionesSidebar({ data, filters, setFilters, amountBounds, amountRange }) {
+export default function LicitacionesSidebar({ data, filters, setFilters, onClear, availableStates, amountBounds, amountRange }) {
   const [openSection, setOpenSection] = useState(null);
   const dynamic = useMemo(() => ({
-    states: getUniqueOptions(data, 'estado').filter((value) => value !== 'Sin información'),
+    states: (() => {
+      const values = getUniqueOptions(availableStates, 'estado');
+      return values.includes(LICITACION_UNASSIGNED_LABEL)
+        ? [LICITACION_UNASSIGNED_LABEL, ...values.filter((value) => value !== LICITACION_UNASSIGNED_LABEL)]
+        : values;
+    })(),
     orders: getUniqueOptions(data, 'orden_de_gobierno').filter((value) => value !== 'Sin información'),
     procedures: getUniqueOptions(data, 'tipo_de_procedimiento').filter((value) => value !== 'Sin información'),
     statuses: getUniqueOptions(data, 'estatus').filter((value) => value !== 'Sin información'),
     sources: getUniqueOptions(data, 'fuente_del_registro').filter((value) => value !== 'Sin información'),
-  }), [data]);
-  const clear = () => setFilters({
-    dateField: 'fecha_de_publicacion', periodIndex: -1, states: [], orders: [],
-    procedures: [], statuses: [], sources: [], amountMin: null, amountMax: null,
-  });
+  }), [availableStates, data]);
   const multiSections = [
     ['states', 'Estado', dynamic.states], ['orders', 'Orden de gobierno', dynamic.orders],
     ['procedures', 'Tipo de procedimiento', dynamic.procedures], ['statuses', 'Estatus', dynamic.statuses],
@@ -160,7 +196,7 @@ export default function LicitacionesSidebar({ data, filters, setFilters, amountB
       <Flex justify="space-between" align="center" mb={3}>
         <Box><Text fontWeight="700" fontSize="14px" color="var(--cl-text-strong)">Licitaciones</Text>
           <Text fontSize="10px" color="var(--cl-text-muted)">Filtros de búsqueda</Text></Box>
-        <Button size="xs" variant="ghost" color="#FF653F" onClick={clear}>Limpiar</Button>
+        <Button size="xs" variant="ghost" color="#FF653F" onClick={onClear}>Limpiar</Button>
       </Flex>
       <Stack gap={2}>
         <AccordionSection id="date" label="Tipo de fecha" {...{ openSection, setOpenSection }}>
@@ -171,11 +207,19 @@ export default function LicitacionesSidebar({ data, filters, setFilters, amountB
           <SelectContent value={filters.periodIndex + 1} options={PERIOD_OPTIONS}
             onChange={(value) => { setFilters((current) => ({ ...current, periodIndex: Number(value) - 1 })); setOpenSection(null); }} />
         </AccordionSection>
-        <AccordionSection id="amount" label="Monto del contrato" count={amountRange?.active ? 1 : 0}
+        <AccordionSection id="amount" label="Monto del contrato" count={Number(Boolean(amountRange?.active)) + Number(Boolean(amountRange?.includeMissing))}
           {...{ openSection, setOpenSection }}>
           <ContractAmountContent {...{ amountBounds, amountRange }} onChange={({ min, max }) => {
-            setFilters((current) => ({ ...current, amountMin: min, amountMax: max }));
-          }} />
+            setFilters((current) => ({ ...current, amountMin: min, amountMax: max, amountMissing: false }));
+          }} onToggleMissing={() => setFilters((current) => {
+            const nextMissing = !current.amountMissing;
+            return {
+              ...current,
+              amountMissing: nextMissing,
+              amountMin: nextMissing ? null : current.amountMin,
+              amountMax: nextMissing ? null : current.amountMax,
+            };
+          })} />
         </AccordionSection>
         {multiSections.map(([field, label, options]) => options.length ? (
           <AccordionSection key={field} id={field} label={label} count={(filters[field] || []).length}

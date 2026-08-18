@@ -1,6 +1,7 @@
 const EMPTY = 'Sin información';
 export const LICITACION_MISSING_FALLO_VALUE = '__sin_fallo_emitido__';
 export const LICITACION_MISSING_FALLO_LABEL = 'Sin fallo emitido';
+export const LICITACION_UNASSIGNED_LABEL = 'Sin asignación';
 const licitacionCurrencyFormatter = new Intl.NumberFormat('es-MX', {
   style: 'currency', currency: 'MXN', maximumFractionDigits: 0,
 });
@@ -16,7 +17,21 @@ export function formatLicitacionProvider(value) {
     !text ||
     ['sin informacion', 'sin asignacion', 'null', 'n/a', 'na', 'no disponible'].includes(normalized)
   ) {
-    return 'Sin asignación';
+    return LICITACION_UNASSIGNED_LABEL;
+  }
+
+  return text;
+}
+
+export function formatLicitacionState(value) {
+  const text = String(value ?? '').replace(/\s+/g, ' ').trim();
+  const normalized = normalizeSearchText(text);
+
+  if (
+    !text ||
+    ['sin informacion', 'sin asignacion', 'null', 'n/a', 'na', 'no disponible'].includes(normalized)
+  ) {
+    return LICITACION_UNASSIGNED_LABEL;
   }
 
   return text;
@@ -119,7 +134,7 @@ export function normalizeLicitacion(node) {
     articulo_de_excepcion: read('articulo_de_excepcion'),
     descripcion_de_la_excepcion: read('descripcion_de_la_excepcion'),
     partida_especifica: read('partida_específica', 'partida_especifica'),
-    estado: read('estado', 'entidad_federativa', 'entidad'),
+    estado: formatLicitacionState(readOptional('estado', 'entidad_federativa', 'entidad')),
     region: read('region', 'región'),
     estatus: read('estatus'),
     estatus_original_fuente: read('estatus_original_fuente'),

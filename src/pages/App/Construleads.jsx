@@ -1,11 +1,9 @@
-import { lazy, Suspense, useState, useEffect, useCallback, useMemo } from 'react';
+import { Component, lazy, Suspense, useState, useEffect, useCallback, useMemo } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 import {
   Box,
   Flex,
-  HStack,
-  Image,
   Spinner,
   Text,
   useMediaQuery,
@@ -13,12 +11,9 @@ import {
 
 import {
   FiBarChart2,
+  FiBriefcase,
   FiList,
   FiMapPin,
-  FiMoon,
-  FiSun,
-  FiSettings,
-  FiLogOut,
 } from 'react-icons/fi';
 
 import SidebarFiltros from './SidebarFiltros';
@@ -26,8 +21,11 @@ import PanelResumen from './PanelResumen';
 import Mapa from './Mapa';
 import DownloadPanel from './DownloadPanel';
 import FichaTecnicaModal from './FichaTecnicaModal';
+import ConstruleadsNavbar from './ConstruleadsNavbar';
+import Perfil from './Perfil';
 import WelcomeExperience from './WelcomeExperience';
 import { obtenerObrasProgresivas } from '../../api/obras';
+import { obtenerCompanias } from '../../api/companias';
 import {
   iniciarDescargaReporte,
   solicitarFichaDatos,
@@ -41,9 +39,11 @@ import { readCachedObras, writeCachedObras } from '../../utils/obrasCache';
 const PREFILTERED_MAP_FILTERS = Object.freeze({ __preFiltered: true });
 const loadResultadosView = () => import('./views/ResultadosView');
 const loadGraficasView = () => import('./views/GraficasView');
+const loadCompaniasView = () => import('../../features/companias/CompaniasView');
 const Resultados = lazy(loadResultadosView);
 const GraficasView = lazy(loadGraficasView);
 const LicitacionesView = lazy(() => import('../../features/licitaciones/LicitacionesView'));
+const CompaniasView = lazy(loadCompaniasView);
 
 function readPersistedFilters() {
   try {
@@ -128,6 +128,36 @@ function ViewLoader({ label }) {
   );
 }
 
+class ModuleErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidUpdate(previousProps) {
+    if (previousProps.resetKey !== this.props.resetKey && this.state.hasError) {
+      this.setState({ hasError: false });
+    }
+  }
+
+  render() {
+    if (!this.state.hasError) return this.props.children;
+
+    return (
+      <Flex h="100%" minH="0" align="center" justify="center" p={6}>
+        <Box maxW="460px" p={5} bg="var(--cl-surface)" border="1px solid var(--cl-border)" borderRadius="12px" textAlign="center">
+          <Text fontWeight="700" color="var(--cl-text-strong)">No pudimos abrir este módulo</Text>
+          <Text mt={1.5} fontSize="12px" color="var(--cl-text-muted)">Regresa a Proyectos e inténtalo de nuevo. La aplicación principal seguirá disponible.</Text>
+        </Box>
+      </Flex>
+    );
+  }
+}
+
 function getObraSelectionKey(obra) {
   return String(
     obra?.Id_Obra ||
@@ -155,16 +185,10 @@ function haveSameSelection(previousSelection, nextSelection) {
   return previousKeys === nextKeys;
 }
 
-function getInitials(name = '') {
-  const parts = String(name).trim().split(/\s+/).filter(Boolean);
-  const first = parts[0]?.[0] || 'U';
-  const second = parts[1]?.[0] || parts[0]?.[1] || 'M';
-  return `${first}${second}`.toUpperCase();
-}
-
 export default function Construleads() {
   const navigate = useNavigate();
   const location = useLocation();
+  const isProfileModule = location.pathname.includes('/perfil');
   const isLicitacionesModule = location.pathname.includes('/licitaciones');
   const [useCompactScale] = useMediaQuery(
     '(min-width: 1100px) and (max-width: 1366px) and (max-height: 900px)'
@@ -188,6 +212,10 @@ export default function Construleads() {
   const [obras, setObras] = useState([]);
   const [mapPreviewObras, setMapPreviewObras] = useState([]);
   const [loadingObras, setLoadingObras] = useState(true);
+  const [companyRelationships, setCompanyRelationships] = useState([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+  const [companiesError, setCompaniesError] = useState('');
+  const [companiesSessionKey, setCompaniesSessionKey] = useState('');
   const filteredObras = useMemo(
     () => filterObrasByFilters(obras, filtros),
     [obras, filtros]
@@ -208,6 +236,7 @@ export default function Construleads() {
     mapa: true,
     resultados: false,
     graficas: false,
+    companias: false,
   });
   const [fichaTecnica, setFichaTecnica] = useState({
     isOpen: false, isLoading: false, isDownloading: false,
@@ -326,6 +355,45 @@ export default function Construleads() {
     };
   }, [isLicitacionesModule, user.idUsuario]);
 
+  useEffect(() => {
+    // Precargamos los perfiles desde que el módulo de proyectos está abierto.
+    // Así, al entrar a Compañías los RFC y claves ya están listos y no se
+    // reemplazan temporalmente por los datos de respaldo de obras.
+    if (isLicitacionesModule || isProfileModule) return undefined;
+
+    const sessionKey = `${user.idUsuario || ''}:${user.idSession || ''}`;
+    if (companiesSessionKey === sessionKey) return undefined;
+
+    let isActive = true;
+    const abortController = new AbortController();
+
+    async function cargarCompanias() {
+      try {
+        setLoadingCompanies(true);
+        setCompaniesError('');
+        const relationships = await obtenerCompanias({ signal: abortController.signal });
+        if (isActive) {
+          setCompanyRelationships(relationships);
+          setCompaniesSessionKey(sessionKey);
+        }
+      } catch (error) {
+        if (isActive && !abortController.signal.aborted) {
+          setCompaniesError(error instanceof Error
+            ? error.message
+            : 'No fue posible actualizar los datos de compañías.');
+        }
+      } finally {
+        if (isActive) setLoadingCompanies(false);
+      }
+    }
+
+    cargarCompanias();
+    return () => {
+      isActive = false;
+      abortController.abort();
+    };
+  }, [companiesSessionKey, isLicitacionesModule, isProfileModule, mountedViews.companias, user.idSession, user.idUsuario]);
+
   const changeView = useCallback((nextView) => {
     setMountedViews((current) => (
       current[nextView] ? current : { ...current, [nextView]: true }
@@ -339,9 +407,13 @@ export default function Construleads() {
   }, [changeView, navigate]);
 
   useEffect(() => {
-    const routeView = location.pathname.match(/\/proyectos\/(mapa|resultados|graficas)\/?$/)?.[1];
+    const routeView = location.pathname.match(/\/proyectos\/(mapa|resultados|graficas|companias)\/?$/)?.[1];
     if (routeView) changeView(routeView);
-  }, [changeView, location.pathname]);
+    if (location.pathname.match(/\/companias\/?$/)) {
+      changeView('companias');
+      navigate('/construleads/proyectos/companias', { replace: true });
+    }
+  }, [changeView, location.pathname, navigate]);
 
   const handleLogout = useCallback(() => {
     localStorage.removeItem('cl_authenticated');
@@ -436,18 +508,21 @@ export default function Construleads() {
 
   return (
     <Box
+      className="cl-app-shell"
       bg={appColors.pageBg}
-      minH="100vh"
       p={3}
       color={appColors.text}
       transition="background 180ms ease, color 180ms ease"
       w={usesScaledCanvas ? canvasSize : '100%'}
       maxW="none"
-      minH={usesScaledCanvas ? canvasViewportHeight : '100vh'}
+      h={usesScaledCanvas ? canvasViewportHeight : '100dvh'}
+      minH="0"
       position={usesScaledCanvas ? 'fixed' : 'relative'}
       top={usesScaledCanvas ? 0 : 'auto'}
       left={usesScaledCanvas ? 0 : 'auto'}
-      overflow={usesScaledCanvas ? 'hidden' : 'visible'}
+      overflow="hidden"
+      display="flex"
+      flexDirection="column"
       style={{
         transform: usesScaledCanvas ? `scale(${interfaceScale})` : 'none',
         transformOrigin: 'top left',
@@ -466,192 +541,17 @@ export default function Construleads() {
         '--cl-summary-columns': '132px 190px 132px 160px 190px 120px',
       }}
     >
-      <Flex
-        bg={appColors.navBg}
-        borderRadius="12px"
-        px={4}
-        py={2}
-        mb={3}
-        minH="60px"
-        align="center"
-        justify="flex-start"
-        border={`1px solid ${appColors.navBorder}`}
-        gap={4}
-      >
-        <Box
-          w="252px"
-          flexShrink={0}
-          display="flex"
-          alignItems="center"
-        >
-          <Image
-            src={`${import.meta.env.BASE_URL}logo-construleads.svg`}
-            alt="BIMSA Reports"
-            h="48px"
-            objectFit="contain"
-            filter="brightness(0) invert(1)"
-          />
-        </Box>
-
-        <HStack
-          spacing={1}
-          flex="1"
-          justify="flex-start"
-          overflowX="auto"
-        >
-          <Box
-            as="button"
-            type="button"
-            px={3}
-            h="38px"
-            display="flex"
-            alignItems="center"
-            borderRadius="9px"
-            bg={!isLicitacionesModule ? 'rgba(255,255,255,.2)' : 'transparent'}
-            color="white"
-            fontWeight="700"
-            fontSize="13px"
-            whiteSpace="nowrap"
-            transition="all 180ms ease"
-            _hover={{ bg: 'rgba(255,255,255,.24)' }}
-            onClick={() => openProjectView(activeView)}
-          >
-            Proyectos
-          </Box>
-
-          <Box
-            as="button"
-            type="button"
-            px={3}
-            h="38px"
-            display="flex"
-            alignItems="center"
-            borderRadius="9px"
-            bg={isLicitacionesModule ? 'rgba(255,255,255,.2)' : 'transparent'}
-            color="white"
-            fontWeight="700"
-            fontSize="13px"
-            whiteSpace="nowrap"
-            transition="all 180ms ease"
-            _hover={{ bg: 'rgba(255,255,255,.24)' }}
-            onClick={() => navigate('/construleads/licitaciones')}
-          >
-            Licitaciones
-          </Box>
-
-          {/* <Box
-            px={3}
-            h="44px"
-            display="flex"
-            alignItems="center"
-            color="white"
-            cursor="pointer"
-            fontSize="14px"
-            fontWeight="500"
-            borderRadius="8px"
-            borderBottom="3px solid transparent"
-            transition="all 180ms ease"
-            _hover={{ bg: 'rgba(255,255,255,.14)' }}
-          >
-            Analytics
-          </Box> */}
-
-          {/* <Box
-            px={3}
-            h="44px"
-            display="flex"
-            alignItems="center"
-            color="white"
-            cursor="pointer"
-            fontSize="14px"
-            fontWeight="500"
-            borderRadius="8px"
-            borderBottom="3px solid transparent"
-            transition="all 180ms ease"
-            _hover={{ bg: 'rgba(255,255,255,.14)' }}
-          >
-            Personalizado
-          </Box> */}
-        </HStack>
-
-        <HStack spacing={3}>
-          <Box
-            as={isDarkMode ? FiSun : FiMoon}
-            boxSize="20px"
-            color="white"
-            cursor="pointer"
-            transition="all 180ms ease"
-            _hover={{ color: 'rgba(255,255,255,.82)' }}
-            onClick={() => {
-              setColorMode((current) =>
-                current === 'dark' ? 'light' : 'dark'
-              );
-            }}
-          />
-
-          <Box
-            as={FiSettings}
-            boxSize="20px"
-            color="white"
-            cursor="pointer"
-            transition="all 180ms ease"
-            _hover={{ color: 'rgba(255,255,255,.82)' }}
-          />
-
-          <Box
-            as={FiLogOut}
-            boxSize="20px"
-            color="white"
-            cursor="pointer"
-            transition="all 180ms ease"
-            _hover={{ color: 'rgba(255,255,255,.82)' }}
-            onClick={handleLogout}
-            role="button"
-            tabIndex={0}
-            aria-label="Cerrar sesión"
-            title="Cerrar sesión"
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') handleLogout();
-            }}
-          />
-
-          <Box position="relative">
-            <Box
-              as="button"
-              type="button"
-              w="32px"
-              h="32px"
-              borderRadius="full"
-              bg="white"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              fontWeight="600"
-              fontSize="12px"
-              color="#FF653F"
-              cursor="pointer"
-              transition="transform 160ms ease, box-shadow 160ms ease"
-              _hover={{ transform: 'translateY(-1px)' }}
-              onClick={() => navigate('/construleads/perfil')}
-              aria-label="Abrir perfil"
-              title="Abrir perfil"
-            >
-              {getInitials(user.nombreUsuario)}
-            </Box>
-
-            <Box
-              position="absolute"
-              bottom="1px"
-              right="-1px"
-              w="8px"
-              h="8px"
-              borderRadius="full"
-              bg="#35B56A"
-              border="1px solid white"
-            />
-          </Box>
-        </HStack>
-      </Flex>
+      <ConstruleadsNavbar
+        activeModule={isProfileModule ? 'perfil' : isLicitacionesModule ? 'licitaciones' : 'proyectos'}
+        isDarkMode={isDarkMode}
+        userName={user.nombreUsuario}
+        onProjects={() => openProjectView(activeView)}
+        onLicitaciones={() => navigate('/construleads/licitaciones')}
+        onProfile={() => navigate('/construleads/perfil')}
+        onPreferences={() => navigate('/construleads/perfil', { state: { activeTab: 'preferencias' } })}
+        onToggleTheme={() => setColorMode((current) => (current === 'dark' ? 'light' : 'dark'))}
+        onLogout={handleLogout}
+      />
       <style>{`
         @keyframes cl-view-enter {
           0% { opacity: 0; transform: translate3d(18px, 0, 0); }
@@ -664,11 +564,15 @@ export default function Construleads() {
         }
         @media (prefers-reduced-motion: reduce) { .cl-view-enter { animation: none; } }
       `}</style>
+      {isProfileModule ? (
+        <Box className="cl-view-enter" flex="1" minW="0" minH="0" h="100%" position="relative">
+          <Perfil key={location.key} embedded isDarkMode={isDarkMode} />
+        </Box>
+      ) : (
       <Flex
         gap={3}
-        height={usesScaledCanvas
-          ? `calc(${canvasViewportHeight} - 96px)`
-          : 'calc(100vh - 96px)'}
+        flex="1"
+        h="auto"
         minH="0"
         overflow="hidden"
         align="stretch"
@@ -707,13 +611,15 @@ export default function Construleads() {
             bg={appColors.surface}
             border="1px solid var(--cl-border)"
             borderRadius="10px"
-            overflowX="auto"
+            overflow="hidden"
+            minW="0"
             flexShrink={0}
           >
             {[
               { key: 'mapa', label: 'Mapa', icon: FiMapPin, preload: null },
               { key: 'resultados', label: 'Resultados', icon: FiList, preload: loadResultadosView },
               { key: 'graficas', label: 'Gráficas', icon: FiBarChart2, preload: loadGraficasView },
+              { key: 'companias', label: 'Compañías', icon: FiBriefcase, preload: loadCompaniasView },
             ].map(({ key, label, icon, preload }) => (
               <Flex
                 as="button"
@@ -737,40 +643,42 @@ export default function Construleads() {
               </Flex>
             ))}
           </Flex>
-          <Box
-            position="fixed"
-            left={`calc(var(--cl-sidebar-width) + 24px)`}
-            right="12px"
-            bottom="12px"
-            zIndex={40}
-            pointerEvents="none"
-          >
-            <Flex
-              pointerEvents="auto"
-              align="end"
-              gap={3}
-              justify="space-between"
-              width="100%"
+          {activeView !== 'companias' && (
+            <Box
+              position="fixed"
+              left={`calc(var(--cl-sidebar-width) + 24px)`}
+              right="12px"
+              bottom="12px"
+              zIndex={40}
+              pointerEvents="none"
             >
-              <Box flex="1" minW="0">
-                <PanelResumen
-                  obras={filteredObras}
-                  filtros={filtros}
-                  variant="map"
-                  showCurrentSelection={activeView === 'graficas'}
-                  currentSelectionCount={graphSelectionCount}
-                />
-              </Box>
-              <Box flexShrink={0}>
-                <DownloadPanel
-                  selectedObras={selectedResultObras}
-                  filteredObras={filteredObras}
-                  filtros={filtros}
-                  user={user}
-                />
-              </Box>
-            </Flex>
-          </Box>
+              <Flex
+                pointerEvents="auto"
+                align="end"
+                gap={3}
+                justify="space-between"
+                width="100%"
+              >
+                <Box flex="1" minW="0">
+                  <PanelResumen
+                    obras={filteredObras}
+                    filtros={filtros}
+                    variant="map"
+                    showCurrentSelection={activeView === 'graficas'}
+                    currentSelectionCount={graphSelectionCount}
+                  />
+                </Box>
+                <Box flexShrink={0}>
+                  <DownloadPanel
+                    selectedObras={selectedResultObras}
+                    filteredObras={filteredObras}
+                    filtros={filtros}
+                    user={user}
+                  />
+                </Box>
+              </Flex>
+            </Box>
+          )}
 
           <Box flex="1" minH="0" position="relative">
             <Box className={activeView === 'mapa' ? 'cl-view-enter' : undefined}
@@ -813,13 +721,35 @@ export default function Construleads() {
                 </Suspense>
               </Box>
             )}
+
+            {mountedViews.companias && (
+              <Box className={activeView === 'companias' ? 'cl-view-enter' : undefined}
+                display={activeView === 'companias' ? 'block' : 'none'} h="100%" minH="0">
+                <ModuleErrorBoundary resetKey={location.pathname}>
+                  <Suspense fallback={<ViewLoader label="compañías" />}>
+                    <CompaniasView
+                      filteredObras={obras.length ? filteredObras : filteredMapPreviewObras}
+                      filtros={filtros}
+                      isLoading={loadingObras}
+                      companyRelationships={companyRelationships}
+                      isLoadingCompanies={loadingCompanies}
+                      companiesError={companiesError}
+                      isDarkMode={isDarkMode}
+                      onViewFicha={handleViewFicha}
+                    />
+                  </Suspense>
+                </ModuleErrorBoundary>
+              </Box>
+            )}
           </Box>
         </Box>
         </>
         )}
       </Flex>
+      )}
       <FichaTecnicaModal
         {...fichaTecnica}
+        isDarkMode={isDarkMode}
         onClose={closeFicha}
         onDownload={handleDownloadFicha}
       />

@@ -11,6 +11,20 @@ import {
   MarkerClusterer,
   SuperClusterAlgorithm,
 } from '@googlemaps/markerclusterer';
+import {
+  FiActivity,
+  FiArrowRight,
+  FiBookOpen,
+  FiBriefcase,
+  FiCalendar,
+  FiHome,
+  FiLayers,
+  FiMap,
+  FiSettings,
+  FiShoppingBag,
+  FiTool,
+  FiTruck,
+} from 'react-icons/fi';
 
 const DEBUG_MAPA = false;
 const AUTO_FIT_INITIAL_BOUNDS = false;
@@ -111,6 +125,43 @@ function getSingleTaxonomyValue(value) {
     .split(/[|;,]+/)
     .map((item) => item.trim())
     .find(Boolean) || '';
+}
+
+const projectDateFormatter = new Intl.DateTimeFormat('es-MX', {
+  day: '2-digit', month: 'short', year: 'numeric',
+});
+
+function formatProjectDate(value) {
+  if (!value) return 'Por confirmar';
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? 'Por confirmar' : projectDateFormatter.format(value);
+  if (typeof value === 'number') {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? 'Por confirmar' : projectDateFormatter.format(date);
+  }
+
+  const text = String(value).trim();
+  const iso = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  const local = text.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  const date = iso
+    ? new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]))
+    : local
+      ? new Date(Number(local[3]), Number(local[2]) - 1, Number(local[1]))
+      : new Date(text);
+  return Number.isNaN(date.getTime()) ? 'Por confirmar' : projectDateFormatter.format(date);
+}
+
+function getGenreIcon(genero) {
+  const genre = normalizeText(genero);
+  if (genre.includes('infraestructura')) return FiTruck;
+  if (genre.includes('salud')) return FiActivity;
+  if (genre.includes('educa')) return FiBookOpen;
+  if (genre.includes('habitacional') || genre.includes('vivienda')) return FiHome;
+  if (genre.includes('comercial')) return FiShoppingBag;
+  if (genre.includes('industrial')) return FiSettings;
+  if (genre.includes('institucional')) return FiBriefcase;
+  if (genre.includes('tur') || genre.includes('recrea')) return FiMap;
+  if (genre.includes('urban')) return FiTool;
+  return FiLayers;
 }
 
 function Mapa({
@@ -818,7 +869,8 @@ useEffect(() => {
           genero: getSingleTaxonomyValue(obra.genero),
           estado: obra.estado,
           subgenero: getSingleTaxonomyValue(obra.subgenero),
-          direccion: obra.localizacion,
+          fechaInicio: obra.fechaInicioDate || obra.fechaInicio,
+          fechaFin: obra.fechaTerminoDate || obra.fechaFinDate || obra.fechaTermino || obra.fechaFin,
           lat: clickedLat,
           lng: clickedLng,
         };
@@ -1240,7 +1292,7 @@ useEffect(() => {
     <Box
       bg="var(--cl-surface)"
       h="100%"
-      minH="520px"
+      minH="0"
       borderRadius="12px"
       p={0}
       border="1px solid var(--cl-border)"
@@ -1248,19 +1300,19 @@ useEffect(() => {
     >
       <Box
         h="100%"
-        minH="520px"
+        minH="0"
         borderRadius="12px"
         overflow="hidden"
         border="0"
         p={0}
       >
-        <Box position="relative" h="100%" minH="520px" w="100%">
+        <Box position="relative" h="100%" minH="0" w="100%">
           <Box
             ref={mapRef}
             position="absolute"
             inset={0}
             h="100%"
-            minH="520px"
+            minH="0"
             w="100%"
           />
 
@@ -1372,71 +1424,64 @@ useEffect(() => {
               >
                 ×
               </Button>
-              <Flex gap={1.5} wrap="wrap" pr="34px" mb={2}>
-                {[selectedProject.genero, selectedProject.subgenero]
-                  .filter(Boolean)
-                  .filter((label, index, labels) => (
-                    labels.findIndex((candidate) => normalizeText(candidate) === normalizeText(label)) === index
-                  ))
-                  .map((label) => (
-                    <Box
-                      key={label}
-                      bg="var(--cl-surface-muted)"
-                      color="var(--cl-text-muted)"
-                      px={2}
-                      py={1}
-                      borderRadius="999px"
-                      fontSize="10px"
-                      fontWeight="400"
-                    >
-                      {label}
-                    </Box>
-                  ))}
+              <Flex align="center" gap={2} pr="34px" mb={2.5}>
+                <Flex align="center" justify="center" w="30px" h="30px" flexShrink={0} borderRadius="9px" bg="var(--cl-orange-soft)" color="#D94E2D">
+                  {React.createElement(getGenreIcon(selectedProject.genero), { size: 16, 'aria-hidden': true })}
+                </Flex>
+                <Box minW={0}>
+                  <Text fontSize="9px" textTransform="uppercase" letterSpacing=".06em" fontWeight="700" color="var(--cl-text-muted)">Género</Text>
+                  <Text fontSize="11px" fontWeight="700" color="var(--cl-text-strong)" lineClamp={1}>{selectedProject.genero || 'Proyecto'}</Text>
+                </Box>
+                {selectedProject.subgenero && normalizeText(selectedProject.subgenero) !== normalizeText(selectedProject.genero) && (
+                  <Box ml="auto" maxW="128px" px={2} py={1} borderRadius="999px" bg="var(--cl-surface-muted)" border="1px solid var(--cl-border)">
+                    <Text fontSize="9px" color="var(--cl-text-muted)" lineClamp={1}>{selectedProject.subgenero}</Text>
+                  </Box>
+                )}
               </Flex>
 
               {selectedProject.clave && (
-                <Text fontSize="10px" color="var(--cl-text-muted)" mb={1}>
-                  {selectedProject.clave}
-                </Text>
+                <Flex align="center" gap={1.5} mb={1}>
+                  <Box w="5px" h="5px" borderRadius="full" bg="#FF653F" />
+                  <Text fontSize="10px" color="var(--cl-text-muted)" lineClamp={1}>{selectedProject.clave}</Text>
+                </Flex>
               )}
 
-              <Text fontSize="16px" fontWeight="500" mb={3} lineHeight="1.3" color="var(--cl-text-strong)" noOfLines={2}>
+              <Text fontSize="18px" fontWeight="600" mb={3} lineHeight="1.25" letterSpacing="-.01em" color="var(--cl-text-strong)" noOfLines={2}>
                 {selectedProject.proyecto}
               </Text>
 
               <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2} mb={3}>
-                <Box bg="var(--cl-surface-muted)" p={2.5} borderRadius="8px" border="1px solid var(--cl-border)">
-                  <Text fontSize="10px" color="var(--cl-text-muted)">Inversión</Text>
-                  <Text mt={0.5} fontSize="13px" fontWeight="400" color="var(--cl-text-strong)">
+                <Box bg="var(--cl-surface-muted)" p={2.5} borderRadius="10px" border="1px solid var(--cl-border)">
+                  <Text fontSize="9px" textTransform="uppercase" letterSpacing=".05em" fontWeight="700" color="var(--cl-text-muted)">Inversión</Text>
+                  <Text mt={0.5} fontSize="14px" fontWeight="600" color="var(--cl-text-strong)">
                     {selectedProject.inversion}
                   </Text>
                 </Box>
 
-                <Box bg="var(--cl-surface-muted)" p={2.5} borderRadius="8px" border="1px solid var(--cl-border)">
-                  <Text fontSize="10px" color="var(--cl-text-muted)">Superficie</Text>
-                  <Text mt={0.5} fontSize="13px" fontWeight="400" color="var(--cl-text-strong)">
+                <Box bg="var(--cl-surface-muted)" p={2.5} borderRadius="10px" border="1px solid var(--cl-border)">
+                  <Text fontSize="9px" textTransform="uppercase" letterSpacing=".05em" fontWeight="700" color="var(--cl-text-muted)">Superficie</Text>
+                  <Text mt={0.5} fontSize="14px" fontWeight="600" color="var(--cl-text-strong)">
                     {selectedProject.superficie}
                   </Text>
                 </Box>
               </Box>
 
-              <Box
-                bg="var(--cl-surface-muted)"
-                border="1px solid var(--cl-border)"
-                borderRadius="8px"
-                px={3}
-                py={2.5}
-                mb={3}
-                fontSize="11px"
-                fontWeight="400"
-                color="var(--cl-text-muted)"
-              >
-                <Text fontSize="10px" color="var(--cl-text-muted)" mb={1}>
-                  Dirección
-                </Text>
-                <Text fontSize="11px" color="var(--cl-text-strong)" fontWeight="400" lineHeight="1.35">
-                  {selectedProject.direccion || selectedProject.estado || 'Dirección no disponible'}
-                </Text>
+              <Box bg="#FFF8F5" border="1px solid #FFD9CD" borderRadius="10px" px={3} py={2.5} mb={3}>
+                <Flex align="center" gap={2} mb={2}>
+                  <Flex align="center" justify="center" w="22px" h="22px" borderRadius="full" bg="#FFE2D8" color="#D94E2D"><FiCalendar size={12} /></Flex>
+                  <Text fontSize="9px" textTransform="uppercase" letterSpacing=".05em" fontWeight="700" color="#B45035">Periodo estimado</Text>
+                </Flex>
+                <Flex align="center" gap={2}>
+                  <Box flex="1" minW={0}>
+                    <Text fontSize="9px" color="var(--cl-text-muted)">Inicio</Text>
+                    <Text mt={0.5} fontSize="11px" fontWeight="700" color="var(--cl-text-strong)" lineClamp={1}>{formatProjectDate(selectedProject.fechaInicio)}</Text>
+                  </Box>
+                  <FiArrowRight size={14} color="#D94E2D" aria-hidden="true" />
+                  <Box flex="1" minW={0}>
+                    <Text fontSize="9px" color="var(--cl-text-muted)">Fin</Text>
+                    <Text mt={0.5} fontSize="11px" fontWeight="700" color="var(--cl-text-strong)" lineClamp={1}>{formatProjectDate(selectedProject.fechaFin)}</Text>
+                  </Box>
+                </Flex>
               </Box>
 
               <Button
@@ -1450,7 +1495,7 @@ useEffect(() => {
                 h="38px"
                 onClick={() => onViewFicha?.(selectedProject)}
               >
-                Ver ficha
+                Ver ficha <FiArrowRight />
               </Button>
               </Box>
             </Box>

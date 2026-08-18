@@ -384,12 +384,20 @@ function ColumnChart({
       footer={<Flex justify="space-between" align="center" pt={3} borderTop="1px solid var(--cl-border)"><Text fontSize="12px" fontWeight="600" color="var(--cl-text-muted)">Total</Text><Text fontSize="14px" fontWeight="700" color="var(--cl-text-strong)">{getDisplayValue(totalValue, metric)} {formatGraphMetricSuffix(metric)}</Text></Flex>}
     >
       {visibleItems.length ? (
-        <Flex minH="300px" h="100%" align="flex-end" gap={2} pt={5} borderBottom="1px solid rgba(148,163,184,.25)">
-          {visibleItems.map((item, index) => {
-            const isSelected = normalizeText(selectedKey) === normalizeText(item.key);
-            const height = `${Math.max(10, (item.value / maxValue) * 100)}%`;
-            return <Flex key={item.key} as="button" type="button" flex="1" minW="0" h="100%" direction="column" justify="flex-end" align="stretch" cursor="pointer" opacity={selectedKey && !isSelected ? 0.45 : 1} onClick={() => onSelect(item.key)}><Text mb={2} textAlign="center" fontSize="11px" fontWeight="700" color="var(--cl-text-strong)">{getDisplayValue(item.value, metric)}</Text><Box h={height} minH="30px" mx="auto" w="clamp(34px, 82%, 78px)" bg={CHART_COLORS[index % CHART_COLORS.length]} borderRadius="8px 8px 2px 2px" border={isSelected ? '3px solid #FFB27F' : '3px solid transparent'} transition="height 180ms ease, opacity 160ms ease" _hover={{ filter: 'brightness(1.08)' }} /><Text h="48px" mt={2} px={1} textAlign="center" fontSize="10px" fontWeight="600" lineHeight="1.2" noOfLines={3} color="var(--cl-text-muted)">{item.label}</Text></Flex>;
-          })}
+        <Flex minH="300px" h="100%" direction="column" pt={5}>
+          <Flex flex="1" minH="0" align="flex-end" gap={2} borderBottom="1px solid rgba(148,163,184,.25)">
+            {visibleItems.map((item, index) => {
+              const isSelected = normalizeText(selectedKey) === normalizeText(item.key);
+              const height = `${Math.max(10, (item.value / maxValue) * 100)}%`;
+              return <Flex key={item.key} as="button" type="button" flex="1" minW="0" h="100%" p={0} border="none" bg="transparent" direction="column" justify="flex-end" align="stretch" cursor="pointer" opacity={selectedKey && !isSelected ? 0.45 : 1} onClick={() => onSelect(item.key)}><Text mb={2} textAlign="center" fontSize="11px" fontWeight="700" color="var(--cl-text-strong)">{getDisplayValue(item.value, metric)}</Text><Box h={height} minH="30px" mx="auto" w="clamp(34px, 82%, 78px)" bg={CHART_COLORS[index % CHART_COLORS.length]} borderRadius="8px 8px 2px 2px" border={isSelected ? '3px solid #FFB27F' : '3px solid transparent'} transition="height 180ms ease, opacity 160ms ease" _hover={{ filter: 'brightness(1.08)' }} /></Flex>;
+            })}
+          </Flex>
+          <Flex flex="0 0 48px" gap={2} pt={2}>
+            {visibleItems.map((item) => {
+              const isSelected = normalizeText(selectedKey) === normalizeText(item.key);
+              return <Box key={item.key} as="button" type="button" flex="1" minW="0" p={0} border="none" bg="transparent" cursor="pointer" opacity={selectedKey && !isSelected ? 0.45 : 1} onClick={() => onSelect(item.key)}><Text px={1} textAlign="center" fontSize="10px" fontWeight="600" lineHeight="1.2" noOfLines={3} color="var(--cl-text-muted)">{item.label}</Text></Box>;
+            })}
+          </Flex>
         </Flex>
       ) : <Box border="1px dashed var(--cl-border)" borderRadius="12px" px={4} py={6} color="var(--cl-text-muted)" fontSize="13px">Sin datos para mostrar.</Box>}
       {bottomAction ? <Flex justify="center" mt={3}>{bottomAction}</Flex> : null}
@@ -1036,7 +1044,7 @@ export default function GraficasView({ obras = [], filtros = {}, onSelectionCoun
 
   return (
     <Box flex="1" minH="0" h="100%" overflowY="auto" overflowX="hidden" pb={{ base: '95px', lg: '72px' }} pr={2}>
-      <Box px={2} pt={1} pb={2}>
+      <Box px={0} pt={1} pb={2}>
         {appliedSelections.length > 0 && (
           <Flex mb={4} gap={2} align="center" flexWrap="wrap">
             {appliedSelections.map((selection) => (

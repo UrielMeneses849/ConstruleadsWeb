@@ -7,7 +7,10 @@ import LicitacionesTable from './LicitacionesTable';
 import LicitacionDrawer from './LicitacionDrawer';
 import LicitacionesSummary from './LicitacionesSummary';
 import LicitacionesDownloadPanel from './LicitacionesDownloadPanel';
+import { readCachedLicitaciones, writeCachedLicitaciones } from '../../utils/licitacionesCache';
 import {
+  formatLicitacionProvider,
+  formatLicitacionState,
   LICITACION_MISSING_FALLO_VALUE,
   normalizeSearchText,
   parseLicitacionAmount,
@@ -17,8 +20,16 @@ import {
 const PAGE_SIZE = 50;
 const initialSidebarFilters = {
   dateField: 'fecha_de_publicacion', periodIndex: -1, states: [], orders: [],
-  procedures: [], statuses: [], sources: [], amountMin: null, amountMax: null,
+  procedures: [], statuses: [], sources: [], amountMin: null, amountMax: null, amountMissing: false,
 };
+
+function normalizeLoadedLicitaciones(items = []) {
+  return items.map((item) => ({
+    ...item,
+    estado: formatLicitacionState(item.estado),
+    proveedor_adjudicado: formatLicitacionProvider(item.proveedor_adjudicado),
+  }));
+}
 
 function useDebouncedValue(value, delay = 260) {
   const [debounced, setDebounced] = useState(value);
@@ -76,8 +87,14 @@ function matchesTableFilters(item, tableFilters = {}, amountRange) {
     if (!matchesFallo) return false;
   }
 
-  if (amountRange.min !== null && (item.monto_del_contrato_MXN === null || item.monto_del_contrato_MXN < amountRange.min)) return false;
-  if (amountRange.max !== null && (item.monto_del_contrato_MXN === null || item.monto_del_contrato_MXN > amountRange.max)) return false;
+  const hasAmountRange = amountRange.min !== null || amountRange.max !== null;
+  const isAmountMissing = !Number.isFinite(item.monto_del_contrato_MXN);
+  if (hasAmountRange || tableFilters.montoMissing) {
+    const isWithinAmountRange = !isAmountMissing &&
+      (amountRange.min === null || item.monto_del_contrato_MXN >= amountRange.min) &&
+      (amountRange.max === null || item.monto_del_contrato_MXN <= amountRange.max);
+    if (!isWithinAmountRange && !(tableFilters.montoMissing && isAmountMissing)) return false;
+  }
 
   if (!matchesDateRange(item.fecha_de_publicacion, tableFilters.fecha_de_publicacionDesde, tableFilters.fecha_de_publicacionHasta)) return false;
   if (!matchesDateRange(item.fecha_de_fallo, tableFilters.fecha_de_falloDesde, tableFilters.fecha_de_falloHasta)) return false;
@@ -85,7 +102,8 @@ function matchesTableFilters(item, tableFilters = {}, amountRange) {
 }
 
 export default function LicitacionesView({ user }) {
-  const initialCache = leerLicitacionesCache(user.idUsuario, user.idSession);
+  const rawInitialCache = leerLicitacionesCache(user.idUsuario, user.idSession);
+  const initialCache = rawInitialCache ? normalizeLoadedLicitaciones(rawInitialCache) : null;
   const [data, setData] = useState(() => initialCache || []);
   const [loading, setLoading] = useState(() => !initialCache);
   const [error, setError] = useState('');
@@ -105,20 +123,63 @@ export default function LicitacionesView({ user }) {
 
   useEffect(() => {
     const controller = new AbortController();
+    let isActive = true;
+    let hasPersistentCache = false;
+    let hasVisibleData = false;
+    let wrotePreviewCache = false;
+    let networkCompleted = false;
+
+    // IndexedDB y la petición corren en paralelo: la primera visita no espera
+    // al disco y las siguientes pintan la última respuesta inmediatamente.
+    const persistentCache = readCachedLicitaciones(user.idUsuario).then((cached) => {
+      if (!isActive || networkCompleted || !cached?.length) return null;
+      hasPersistentCache = true;
+      hasVisibleData = true;
+      setData(normalizeLoadedLicitaciones(cached));
+      setError('');
+      setLoading(false);
+      return cached;
+    });
+
     obtenerLicitaciones({
       userId: user.idUsuario,
       sessionId: user.idSession,
       signal: controller.signal,
       onBatch: (batch) => {
-        if (controller.signal.aborted || !batch.length) return;
-        setData((current) => current.length ? [...current, ...batch] : batch);
+        if (!isActive || !batch.length || hasPersistentCache) return;
+        hasVisibleData = true;
+        setData((current) => current.length ? [...current, ...normalizeLoadedLicitaciones(batch)] : normalizeLoadedLicitaciones(batch));
         setLoading(false);
+
+        // Incluso si la respuesta tarda en terminar, la próxima recarga ya
+        // puede mostrar la primera página sin depender de la red.
+        if (!wrotePreviewCache) {
+          wrotePreviewCache = true;
+          void writeCachedLicitaciones(user.idUsuario, batch);
+        }
       },
     })
-      .then(setData)
-      .catch((requestError) => { if (requestError?.name !== 'AbortError') setError('No pudimos cargar las licitaciones.'); })
-      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
-    return () => controller.abort();
+      .then((items) => {
+        if (!isActive) return;
+        networkCompleted = true;
+        hasVisibleData = Boolean(items?.length);
+        setData(normalizeLoadedLicitaciones(items));
+        setError('');
+        if (items?.length) void writeCachedLicitaciones(user.idUsuario, items);
+      })
+      .catch(async (requestError) => {
+        if (requestError?.name === 'AbortError') return;
+        const cached = await persistentCache;
+        if (isActive && !cached?.length && !hasVisibleData) {
+          setError('No pudimos cargar las licitaciones.');
+        }
+      })
+      .finally(() => { if (isActive) setLoading(false); });
+
+    return () => {
+      isActive = false;
+      controller.abort();
+    };
   }, [retryToken, user.idSession, user.idUsuario]);
 
   useEffect(() => {
@@ -131,6 +192,14 @@ export default function LicitacionesView({ user }) {
 
   const updateSidebarFilters = useCallback((nextFilters) => {
     setFilters(nextFilters);
+    setPage(1);
+  }, []);
+
+  const clearAllFilters = useCallback(() => {
+    setFilters(initialSidebarFilters);
+    setTableFilters({});
+    setOnlyFollowed(false);
+    setSelectedIds(new Set());
     setPage(1);
   }, []);
 
@@ -150,23 +219,28 @@ export default function LicitacionesView({ user }) {
     setRetryToken((value) => value + 1);
   }, []);
 
-  const sidebarContext = useMemo(() => data.filter((item) => {
+  const matchesSidebarFilters = useCallback((item, activeFilters, { ignoreStates = false } = {}) => {
     if (onlyFollowed) return favorites.has(item.id);
-    if (!selectedIncludes(filters.states, item.estado)) return false;
-    if (!selectedIncludes(filters.orders, item.orden_de_gobierno)) return false;
-    if (!selectedIncludes(filters.procedures, item.tipo_de_procedimiento)) return false;
-    if (!selectedIncludes(filters.statuses, item.estatus)) return false;
-    if (!selectedIncludes(filters.sources, item.fuente_del_registro)) return false;
-    if (filters.periodIndex >= 0) {
-      const days = [0, 1, 7, 30, 90, 180][filters.periodIndex];
-      const value = parseLicitacionDate(item[filters.dateField]);
+    if (!ignoreStates && !selectedIncludes(activeFilters.states, item.estado)) return false;
+    if (!selectedIncludes(activeFilters.orders, item.orden_de_gobierno)) return false;
+    if (!selectedIncludes(activeFilters.procedures, item.tipo_de_procedimiento)) return false;
+    if (!selectedIncludes(activeFilters.statuses, item.estatus)) return false;
+    if (!selectedIncludes(activeFilters.sources, item.fuente_del_registro)) return false;
+    if (activeFilters.periodIndex >= 0) {
+      const days = [0, 1, 7, 30, 90, 180][activeFilters.periodIndex];
+      const value = parseLicitacionDate(item[activeFilters.dateField]);
       if (!value) return false;
       const start = new Date(); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - days);
       const end = new Date(); end.setHours(23, 59, 59, 999);
       if (value < start || value > end) return false;
     }
     return true;
-  }), [data, favorites, filters, onlyFollowed]);
+  }, [favorites, onlyFollowed]);
+
+  const sidebarContext = useMemo(
+    () => data.filter((item) => matchesSidebarFilters(item, filters)),
+    [data, filters, matchesSidebarFilters],
+  );
 
   const sidebarAmountBounds = useMemo(() => {
     let min = Infinity;
@@ -181,27 +255,39 @@ export default function LicitacionesView({ user }) {
   }, [sidebarContext]);
 
   const sidebarAmountRange = useMemo(() => {
-    if (!sidebarAmountBounds) return { min: null, max: null, active: false };
+    if (!sidebarAmountBounds) return { min: null, max: null, active: false, includeMissing: Boolean(filters.amountMissing) };
     const { min: lowerBound, max: upperBound } = sidebarAmountBounds;
     const active = filters.amountMin !== null || filters.amountMax !== null;
     const min = Math.min(Math.max(Number(filters.amountMin ?? lowerBound), lowerBound), upperBound);
     const max = Math.max(min, Math.min(Number(filters.amountMax ?? upperBound), upperBound));
-    return { min, max, active };
-  }, [filters.amountMax, filters.amountMin, sidebarAmountBounds]);
+    return { min, max, active, includeMissing: Boolean(filters.amountMissing) };
+  }, [filters.amountMax, filters.amountMin, filters.amountMissing, sidebarAmountBounds]);
+
+  const matchesSidebarAmount = useCallback((item, range) => {
+    if (!range.active && !range.includeMissing) return true;
+    const isMissing = !Number.isFinite(item.monto_del_contrato_MXN);
+    const isWithinRange = range.active && !isMissing &&
+      item.monto_del_contrato_MXN >= range.min &&
+      item.monto_del_contrato_MXN <= range.max;
+    return isWithinRange || (range.includeMissing && isMissing);
+  }, []);
 
   const sidebarFiltered = useMemo(() => {
-    if (!sidebarAmountRange.active) return sidebarContext;
-    return sidebarContext.filter((item) => (
-      Number.isFinite(item.monto_del_contrato_MXN) &&
-      item.monto_del_contrato_MXN >= sidebarAmountRange.min &&
-      item.monto_del_contrato_MXN <= sidebarAmountRange.max
-    ));
-  }, [sidebarAmountRange, sidebarContext]);
+    return sidebarContext.filter((item) => matchesSidebarAmount(item, sidebarAmountRange));
+  }, [matchesSidebarAmount, sidebarAmountRange, sidebarContext]);
 
   const amountRange = useMemo(
     () => getAmountRange(debouncedTableFilters),
     [debouncedTableFilters],
   );
+  const availableStates = useMemo(() => {
+    const tableFiltersWithoutState = { ...debouncedTableFilters };
+    delete tableFiltersWithoutState.estado;
+    return data
+      .filter((item) => matchesSidebarFilters(item, filters, { ignoreStates: true }))
+      .filter((item) => matchesSidebarAmount(item, sidebarAmountRange))
+      .filter((item) => matchesTableFilters(item, tableFiltersWithoutState, amountRange));
+  }, [amountRange, data, debouncedTableFilters, filters, matchesSidebarAmount, matchesSidebarFilters, sidebarAmountRange]);
   const filtered = useMemo(
     () => sidebarFiltered.filter((item) => matchesTableFilters(item, debouncedTableFilters, amountRange)),
     [amountRange, debouncedTableFilters, sidebarFiltered],
@@ -235,8 +321,8 @@ export default function LicitacionesView({ user }) {
   if (error) return <Flex h="100%" align="center" justify="center" direction="column" gap={3}><Text fontWeight="700" color="var(--cl-text-strong)">{error}</Text><Button onClick={retry}><FiRefreshCw /> Reintentar</Button></Flex>;
 
   return <Flex h="100%" minH="0" gap={3}>
-    <LicitacionesSidebar data={data} filters={filters} setFilters={updateSidebarFilters}
-      amountBounds={sidebarAmountBounds} amountRange={sidebarAmountRange} />
+    <LicitacionesSidebar data={data} filters={filters} setFilters={updateSidebarFilters} onClear={clearAllFilters}
+      availableStates={availableStates} amountBounds={sidebarAmountBounds} amountRange={sidebarAmountRange} />
     <Flex flex="1" minW={0} minH={0} direction="column" pb="68px">
       <Flex justify="space-between" align="center" mb={3} gap={4} wrap="wrap">
         <Box><Heading fontSize="22px" color="var(--cl-text-strong)">Licitaciones</Heading><Text fontSize="11px" color="var(--cl-text-muted)">{filtered.length.toLocaleString('es-MX')} registros · {metrics.verified.toLocaleString('es-MX')} contratos verificados</Text></Box>

@@ -11,6 +11,7 @@ export default function FichaTecnicaModal({
   error,
   isDownloading,
   downloadError,
+  isDarkMode,
   onClose,
   onDownload,
 }) {
@@ -24,6 +25,28 @@ export default function FichaTecnicaModal({
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  const fichaTheme = isDarkMode
+    ? {
+        '--ft-surface': '#181818',
+        '--ft-surface-muted': '#222222',
+        '--ft-surface-subtle': '#1F1F1F',
+        '--ft-border': '#383838',
+        '--ft-text': '#F5F5F5',
+        '--ft-text-muted': '#A3A3A3',
+        '--ft-chip': '#303030',
+        '--ft-error': '#FCA5A5',
+      }
+    : {
+        '--ft-surface': '#FFFFFF',
+        '--ft-surface-muted': '#F7F8FA',
+        '--ft-surface-subtle': '#F5F5F5',
+        '--ft-border': '#E5E7EB',
+        '--ft-text': '#313A4A',
+        '--ft-text-muted': '#687386',
+        '--ft-chip': '#E9ECF1',
+        '--ft-error': '#B91C1C',
+      };
 
   return createPortal(
     <Flex
@@ -41,19 +64,20 @@ export default function FichaTecnicaModal({
         direction="column"
         w="min(1420px, 96vw)"
         h="min(880px, 95vh)"
-        bg="var(--cl-surface, #fff)"
-        color="var(--cl-text, #252525)"
-        border="1px solid var(--cl-border, #e5e5e5)"
+        bg="var(--ft-surface)"
+        color="var(--ft-text)"
+        border="1px solid var(--ft-border)"
         borderRadius={{ base: '12px', md: '16px' }}
         overflow="hidden"
         boxShadow="0 28px 80px rgba(0,0,0,.32)"
+        style={fichaTheme}
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label="Ficha técnica de la obra"
       >
         <Flex align="center" justify="space-between" gap={4} px={4} py={3}
-          borderBottom="1px solid var(--cl-border, #e5e5e5)">
+          borderBottom="1px solid var(--ft-border)">
           <Box minW="0">
             <Text fontSize="10px" color="#FF653F" fontWeight="700" letterSpacing=".1em">
               FICHA TÉCNICA
@@ -63,20 +87,21 @@ export default function FichaTecnicaModal({
             </Text>
           </Box>
           <Button aria-label="Cerrar ficha" title="Cerrar" variant="ghost" size="sm"
-            minW="34px" onClick={onClose} fontSize="21px">×</Button>
+            minW="34px" onClick={onClose} fontSize="21px" color="var(--ft-text)"
+            _hover={{ bg: 'var(--ft-surface-muted)' }}>×</Button>
         </Flex>
 
-        <Flex flex="1" minH="0" align="center" justify="center" bg="#F5F5F5" position="relative">
+        <Flex flex="1" minH="0" align="center" justify="center" bg="var(--ft-surface-subtle)" position="relative">
           {isLoading && (
             <Flex direction="column" align="center" gap={3}>
               <Spinner color="#FF653F" />
-              <Text fontSize="13px" color="#777">Cargando ficha técnica…</Text>
+              <Text fontSize="13px" color="var(--ft-text-muted)">Cargando ficha técnica…</Text>
             </Flex>
           )}
           {!isLoading && error && (
             <Box maxW="420px" textAlign="center" p={6}>
               <Text fontWeight="700" mb={2}>No fue posible abrir la ficha</Text>
-              <Text fontSize="13px" color="#777">{error}</Text>
+              <Text fontSize="13px" color="var(--ft-text-muted)">{error}</Text>
             </Box>
           )}
           {!isLoading && !error && data && (
@@ -84,26 +109,27 @@ export default function FichaTecnicaModal({
               w="100%"
               h="100%"
               overflowY="auto"
-              bg="white"
+              bg="var(--ft-surface)"
             >
-              <FichaTecnicaContent obra={data} />
+              <FichaTecnicaContent obra={data} isDarkMode={isDarkMode} />
             </Box>
           )}
         </Flex>
         <Flex
           px={4}
           py={3}
-          borderTop="1px solid var(--cl-border, #e5e5e5)"
+          borderTop="1px solid var(--ft-border)"
           align={{ base: 'stretch', sm: 'center' }}
           justify="space-between"
           gap={3}
           direction={{ base: 'column', sm: 'row' }}
         >
-          <Text fontSize="11px" color={downloadError ? '#B91C1C' : '#777'} flex="1">
+          <Text fontSize="11px" color={downloadError ? 'var(--ft-error)' : 'var(--ft-text-muted)'} flex="1">
             {downloadError || 'Puedes consultar la ficha o descargarla en formato PDF.'}
           </Text>
           <Flex gap={2} justify="flex-end">
-            <Button variant="outline" borderColor="var(--cl-border, #ddd)" onClick={onClose}>
+            <Button variant="outline" borderColor="var(--ft-border)" color="var(--ft-text)" onClick={onClose}
+              _hover={{ bg: 'var(--ft-surface-muted)' }}>
               Cerrar
             </Button>
             <Button bg="#FF653F" color="white" _hover={{ bg: '#D94E2D' }}
