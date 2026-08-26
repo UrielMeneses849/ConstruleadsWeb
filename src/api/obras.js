@@ -30,7 +30,7 @@ export async function obtenerObras() {
 export async function obtenerObrasProgresivas({
   onBatch,
   signal,
-  firstBatchSize = 15,
+  firstBatchSize = 6,
   batchSize = 240,
 } = {}) {
   const user = JSON.parse(localStorage.getItem("construleadsUser") || "{}");
@@ -59,7 +59,7 @@ export async function obtenerObrasProgresivas({
     window.clearTimeout(requestTimeout);
     signal?.removeEventListener("abort", handleExternalAbort);
     if (requestController.signal.aborted && !signal?.aborted) {
-      throw new Error("El servicio de obras tardó demasiado en responder.");
+      throw new Error("El servicio de obras tardó demasiado en responder.", { cause: error });
     }
     throw error;
   }

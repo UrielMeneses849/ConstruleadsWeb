@@ -6,6 +6,7 @@ import {
   Spinner,
   Text,
 } from '@chakra-ui/react';
+import { FiDownload } from 'react-icons/fi';
 import {
   buildObrasKeys,
   DATE_TYPE_WS_MAP,
@@ -249,8 +250,10 @@ export default function DownloadPanel({
       ref={panelRef}
       bg="var(--cl-surface)"
       border="1px solid var(--cl-border)"
-      borderRadius="12px"
-      p={2}
+      borderRadius="11px"
+      minH="70px"
+      px={2}
+      py={1.5}
       gap={2}
       align="center"
       boxShadow="none"
@@ -383,7 +386,7 @@ export default function DownloadPanel({
         {isOpen && (
           <Box
             position="absolute"
-            bottom="44px"
+            top="calc(100% + 6px)"
             left={0}
             zIndex={50}
             w="max-content"
@@ -434,6 +437,8 @@ export default function DownloadPanel({
         color="white"
         borderRadius="8px"
         fontSize="13px"
+        fontWeight="600"
+        leftIcon={!isGenerating ? <FiDownload size={14} /> : undefined}
         disabled={isGenerating}
         _hover={{ bg: '#D94E2D' }}
         onClick={handleDownload}

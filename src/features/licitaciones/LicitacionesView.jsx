@@ -323,12 +323,24 @@ export default function LicitacionesView({ user }) {
   return <Flex h="100%" minH="0" gap={3}>
     <LicitacionesSidebar data={data} filters={filters} setFilters={updateSidebarFilters} onClear={clearAllFilters}
       availableStates={availableStates} amountBounds={sidebarAmountBounds} amountRange={sidebarAmountRange} />
-    <Flex flex="1" minW={0} minH={0} direction="column" pb="68px">
+    <Flex flex="1" minW={0} minH={0} direction="column">
       <Flex justify="space-between" align="center" mb={3} gap={4} wrap="wrap">
         <Box><Heading fontSize="22px" color="var(--cl-text-strong)">Licitaciones</Heading><Text fontSize="11px" color="var(--cl-text-muted)">{filtered.length.toLocaleString('es-MX')} registros · {metrics.verified.toLocaleString('es-MX')} contratos verificados</Text></Box>
         <Flex align="center" gap={2}>
           <Button size="sm" variant={onlyFollowed ? 'solid' : 'outline'} bg={onlyFollowed ? '#FFF4D6' : 'var(--cl-surface)'} color={onlyFollowed ? '#946200' : 'var(--cl-text)'} onClick={toggleOnlyFollowed}><FiStar /> Ver solo seguidas ({favorites.size})</Button>
         </Flex>
+      </Flex>
+      <Flex align="stretch" gap={2} mb={2} minW={0} flexShrink={0}>
+        <Box flex="1" minW={0}>
+          <LicitacionesSummary metrics={metrics} dateLabel={dateLabel} />
+        </Box>
+        <Box flexShrink={0} display="flex" alignItems="stretch">
+          <LicitacionesDownloadPanel
+            user={user}
+            filteredLicitaciones={filtered}
+            selectedLicitaciones={filtered.filter((item) => selectedIds.has(item.id))}
+          />
+        </Box>
       </Flex>
       {!sidebarFiltered.length ? <Flex flex="1" border="1px solid var(--cl-border)" borderRadius="12px" align="center" justify="center" direction="column" color="var(--cl-text-muted)">
         <FiStar size={25} /><Text mt={3} fontWeight="700" color="var(--cl-text-strong)">{onlyFollowed ? 'Aún no sigues ninguna licitación.' : 'No encontramos licitaciones con los filtros seleccionados.'}</Text>
@@ -347,19 +359,6 @@ export default function LicitacionesView({ user }) {
         </Flex>
         <Text color="var(--cl-text-muted)" fontSize="11px">{selectedIds.size.toLocaleString('es-MX')} seleccionados</Text>
       </Flex>
-      <Box
-        position="absolute"
-        left="calc(var(--cl-sidebar-width) + 12px)"
-        bottom="0"
-        zIndex={40}
-        pointerEvents="none"
-      >
-        <Box pointerEvents="auto">
-          <LicitacionesSummary metrics={metrics} dateLabel={dateLabel} />
-        </Box>
-      </Box>
-      <LicitacionesDownloadPanel user={user} filteredLicitaciones={filtered}
-        selectedLicitaciones={filtered.filter((item) => selectedIds.has(item.id))} />
     </Flex>
     <LicitacionDrawer item={detail} followed={detail ? favorites.has(detail.id) : false} onToggleFollow={() => detail && toggleFavorite(detail.id)} onClose={() => setDetail(null)} />
   </Flex>;

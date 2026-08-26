@@ -199,6 +199,7 @@ export default function ConstruleadsNavbar({
   isDarkMode,
   userName,
   onProjects,
+  onCompanies,
   onLicitaciones,
   onProfile,
   onPreferences,
@@ -233,6 +234,7 @@ export default function ConstruleadsNavbar({
 
       <HStack spacing={1} flex="1" justify="flex-start" overflowX="auto">
         <NavbarItem active={activeModule === 'proyectos'} onClick={onProjects}>Proyectos</NavbarItem>
+        <NavbarItem active={activeModule === 'companias'} onClick={onCompanies}>Compañías</NavbarItem>
         <NavbarItem active={activeModule === 'licitaciones'} onClick={onLicitaciones}>Licitaciones</NavbarItem>
       </HStack>
 

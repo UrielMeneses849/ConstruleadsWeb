@@ -89,14 +89,13 @@ export default function LicitacionesDownloadPanel({
 
   return (
     <Flex
-      position="absolute"
-      right="0"
-      bottom="0"
-      zIndex={45}
+      position="relative"
       align="center"
       gap={2}
       w="clamp(350px, 29vw, 430px)"
-      p="7px"
+      minH="70px"
+      px={2}
+      py={1.5}
       bg="var(--cl-surface)"
       border="1px solid var(--cl-border)"
       borderRadius="12px"

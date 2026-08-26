@@ -13,11 +13,11 @@ import {
 } from './licitacionesUtils';
 
 const columns = [
-  ['clave', 'Clave', 300], ['expediente', 'Expediente', 180], ['descripcion', 'Descripción', 300],
-  ['institucion_convocante', 'Institución convocante', 240], ['tipo_de_procedimiento', 'Tipo de procedimiento', 190],
-  ['estado', 'Estado', 130], ['monto', 'Monto del contrato (MXN)', 250], ['estatus', 'Estatus', 130],
-  ['proveedor_adjudicado', 'Proveedor adjudicado', 240], ['fecha_de_publicacion', 'Fecha de publicación', 190],
-  ['fecha_de_fallo', 'Fecha de fallo', 160],
+  ['clave', 'Clave', 180], ['expediente', 'Expediente', 150], ['descripcion', 'Descripción', 210],
+  ['institucion_convocante', 'Institución convocante', 190], ['tipo_de_procedimiento', 'Tipo de procedimiento', 170],
+  ['estado', 'Estado', 105], ['monto', 'Monto del contrato (MXN)', 185], ['estatus', 'Estatus', 115],
+  ['proveedor_adjudicado', 'Proveedor adjudicado', 195], ['fecha_de_publicacion', 'Fecha de publicación', 145],
+  ['fecha_de_fallo', 'Fecha de fallo', 135],
 ];
 
 function statusStyle(status) {
@@ -225,6 +225,8 @@ export default function LicitacionesTable({
       .licitaciones-table thead { position: sticky; top: 0; z-index: 40; isolation: isolate; }
       .licitaciones-table thead th { background: var(--cl-surface-muted); }
       .licitaciones-table thead th:last-child { position: sticky; right: 0; background: var(--cl-surface-muted); z-index: 60; box-shadow: -1px 0 0 var(--cl-border); }
+      .licitaciones-table .licitaciones-header-action { color: var(--cl-text) !important; }
+      .licitaciones-table .licitaciones-header-action:hover { background: var(--cl-hover) !important; color: var(--cl-text-strong) !important; }
       .licitaciones-amount-min, .licitaciones-amount-max { position: absolute; left: 0; top: -2px; width: 100%; appearance: none; background: transparent; pointer-events: none; height: 30px; }
       .licitaciones-amount-min { z-index: 3; }
       .licitaciones-amount-max { z-index: 4; }
@@ -233,16 +235,16 @@ export default function LicitacionesTable({
       .licitaciones-amount-min::-moz-range-thumb, .licitaciones-amount-max::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #4B5563; border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,.16); cursor: pointer; pointer-events: auto; }
       .licitaciones-amount-min::-moz-range-track, .licitaciones-amount-max::-moz-range-track { height: 4px; background: transparent; }
     `}</style>
-    <Box as="table" className="licitaciones-table" borderCollapse="separate" borderSpacing={0} tableLayout="fixed" minW="2610px" w="100%" fontSize="11px">
+    <Box as="table" className="licitaciones-table" borderCollapse="separate" borderSpacing={0} tableLayout="fixed" minW="1928px" w="100%" fontSize="11px">
       <Box as="thead" position="sticky" top={0} zIndex={40} bg="var(--cl-surface-muted)">
         <Box as="tr">
-          <Box as="th" w="42px" p={2} borderBottom="1px solid var(--cl-border)"><input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Seleccionar todos los resultados filtrados" /></Box>
-          <Box as="th" w="44px" p={2} borderBottom="1px solid var(--cl-border)">★</Box>
-          {columns.map(([key, label, width]) => <Box as="th" key={label} w={`${width}px`} minW={`${width}px`} p={2.5} textAlign="left" fontSize="10px" color="var(--cl-text-muted)" borderBottom="1px solid var(--cl-border)" position="relative">
+          <Box as="th" w="36px" p={2} borderBottom="1px solid var(--cl-border)"><input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Seleccionar todos los resultados filtrados" /></Box>
+          <Box as="th" w="38px" p={2} borderBottom="1px solid var(--cl-border)">★</Box>
+          {columns.map(([key, label, width]) => <Box as="th" key={label} w={`${width}px`} minW={`${width}px`} px={2} py={2.5} textAlign="left" fontSize="10px" color="var(--cl-text-muted)" borderBottom="1px solid var(--cl-border)" position="relative">
             <Flex align="flex-start" justify="flex-start" gap={1}>
               <Text flex="1" minW={0} fontSize="10px" fontWeight="700" lineHeight="1.3">{label}</Text>
-              <Button data-licitacion-filter-trigger size="xs" variant="ghost" minW="20px" w="20px" h="20px" p={0} onClick={(event) => { event.stopPropagation(); setFilterMenu((current) => current === key ? null : key); }} aria-label={`Filtrar ${label}`}><FiSliders size={11} /></Button>
-              <Button size="xs" variant="ghost" minW="20px" w="20px" h="20px" p={0} onClick={() => toggleSort(key)} aria-label={`Ordenar ${label}`}>
+              <Button className="licitaciones-header-action" data-licitacion-filter-trigger size="xs" variant="ghost" minW="20px" w="20px" h="20px" p={0} onClick={(event) => { event.stopPropagation(); setFilterMenu((current) => current === key ? null : key); }} aria-label={`Filtrar ${label}`} title={`Filtrar ${label}`}><FiSliders size={11} color="currentColor" /></Button>
+              <Button className="licitaciones-header-action" size="xs" variant="ghost" minW="20px" w="20px" h="20px" p={0} onClick={() => toggleSort(key)} aria-label={`Ordenar ${label}`} title={`Ordenar ${label}`}>
                 <Flex direction="column"><FiChevronUp size={9} color={sortConfig.field === key && sortConfig.direction === 'asc' ? '#FF653F' : 'currentColor'} /><FiChevronDown size={9} color={sortConfig.field === key && sortConfig.direction === 'desc' ? '#FF653F' : 'currentColor'} /></Flex>
               </Button>
             </Flex>
@@ -258,7 +260,7 @@ export default function LicitacionesTable({
               }}>Limpiar</Button><Button size="xs" bg="#FF653F" color="white" onClick={() => setFilterMenu(null)}>Listo</Button></Flex>
             </Box>}
           </Box>)}
-          <Box as="th" w="104px" minW="104px" p={2} textAlign="center" borderBottom="1px solid var(--cl-border)">Ver detalle</Box>
+          <Box as="th" w="76px" minW="76px" p={2} textAlign="center" borderBottom="1px solid var(--cl-border)">Ver detalle</Box>
         </Box>
       </Box>
       <Box as="tbody">
@@ -273,17 +275,17 @@ export default function LicitacionesTable({
             })} /></Box>
             <Box as="td" p={2} textAlign="center" borderBottom="1px solid var(--cl-border)" borderLeft={favorite ? '2px solid #D9A514' : '2px solid transparent'}>
               <Button size="xs" variant="ghost" color={favorite ? '#C58A00' : 'var(--cl-text-muted)'} onClick={() => toggleFavorite(item.id)} aria-label={favorite ? 'Dejar de seguir' : 'Seguir'}><FiStar fill={favorite ? 'currentColor' : 'none'} /></Button></Box>
-            <Box as="td" p={2.5} fontWeight="700" borderBottom="1px solid var(--cl-border)" title={item.clave}><Text whiteSpace="nowrap">{item.clave}</Text></Box>
-            <Box as="td" p={2.5} borderBottom="1px solid var(--cl-border)" title={item.expediente}><Text lineClamp={2}>{item.expediente}</Text></Box>
-            <Box as="td" p={2.5} borderBottom="1px solid var(--cl-border)" title={item.descripcion}><Text lineClamp={2}>{item.descripcion}</Text></Box>
-            <Box as="td" p={2.5} borderBottom="1px solid var(--cl-border)" title={item.institucion_convocante}><Text lineClamp={2}>{item.institucion_convocante}</Text></Box>
-            <Box as="td" p={2.5} borderBottom="1px solid var(--cl-border)">{item.tipo_de_procedimiento}</Box>
-            <Box as="td" p={2.5} borderBottom="1px solid var(--cl-border)">{item.estado}</Box>
-            <Box as="td" p={2.5} fontWeight="700" borderBottom="1px solid var(--cl-border)">{formatLicitacionAmount(item.monto_del_contrato_MXN)}</Box>
-            <Box as="td" p={2.5} borderBottom="1px solid var(--cl-border)"><Text display="inline-block" px={2} py={1} borderRadius="full" {...statusStyle(item.estatus)}>{item.estatus}</Text></Box>
-            <Box as="td" p={2.5} borderBottom="1px solid var(--cl-border)" title={item.proveedor_adjudicado}><Text lineClamp={2}>{item.proveedor_adjudicado}</Text></Box>
-            <Box as="td" p={2.5} borderBottom="1px solid var(--cl-border)">{formatLicitacionDate(item.fecha_de_publicacion)}</Box>
-            <Box as="td" p={2.5} borderBottom="1px solid var(--cl-border)">{formatLicitacionDate(item.fecha_de_fallo)}</Box>
+            <Box as="td" p={2} fontWeight="700" borderBottom="1px solid var(--cl-border)" title={item.clave}><Text whiteSpace="nowrap">{item.clave}</Text></Box>
+            <Box as="td" p={2} borderBottom="1px solid var(--cl-border)" title={item.expediente}><Text lineClamp={2}>{item.expediente}</Text></Box>
+            <Box as="td" p={2} borderBottom="1px solid var(--cl-border)" title={item.descripcion}><Text lineClamp={2}>{item.descripcion}</Text></Box>
+            <Box as="td" p={2} borderBottom="1px solid var(--cl-border)" title={item.institucion_convocante}><Text lineClamp={2}>{item.institucion_convocante}</Text></Box>
+            <Box as="td" p={2} borderBottom="1px solid var(--cl-border)">{item.tipo_de_procedimiento}</Box>
+            <Box as="td" p={2} borderBottom="1px solid var(--cl-border)">{item.estado}</Box>
+            <Box as="td" p={2} fontWeight="700" borderBottom="1px solid var(--cl-border)">{formatLicitacionAmount(item.monto_del_contrato_MXN)}</Box>
+            <Box as="td" p={2} borderBottom="1px solid var(--cl-border)"><Text display="inline-block" px={2} py={1} borderRadius="full" {...statusStyle(item.estatus)}>{item.estatus}</Text></Box>
+            <Box as="td" p={2} borderBottom="1px solid var(--cl-border)" title={item.proveedor_adjudicado}><Text lineClamp={2}>{item.proveedor_adjudicado}</Text></Box>
+            <Box as="td" p={2} borderBottom="1px solid var(--cl-border)">{formatLicitacionDate(item.fecha_de_publicacion)}</Box>
+            <Box as="td" p={2} borderBottom="1px solid var(--cl-border)">{formatLicitacionDate(item.fecha_de_fallo)}</Box>
             <Box as="td" p={0} textAlign="center" borderBottom="1px solid var(--cl-border)" bg={rowBg}>
               <Flex minH="52px" align="center" justify="center">
                 <Button size="xs" variant="outline" w="32px" h="32px" minW="32px" p={0} borderColor="var(--cl-border)" color="var(--cl-text-strong)" borderRadius="8px" bg={rowBg}

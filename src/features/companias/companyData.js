@@ -121,6 +121,50 @@ function buildRelationshipIndex(relationships = []) {
   return index;
 }
 
+function companyLookupKeys(company = {}) {
+  const key = cleanText(company.key);
+  const clave = cleanText(company.clave);
+  const rfc = cleanText(company.rfc);
+  const name = cleanText(company.name);
+
+  return [...new Set([
+    key && `key:${key}`,
+    clave && `clave:${normalizeCompanyText(clave)}`,
+    rfc && `rfc:${normalizeCompanyText(rfc)}`,
+    name && `name:${normalizeCompanyText(name)}`,
+  ].filter(Boolean))];
+}
+
+function buildCompanyDetailsIndex(relationships = []) {
+  const index = new Map();
+
+  relationships.forEach((relationship, relationshipIndex) => {
+    const identity = getRelationshipIdentity(relationship?.company);
+    if (!identity) return;
+
+    const entry = {
+      id: `${normalizeProjectKey(relationship?.projectKey)}:${relationshipIndex}`,
+      details: relationship.company || {},
+    };
+
+    companyLookupKeys(identity).forEach((lookupKey) => {
+      const entries = index.get(lookupKey) || [];
+      entries.push(entry);
+      index.set(lookupKey, entries);
+    });
+  });
+
+  return index;
+}
+
+function getCompanyDetails(company, detailsIndex) {
+  const entries = new Map();
+  companyLookupKeys(company).forEach((lookupKey) => {
+    (detailsIndex.get(lookupKey) || []).forEach((entry) => entries.set(entry.id, entry.details));
+  });
+  return [...entries.values()];
+}
+
 function createCompany(identity) {
   return {
     ...identity,
@@ -130,6 +174,7 @@ function createCompany(identity) {
     websites: new Set(),
     addresses: new Map(),
     phones: new Set(),
+    emails: new Set(),
     datasetContacts: new Map(),
     linkedinContacts: new Map(),
   };
@@ -142,6 +187,7 @@ function appendCompanyDetails(company, details = {}) {
   const address = details.address;
   if (address?.formatted) company.addresses.set(address.formatted, address);
   (details.phones || []).map(cleanText).filter(Boolean).forEach((phone) => company.phones.add(phone));
+  (details.emails || []).map(cleanText).filter(Boolean).forEach((email) => company.emails.add(email));
 
   (details.datasetContacts || []).forEach((contact) => {
     if (!contact) return;
@@ -173,6 +219,7 @@ export function getCompanyGenreColor(genero) {
 export function buildCompanyRows(obras = [], relationships = []) {
   const companies = new Map();
   const relationshipsByProject = buildRelationshipIndex(relationships);
+  const companyDetailsIndex = buildCompanyDetailsIndex(relationships);
 
   obras.forEach((obra, index) => {
     const projectKey = getObraKey(obra, index);
@@ -202,6 +249,12 @@ export function buildCompanyRows(obras = [], relationships = []) {
 
   return [...companies.values()]
     .map((company) => {
+      // Algunos proyectos de obras y del WS no comparten una clave idéntica.
+      // Aun así, la ficha remota es de la misma compañía: la fusionamos por
+      // clave, RFC o razón social para no perder sus teléfonos y contactos.
+      getCompanyDetails(company, companyDetailsIndex).forEach((details) => {
+        appendCompanyDetails(company, details);
+      });
       const projects = [...company.projectByKey.values()];
       const totalInvestment = projects.reduce((total, obra) => total + (Number(obra?.inversion) || 0), 0);
       const totalSurface = projects.reduce((total, obra) => total + (Number(obra?.superficie) || 0), 0);
@@ -217,6 +270,7 @@ export function buildCompanyRows(obras = [], relationships = []) {
         websites: [...company.websites],
         addresses: [...company.addresses.values()],
         phones: [...company.phones],
+        emails: [...company.emails],
         datasetContacts: [...company.datasetContacts.values()],
         linkedinContacts: [...company.linkedinContacts.values()],
       };

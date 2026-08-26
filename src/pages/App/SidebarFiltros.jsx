@@ -343,6 +343,12 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     savedFilters.selectedTiposProyecto || []
   );
   const [searchInputs, setSearchInputs] = useState({});
+  // Maqueta local: prepara la interacción de fuentes sin alterar todavía los
+  // resultados, hasta que Explorer tenga datos conectados al mismo contrato.
+  const [sourcePreview, setSourcePreview] = useState({
+    construleads: true,
+    explorer: false,
+  });
 
   const [surfaceMin, setSurfaceMin] = useState(
     getSavedRangeValue(savedFilters.surfaceMin ?? savedFilters.superficieMin, null)
@@ -2437,8 +2443,8 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
   return (
     <Box
       w="var(--cl-sidebar-width)"
-      minW="240px"
-      maxW="272px"
+      minW="216px"
+      maxW="240px"
       h="100%"
       minH="0"
       maxH="100%"
@@ -2505,6 +2511,113 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
           {renderSuperficieAccordion()}
           {renderInversionAccordion()}
         </VStack>
+
+        <Box
+          mt={2}
+          pt={2.5}
+          borderTop="1px solid var(--cl-border)"
+          flexShrink={0}
+        >
+          <Flex align="center" justify="space-between" mb={2}>
+            <Box>
+              <Text fontSize="12px" fontWeight="700" color={TEXT_STRONG}>
+                Fuentes de información
+              </Text>
+              <Text mt={0.5} fontSize="9px" color={TEXT_SECONDARY}>
+                Vista previa de fuentes
+              </Text>
+            </Box>
+            <Text
+              px={1.5}
+              py={0.5}
+              borderRadius="full"
+              bg="var(--cl-surface-muted)"
+              border="1px solid var(--cl-border)"
+              color={TEXT_SECONDARY}
+              fontSize="8px"
+              fontWeight="700"
+              letterSpacing=".04em"
+            >
+              BETA
+            </Text>
+          </Flex>
+
+          {[
+            {
+              key: 'construleads',
+              label: 'Construleads',
+              detail: 'Base BIMSA',
+              color: '#FF653F',
+            },
+            {
+              key: 'explorer',
+              label: 'Explorer',
+              detail: 'Nueva fuente',
+              color: '#1847B8',
+            },
+          ].map((source) => {
+            const isEnabled = sourcePreview[source.key];
+            return (
+              <Flex
+                as="button"
+                type="button"
+                key={source.key}
+                w="100%"
+                align="center"
+                justify="space-between"
+                gap={2}
+                px={2}
+                py={1.5}
+                mb={source.key === 'construleads' ? 1 : 0}
+                borderRadius="9px"
+                bg={isEnabled ? 'var(--cl-surface-muted)' : 'transparent'}
+                cursor="pointer"
+                textAlign="left"
+                transition="background 160ms ease"
+                _hover={{ bg: 'var(--cl-surface-muted)' }}
+                onClick={() => setSourcePreview((current) => ({
+                  ...current,
+                  [source.key]: !current[source.key],
+                }))}
+                role="switch"
+                aria-checked={isEnabled}
+                aria-label={`${source.label} ${isEnabled ? 'visible' : 'oculta'}; maqueta`}
+              >
+                <Flex align="center" gap={2} minW={0}>
+                  <Box w="7px" h="7px" borderRadius="full" bg={source.color} flexShrink={0} />
+                  <Box minW={0}>
+                    <Text fontSize="11px" fontWeight="600" color={TEXT_STRONG} lineHeight="1.15">
+                      {source.label}
+                    </Text>
+                    <Text mt={0.5} fontSize="9px" color={TEXT_SECONDARY} lineHeight="1.1">
+                      {source.detail}
+                    </Text>
+                  </Box>
+                </Flex>
+                <Flex
+                  w="28px"
+                  h="16px"
+                  p="2px"
+                  borderRadius="full"
+                  bg={isEnabled ? source.color : 'var(--cl-border)'}
+                  flexShrink={0}
+                  align="center"
+                  transition="background 180ms ease"
+                >
+                  <Box
+                    w="12px"
+                    h="12px"
+                    borderRadius="full"
+                    bg="white"
+                    boxShadow="0 1px 3px rgba(0,0,0,.2)"
+                    transform={isEnabled ? 'translateX(12px)' : 'translateX(0)'}
+                    transition="transform 180ms ease"
+                  />
+                </Flex>
+              </Flex>
+            );
+          })}
+        </Box>
       </Box>
     </Box>
   );

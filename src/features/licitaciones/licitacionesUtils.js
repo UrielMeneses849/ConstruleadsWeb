@@ -5,9 +5,7 @@ export const LICITACION_UNASSIGNED_LABEL = 'Sin asignación';
 const licitacionCurrencyFormatter = new Intl.NumberFormat('es-MX', {
   style: 'currency', currency: 'MXN', maximumFractionDigits: 0,
 });
-const licitacionDateFormatter = new Intl.DateTimeFormat('es-MX', {
-  day: '2-digit', month: '2-digit', year: 'numeric',
-});
+const licitacionMonthFormatter = new Intl.DateTimeFormat('es-MX', { month: 'short' });
 
 export function formatLicitacionProvider(value) {
   const text = String(value ?? '').replace(/\s+/g, ' ').trim();
@@ -84,7 +82,11 @@ export function parseLicitacionAmount(value) {
 
 export function formatLicitacionDate(value, fallback = 'Sin fecha') {
   const date = value instanceof Date ? value : parseLicitacionDate(value);
-  return date ? licitacionDateFormatter.format(date) : fallback;
+  if (!date) return fallback;
+
+  const month = licitacionMonthFormatter.format(date).replace('.', '');
+  const capitalizedMonth = `${month.charAt(0).toUpperCase()}${month.slice(1)}`;
+  return `${capitalizedMonth} ${date.getDate()}, ${date.getFullYear()}`;
 }
 
 export function formatLicitacionAmount(value) {

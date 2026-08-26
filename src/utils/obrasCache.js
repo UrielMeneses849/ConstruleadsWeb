@@ -1,6 +1,8 @@
 const DATABASE_NAME = 'construleads-performance-cache';
 const STORE_NAME = 'obras';
-const DATABASE_VERSION = 1;
+const COMPANIES_STORE_NAME = 'companias';
+const DATABASE_VERSION = 2;
+const COMPANY_RELATIONSHIPS_CACHE_VERSION = 2;
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
@@ -10,6 +12,9 @@ function openDatabase() {
       const database = request.result;
       if (!database.objectStoreNames.contains(STORE_NAME)) {
         database.createObjectStore(STORE_NAME);
+      }
+      if (!database.objectStoreNames.contains(COMPANIES_STORE_NAME)) {
+        database.createObjectStore(COMPANIES_STORE_NAME);
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -56,5 +61,45 @@ export async function writeCachedObras(userId, obras) {
     database.close();
   } catch {
     // La caché es una mejora de rendimiento y nunca debe bloquear la aplicación.
+  }
+}
+
+export async function readCachedCompanyRelationships(userId) {
+  if (!userId || !('indexedDB' in window)) return null;
+
+  try {
+    const database = await openDatabase();
+    const cached = await new Promise((resolve, reject) => {
+      const transaction = database.transaction(COMPANIES_STORE_NAME, 'readonly');
+      const request = transaction.objectStore(COMPANIES_STORE_NAME).get(String(userId));
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+    database.close();
+    return cached?.version === COMPANY_RELATIONSHIPS_CACHE_VERSION && Array.isArray(cached.relationships)
+      ? cached.relationships
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function writeCachedCompanyRelationships(userId, relationships) {
+  if (!userId || !Array.isArray(relationships) || !('indexedDB' in window)) return;
+
+  try {
+    const database = await openDatabase();
+    await new Promise((resolve, reject) => {
+      const transaction = database.transaction(COMPANIES_STORE_NAME, 'readwrite');
+      transaction.objectStore(COMPANIES_STORE_NAME).put(
+        { version: COMPANY_RELATIONSHIPS_CACHE_VERSION, savedAt: Date.now(), relationships },
+        String(userId)
+      );
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    database.close();
+  } catch {
+    // La caché de perfiles acelera el módulo, pero jamás bloquea la respuesta viva.
   }
 }

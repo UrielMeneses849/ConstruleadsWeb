@@ -8,7 +8,124 @@ import {
   Flex,
   Grid,
 } from '@chakra-ui/react';
+import {
+  FiBarChart2,
+  FiBriefcase,
+  FiCalendar,
+  FiDollarSign,
+  FiMapPin,
+  FiMaximize2,
+  FiUsers,
+} from 'react-icons/fi';
 import { getSelectedDateField } from '../../utils/filterObras';
+
+const SUMMARY_METRIC_META = {
+  projects: { Icon: FiBriefcase, color: '#2854C5', background: 'rgba(40, 84, 197, .11)' },
+  investment: { Icon: FiDollarSign, color: '#E35A2E', background: 'rgba(255, 101, 63, .11)' },
+  states: { Icon: FiMapPin, color: '#A7472C', background: 'rgba(255, 101, 63, .11)' },
+  surface: { Icon: FiMaximize2, color: '#6747C8', background: 'rgba(103, 71, 200, .11)' },
+  companies: { Icon: FiUsers, color: '#16835B', background: 'rgba(22, 131, 91, .11)' },
+  date: { Icon: FiCalendar, color: '#536174', background: 'rgba(83, 97, 116, .11)' },
+  default: { Icon: FiBarChart2, color: '#2854C5', background: 'rgba(40, 84, 197, .11)' },
+};
+
+function getMetricMeta(label = '') {
+  const normalized = String(label).toLowerCase();
+  if (normalized.includes('inversión')) return SUMMARY_METRIC_META.investment;
+  if (normalized.includes('superficie') || normalized.includes('metro')) return SUMMARY_METRIC_META.surface;
+  if (normalized.includes('compañ')) return SUMMARY_METRIC_META.companies;
+  if (normalized.includes('estado')) return SUMMARY_METRIC_META.states;
+  if (normalized.includes('fecha') || normalized.includes('criterio')) return SUMMARY_METRIC_META.date;
+  if (normalized.includes('proyecto') || normalized.includes('obra') || normalized.includes('selección')) return SUMMARY_METRIC_META.projects;
+  return SUMMARY_METRIC_META.default;
+}
+
+export function SummaryMetricCard({
+  label,
+  value,
+  suffix,
+  highlighted = false,
+  icon: customIcon,
+  iconColor,
+  iconBackground,
+}) {
+  const metricMeta = getMetricMeta(label);
+  const Icon = customIcon || metricMeta.Icon;
+  const color = iconColor || metricMeta.color;
+  const background = iconBackground || metricMeta.background;
+
+  return (
+    <Box
+      minW="132px"
+      minH="70px"
+      px={3.5}
+      py={1.5}
+      border={highlighted ? '1px solid rgba(255,101,63,.62)' : '1px solid var(--cl-border)'}
+      borderRadius="11px"
+      boxShadow="none"
+      color="var(--cl-text)"
+      bg={highlighted ? 'rgba(255,101,63,.10)' : 'var(--cl-surface)'}
+      position="relative"
+      overflow="hidden"
+      display="flex"
+      alignItems="center"
+      gap={2.5}
+    >
+      <Box
+        position="absolute"
+        left={0}
+        top={0}
+        bottom={0}
+        w="3px"
+        bg={highlighted ? '#FF653F' : 'transparent'}
+      />
+      <Flex
+        w="28px"
+        h="28px"
+        flexShrink={0}
+        align="center"
+        justify="center"
+        borderRadius="8px"
+        color={highlighted ? '#D94E2D' : color}
+        bg={highlighted ? 'rgba(255,101,63,.14)' : background}
+      >
+        <Box as={Icon} boxSize="16px" />
+      </Flex>
+      <Box minW={0} flex="1">
+        <Text
+          fontSize="9px"
+          fontWeight="400"
+          color="var(--cl-text-muted)"
+          lineHeight="1.15"
+          whiteSpace="nowrap"
+          overflow="hidden"
+          textOverflow="ellipsis"
+        >
+          {label}
+        </Text>
+        <HStack mt={1} spacing={1.5} align="baseline" whiteSpace="nowrap">
+          <Text
+            fontSize="16px"
+            fontWeight="400"
+            lineHeight="1.1"
+            color="var(--cl-text-strong)"
+            fontVariantNumeric="tabular-nums"
+            whiteSpace="nowrap"
+            overflow="hidden"
+            textOverflow="ellipsis"
+          >
+            {value}
+          </Text>
+          {suffix && (
+            <Text fontSize="9px" fontWeight="400" color="var(--cl-text-muted)" whiteSpace="nowrap">
+              {suffix}
+            </Text>
+          )}
+        </HStack>
+      </Box>
+    </Box>
+  );
+}
 
 export default function PanelResumen({
   obras = [],
@@ -23,9 +140,11 @@ const selectedDateField = useMemo(
   () => getSelectedDateField(filtros),
   [filtros]
 );
-const selectedDateLabel = selectedDateField
-  .replace('Fecha de inicio probable', 'Fecha de inicio')
-  .replace('Fecha de término probable', 'Fecha de término');
+const selectedDateLabel = {
+  'Fecha de publicación': 'Publicación',
+  'Fecha de inicio probable': 'Inicio',
+  'Fecha de término probable': 'Término',
+}[selectedDateField] || selectedDateField;
 const numberFormatter = new Intl.NumberFormat('es-MX');
 const compactFormatter = new Intl.NumberFormat('es-MX', {
   maximumFractionDigits: 0,
@@ -49,6 +168,11 @@ obras.forEach((o) => {
 });
 
 const estadosConProyectos = Object.keys(estadosMap).length;
+const companiasUnicas = new Set(
+  obras
+    .map((obra) => String(obra?.compania || '').trim())
+    .filter(Boolean),
+).size;
 
 const metricasDinamicas = [
   ...(leadingMetric ? [{
@@ -77,7 +201,11 @@ const metricasDinamicas = [
   {
     valor: numberFormatter.format(superficieTotal),
     suffix: 'm²',
-    label: metricLabels.surface || 'Superficie',
+    label: metricLabels.surface || 'Superficie construida',
+  },
+  {
+    valor: numberFormatter.format(companiasUnicas),
+    label: metricLabels.companies || 'Compañías únicas',
   },
 ];
 
@@ -88,111 +216,20 @@ if (variant === 'map') {
       gap={2}
       w="100%"
       minW="0"
-      templateColumns={`repeat(${metricasDinamicas.length + 1}, minmax(148px, 1fr))`}
+      templateColumns={`repeat(${metricasDinamicas.length + 1}, minmax(132px, 1fr))`}
       overflowX="auto"
-      pb={1}
+      pb={0}
     >
       {metricasDinamicas.map((item) => (
-        <Box
+        <SummaryMetricCard
           key={item.label}
-          minW="148px"
-          border={item.highlighted ? '1px solid rgba(255,101,63,.62)' : '1px solid var(--cl-border)'}
-          borderRadius="10px"
-          boxShadow="var(--cl-shadow)"
-          color="var(--cl-text)"
-          bg={item.highlighted ? 'rgba(255,101,63,.10)' : 'var(--cl-surface)'}
-          minH="64px"
-          px={3}
-          py={2}
-          position="relative"
-          overflow="hidden"
-          display="flex"
-          flexDirection="column"
-          justifyContent="center"
-        >
-          <Box
-            position="absolute"
-            left={0}
-            top={0}
-            bottom={0}
-            w="3px"
-            bg={item.highlighted ? '#FF653F' : 'transparent'}
-          />
-
-          <Flex align="center" gap={2} mb={1}>
-            <Text
-              fontSize="10px"
-              fontWeight="400"
-              color="var(--cl-text-muted)"
-              lineHeight="1"
-              whiteSpace="nowrap"
-            >
-              {item.label}
-            </Text>
-          </Flex>
-
-          <HStack spacing={1.5} align="baseline" whiteSpace="nowrap">
-            <Text
-              fontSize="18px"
-              fontWeight="400"
-              lineHeight="1.1"
-              color="var(--cl-text-strong)"
-              fontVariantNumeric="tabular-nums"
-              whiteSpace="nowrap"
-              overflow="hidden"
-              textOverflow="ellipsis"
-            >
-              {item.valor}
-            </Text>
-            {item.suffix && (
-              <Text
-                fontSize="10px"
-                fontWeight="400"
-                color="var(--cl-text-muted)"
-                whiteSpace="nowrap"
-              >
-                {item.suffix}
-              </Text>
-            )}
-          </HStack>
-        </Box>
+          label={item.label}
+          value={item.valor}
+          suffix={item.suffix}
+          highlighted={item.highlighted}
+        />
       ))}
-      <Box
-        minW="148px"
-        bg="var(--cl-surface)"
-        border="1px solid var(--cl-border)"
-        borderRadius="10px"
-        boxShadow="var(--cl-shadow)"
-        minH="64px"
-        px={3}
-        py={2}
-        display="flex"
-        flexDirection="column"
-        justifyContent="center"
-      >
-        <Text
-          fontSize="10px"
-          color="var(--cl-text-muted)"
-          fontWeight="400"
-          lineHeight="1"
-          whiteSpace="nowrap"
-        >
-          Criterio de fecha
-        </Text>
-        <Text
-          mt={1}
-          fontSize="18px"
-          lineHeight="1.1"
-          color="var(--cl-text-strong)"
-          fontWeight="400"
-          fontVariantNumeric="tabular-nums"
-          whiteSpace="nowrap"
-          overflow="hidden"
-          textOverflow="ellipsis"
-        >
-          {selectedDateLabel}
-        </Text>
-      </Box>
+      <SummaryMetricCard label="Criterio de fecha" value={selectedDateLabel} />
     </Grid>
   );
 }

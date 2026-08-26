@@ -1,6 +1,7 @@
 export const RADAR_PREFERENCES_UPDATED_EVENT = 'construleads-radar-preferences-updated';
 
 const STORAGE_PREFIX = 'construleads-profile-preferences';
+const COMPANY_ALERTS_SUFFIX = '-company-alerts';
 const EMPTY_CRITERIA = Object.freeze({
   regions: [],
   genres: [],
@@ -36,6 +37,47 @@ function getStorageKey() {
   } catch {
     return `${STORAGE_PREFIX}-local`;
   }
+}
+
+function getCompanyAlertsStorageKey() {
+  return `${getStorageKey()}${COMPANY_ALERTS_SUFFIX}`;
+}
+
+export function getCompanyActivityAlerts() {
+  try {
+    const alerts = JSON.parse(localStorage.getItem(getCompanyAlertsStorageKey()) || '[]');
+    return Array.isArray(alerts) ? alerts.filter((alert) => alert?.key) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function toggleCompanyActivityAlert(company) {
+  const key = String(company?.key || '').trim();
+  if (!key) return { enabled: false, alerts: getCompanyActivityAlerts() };
+
+  const alerts = getCompanyActivityAlerts();
+  const currentIndex = alerts.findIndex((alert) => alert.key === key);
+  const enabled = currentIndex < 0;
+  const next = enabled
+    ? [...alerts, {
+        key,
+        name: String(company?.name || 'Compañía').trim(),
+        enabledAt: new Date().toISOString(),
+      }]
+    : alerts.filter((alert) => alert.key !== key);
+
+  try {
+    localStorage.setItem(getCompanyAlertsStorageKey(), JSON.stringify(next));
+  } catch {
+    // La UI conserva el cambio durante la sesión aunque el navegador no pueda persistirlo.
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(RADAR_PREFERENCES_UPDATED_EVENT));
+  }
+
+  return { enabled, alerts: next };
 }
 
 export function getRadarPreferences() {

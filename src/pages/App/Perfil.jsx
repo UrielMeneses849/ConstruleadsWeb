@@ -686,6 +686,7 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
             isDarkMode={isDarkMode}
             userName={name}
             onProjects={() => navigate('/construleads/proyectos/mapa')}
+            onCompanies={() => navigate('/construleads/companias')}
             onLicitaciones={() => navigate('/construleads/licitaciones')}
             onProfile={() => undefined}
             onPreferences={() => setActive('preferencias')}

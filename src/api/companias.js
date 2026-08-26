@@ -8,7 +8,8 @@ function normalizeTagName(value = '') {
   return cleanText(value)
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
 }
 
 function nodeTagName(node) {
@@ -26,6 +27,35 @@ function firstDirectChild(node, tagName) {
 
 function directText(node, tagName) {
   return cleanText(firstDirectChild(node, tagName)?.textContent);
+}
+
+function directTextFrom(node, tagNames) {
+  for (const tagName of tagNames) {
+    const value = directText(node, tagName);
+    if (value) return value;
+  }
+
+  const expectedNames = new Set(tagNames.map(normalizeTagName));
+  const attribute = Array.from(node?.attributes || []).find((item) => expectedNames.has(normalizeTagName(item.name)));
+  if (attribute?.value) return cleanText(attribute.value);
+
+  return '';
+}
+
+function directTextMatching(node, matchesTagName) {
+  const child = Array.from(node?.children || []).find((item) => matchesTagName(nodeTagName(item)) && cleanText(item.textContent));
+  if (child) return cleanText(child.textContent);
+  const attribute = Array.from(node?.attributes || []).find((item) => matchesTagName(normalizeTagName(item.name)) && cleanText(item.value));
+  return cleanText(attribute?.value);
+}
+
+function directChildrenFrom(node, tagNames) {
+  const expectedNames = new Set(tagNames.map(normalizeTagName));
+  return Array.from(node?.children || []).filter((child) => expectedNames.has(nodeTagName(child)));
+}
+
+function firstDirectChildFrom(node, tagNames) {
+  return directChildrenFrom(node, tagNames)[0] || null;
 }
 
 function parseXmlDocument(xmlText) {
@@ -52,11 +82,11 @@ function unwrapAsmxPayload(xmlText) {
 }
 
 function buildAddress(companyNode) {
-  const street = directText(companyNode, 'sucu_calle');
-  const neighborhood = directText(companyNode, 'sucu_colonia');
-  const postalCode = directText(companyNode, 'sucu_codigopostal');
-  const state = directText(companyNode, 'sucu_esta_descripcion');
-  const municipality = directText(companyNode, 'sucu_muni_descripcion');
+  const street = directTextFrom(companyNode, ['sucu_calle', 'calle_compania', 'compania_calle']);
+  const neighborhood = directTextFrom(companyNode, ['sucu_colonia', 'colonia_compania', 'compania_colonia']);
+  const postalCode = directTextFrom(companyNode, ['sucu_codigopostal', 'codigo_postal_compania', 'compania_codigo_postal']);
+  const state = directTextFrom(companyNode, ['sucu_esta_descripcion', 'estado_compania', 'compania_estado']);
+  const municipality = directTextFrom(companyNode, ['sucu_muni_descripcion', 'municipio_compania', 'compania_municipio']);
   const formatted = [street, neighborhood, municipality, state, postalCode && `C.P. ${postalCode}`]
     .filter(Boolean)
     .join(' · ');
@@ -72,33 +102,68 @@ function buildAddress(companyNode) {
 }
 
 function buildContacts(companyNode) {
-  const contactsNode = firstDirectChild(companyNode, 'CONTACTOS');
-  return directChildrenByName(contactsNode, 'CONTACTO')
+  const contactsNode = firstDirectChildFrom(companyNode, ['CONTACTOS', 'CONTACTOS_COMPANIA']);
+  const contactNodes = contactsNode
+    ? directChildrenFrom(contactsNode, ['CONTACTO', 'CONTACTO_COMPANIA'])
+    : directChildrenFrom(companyNode, ['CONTACTO', 'CONTACTO_COMPANIA']);
+
+  const nodesToParse = contactNodes.length ? contactNodes : [companyNode];
+
+  return nodesToParse
     .map((contactNode) => {
-      const name = directText(contactNode, 'contacto');
-      const role = directText(contactNode, 'cont_puesto');
-      const email = directText(contactNode, 'cont_email');
-      const extension = directText(contactNode, 'cont_extension');
-      if (!name && !role && !email && !extension) return null;
+      const completeName = [
+        directTextFrom(contactNode, ['cont_nombre', 'nombre_contacto']),
+        directTextFrom(contactNode, ['cont_paterno', 'apellido_paterno_contacto']),
+        directTextFrom(contactNode, ['cont_materno', 'apellido_materno_contacto']),
+      ].filter(Boolean).join(' ');
+      const name = directTextFrom(contactNode, ['contacto', 'nombre_contacto', 'contacto_nombre']) || completeName;
+      const role = directTextFrom(contactNode, ['cont_puesto', 'cargo_contacto', 'puesto_contacto', 'contacto_cargo']);
+      const email = directTextFrom(contactNode, [
+        'cont_email', 'cont_correo', 'cont_correo_electronico',
+        'email_contacto', 'correo_contacto', 'contacto_email', 'contacto_correo',
+        'correo_electronico', 'email', 'correo', 'e_mail', 'email1', 'correo1', 'e_mail1',
+      ]) || directTextMatching(contactNode, (tagName) => (
+        tagName.includes('email') || tagName.includes('correo') || tagName === 'mail'
+      ));
+      const phone = directTextFrom(contactNode, [
+        'cont_telefono', 'telefono_contacto', 'contacto_telefono', 'cont_telefono1',
+      ]);
+      const phone2 = directTextFrom(contactNode, [
+        'cont_telefono2', 'telefono2_contacto', 'contacto_telefono2', 'cont_telefono_2',
+      ]);
+      const extension = directTextFrom(contactNode, ['cont_extension', 'extension_contacto', 'contacto_extension']);
+      if (!name && !role && !email && !phone && !phone2 && !extension) return null;
 
       return {
         name: name || 'Contacto registrado',
         role,
         email,
+        phone,
+        phone2,
         extension,
-        key: email || `${normalizeTagName(name)}:${normalizeTagName(role)}:${extension}`,
+        key: email || `${normalizeTagName(name)}:${normalizeTagName(role)}:${phone}:${phone2}:${extension}`,
       };
     })
     .filter(Boolean);
 }
 
 function buildLinkedInContacts(companyNode) {
-  const linkedInNode = firstDirectChild(companyNode, 'LINKEDIN');
-  return directChildrenByName(linkedInNode, 'LINKEDIN')
+  const linkedInNode = firstDirectChildFrom(companyNode, ['LINKEDIN', 'LINKEDIN_CONTACTOS', 'LINKEDIN_COMPANIA']);
+  const profileNodes = linkedInNode
+    ? directChildrenFrom(linkedInNode, ['LINKEDIN', 'PERFIL_LINKEDIN', 'CONTACTO_LINKEDIN'])
+    : directChildrenFrom(companyNode, ['PERFIL_LINKEDIN', 'CONTACTO_LINKEDIN']);
+
+  // El WS puede regresar varios perfiles dentro de <LINKEDIN> o un único
+  // perfil directamente en ese nodo. Soportamos ambos formatos.
+  const nodesToParse = profileNodes.length
+    ? profileNodes
+    : linkedInNode ? [linkedInNode] : [companyNode];
+
+  return nodesToParse
     .map((profileNode) => {
-      const name = directText(profileNode, 'nombre');
-      const role = directText(profileNode, 'puesto');
-      const url = directText(profileNode, 'link');
+      const name = directTextFrom(profileNode, ['nombre', 'nombre_linkedin', 'linkedin_nombre']);
+      const role = directTextFrom(profileNode, ['puesto', 'cargo_linkedin', 'linkedin_cargo']);
+      const url = directTextFrom(profileNode, ['link', 'linkedin_url', 'url_linkedin', 'linkedin']);
       if (!name && !role && !url) return null;
 
       return {
@@ -118,19 +183,48 @@ export function normalizeCompanyProjectKey(value) {
 export function parseCompaniasXml(xmlText) {
   const payload = unwrapAsmxPayload(xmlText);
   const document = parseXmlDocument(payload);
+  const responseRoot = document.documentElement;
+
+  // El ASMX conserva HTTP 200 incluso cuando rechaza la sesión o no puede
+  // generar el catálogo. Sin esta validación, la UI interpreta esa respuesta
+  // como un catálogo vacío y termina mostrando cero contactos.
+  if (nodeTagName(responseRoot) === 'row' && responseRoot?.getAttribute('estatus') === '0') {
+    throw new Error(
+      cleanText(responseRoot.getAttribute('mensaje'))
+      || 'El servicio de compañías no pudo entregar los perfiles.'
+    );
+  }
+
   const projects = Array.from(document.getElementsByTagName('*'))
     .filter((node) => nodeTagName(node) === 'datos');
   const relationships = [];
 
   projects.forEach((projectNode) => {
-    const projectKey = normalizeCompanyProjectKey(directText(projectNode, 'proy_clave'));
+    const projectKey = normalizeCompanyProjectKey(directTextFrom(projectNode, [
+      'proy_clave',
+      'clave_proyecto',
+      'proyecto_clave',
+      'clave_obra',
+    ]));
     if (!projectKey) return;
 
-    const companiesNode = firstDirectChild(projectNode, 'CIAS');
-    directChildrenByName(companiesNode, 'CIA').forEach((companyNode) => {
-      const clave = directText(companyNode, 'clave_cia');
-      const name = directText(companyNode, 'comp_razon_social');
-      const rfc = directText(companyNode, 'RFC');
+    const companiesNode = firstDirectChildFrom(projectNode, ['CIAS', 'COMPANIAS', 'COMPAÑIAS']);
+    const nestedCompanyNodes = companiesNode
+      ? directChildrenFrom(companiesNode, ['CIA', 'COMPANIA', 'COMPAÑIA'])
+      : directChildrenFrom(projectNode, ['CIA', 'COMPANIA', 'COMPAÑIA']);
+    const hasFlatCompany = Boolean(directTextFrom(projectNode, [
+      'clave_cia', 'clave_compania', 'compania_clave', 'clave_empresa',
+      'comp_razon_social', 'compania', 'nombre_compania', 'compania_nombre',
+      'RFC', 'rfc_compania', 'compania_rfc',
+    ]));
+    const companyNodes = nestedCompanyNodes.length
+      ? nestedCompanyNodes
+      : hasFlatCompany ? [projectNode] : [];
+
+    companyNodes.forEach((companyNode) => {
+      const clave = directTextFrom(companyNode, ['clave_cia', 'clave_compania', 'compania_clave', 'clave_empresa']);
+      const name = directTextFrom(companyNode, ['comp_razon_social', 'compania', 'nombre_compania', 'compania_nombre', 'razon_social_compania']);
+      const rfc = directTextFrom(companyNode, ['RFC', 'rfc_compania', 'compania_rfc', 'rfc_empresa']);
       if (!clave && !name && !rfc) return;
 
       relationships.push({
@@ -139,9 +233,21 @@ export function parseCompaniasXml(xmlText) {
           clave,
           name: name || rfc || clave,
           rfc,
-          role: directText(companyNode, 'roco_descripcion'),
+          role: directTextFrom(companyNode, ['roco_descripcion', 'rol_compania', 'compania_rol', 'rol_empresa']),
+          website: directTextFrom(companyNode, ['pagina_web', 'sitio_web', 'web_compania', 'compania_web']),
           address: buildAddress(companyNode),
-          phones: ['sucu_telefono1', 'sucu_telefono2', 'sucu_telefono3']
+          phones: [
+            'sucu_telefono1', 'sucu_telefono2', 'sucu_telefono3',
+            'telefono_compania', 'telefono_1_compania', 'telefono_2_compania', 'telefono_3_compania',
+            'telefono1', 'telefono2', 'telefono3', 'telefono',
+          ]
+            .map((tagName) => directText(companyNode, tagName))
+            .filter(Boolean),
+          emails: [
+            'sucu_email', 'sucu_correo', 'email_compania', 'correo_compania',
+            'compania_email', 'compania_correo', 'correo_electronico_compania',
+            'email', 'correo', 'email1', 'correo1',
+          ]
             .map((tagName) => directText(companyNode, tagName))
             .filter(Boolean),
           datasetContacts: buildContacts(companyNode),
@@ -173,11 +279,13 @@ function getSessionCredentials() {
   };
 }
 
-export async function obtenerCompanias({ signal } = {}) {
+export async function obtenerCompanias({ signal, timeoutMs = 90000 } = {}) {
   const requestController = new AbortController();
   const abortFromCaller = () => requestController.abort();
   signal?.addEventListener('abort', abortFromCaller, { once: true });
-  const requestTimeout = window.setTimeout(() => requestController.abort(), 60000);
+  // Este catálogo contiene los contactos y puede tardar bastante más que las
+  // obras. En producción no debe abortarse antes de poder enriquecer la vista.
+  const requestTimeout = window.setTimeout(() => requestController.abort(), timeoutMs);
 
   try {
     const response = await fetch(`${CONSTRULEADS_WS_BASE_URL}/ws_cl_companias`, {
