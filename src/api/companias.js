@@ -117,7 +117,9 @@ function buildContacts(companyNode) {
         directTextFrom(contactNode, ['cont_materno', 'apellido_materno_contacto']),
       ].filter(Boolean).join(' ');
       const name = directTextFrom(contactNode, ['contacto', 'nombre_contacto', 'contacto_nombre']) || completeName;
-      const role = directTextFrom(contactNode, ['cont_puesto', 'cargo_contacto', 'puesto_contacto', 'contacto_cargo']);
+      const role = directTextFrom(contactNode, [
+        'cont_puesto', 'puesto', 'cargo_contacto', 'puesto_contacto', 'contacto_cargo',
+      ]);
       const email = directTextFrom(contactNode, [
         'cont_email', 'cont_correo', 'cont_correo_electronico',
         'email_contacto', 'correo_contacto', 'contacto_email', 'contacto_correo',
@@ -195,8 +197,16 @@ export function parseCompaniasXml(xmlText) {
     );
   }
 
-  const projects = Array.from(document.getElementsByTagName('*'))
-    .filter((node) => nodeTagName(node) === 'datos');
+  // El WS normalmente usa <DATOS>. Consultarlo por nombre evita materializar
+  // y recorrer todos los nodos del XML — un costo notable cuando vienen miles
+  // de contactos. El recorrido genérico se conserva como respaldo para un
+  // proveedor que cambie la capitalización o use un namespace inusual.
+  const exactProjectNodes = ['DATOS', 'Datos', 'datos']
+    .flatMap((tagName) => Array.from(document.getElementsByTagName(tagName)));
+  const projects = exactProjectNodes.length
+    ? [...new Set(exactProjectNodes)]
+    : Array.from(document.getElementsByTagName('*'))
+      .filter((node) => nodeTagName(node) === 'datos');
   const relationships = [];
 
   projects.forEach((projectNode) => {

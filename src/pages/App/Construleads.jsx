@@ -54,7 +54,7 @@ const TOP_LEVEL_MODULE_ORDER = {
   companias: 1,
   licitaciones: 2,
 };
-const COMPANY_PROFILE_DATA_VERSION = 2;
+const COMPANY_PROFILE_DATA_VERSION = 3;
 
 function readPersistedFilters() {
   try {
@@ -115,6 +115,37 @@ function hasMeaningfulFilters(filters = {}) {
     (filters.surfaceMin !== null && filters.surfaceMin !== undefined) ||
     (filters.surfaceMax !== null && filters.surfaceMax !== undefined)
   );
+}
+
+function getMapFitRequestKey(filters = {}) {
+  if (!hasMeaningfulFilters(filters)) return null;
+
+  const orderedValues = (value) => Array.isArray(value)
+    ? [...value].map((item) => String(item)).sort((first, second) => first.localeCompare(second, 'es-MX'))
+    : [];
+
+  // Es una identidad del filtro ya publicado, no de los resultados. El mapa
+  // sólo ajusta la cámara una vez por esta identidad, incluso si llegan más
+  // datos o el usuario cambia de estado varias veces en sucesión.
+  return JSON.stringify({
+    regiones: orderedValues(filters.regiones),
+    estados: orderedValues(filters.estados),
+    generos: orderedValues(filters.generos),
+    subgeneros: orderedValues(filters.subgeneros),
+    sectores: orderedValues(filters.sectores),
+    etapas: orderedValues(filters.etapas),
+    desarrollos: orderedValues(filters.desarrollos),
+    tipoObra: orderedValues(filters.tipoObra),
+    tiposProyecto: orderedValues(filters.tiposProyecto),
+    periodoIndex: Number(filters.periodoIndex ?? -1),
+    fechaConsulta: filters.hasDateRangeFilter ? filters.fechaConsulta || '' : '',
+    fechaInicio: filters.hasDateRangeFilter ? filters.fechaInicio || filters.dateRangeStart || '' : '',
+    fechaFin: filters.hasDateRangeFilter ? filters.fechaFin || filters.dateRangeEnd || '' : '',
+    investmentMin: filters.investmentMin ?? null,
+    investmentMax: filters.investmentMax ?? null,
+    surfaceMin: filters.surfaceMin ?? null,
+    surfaceMax: filters.surfaceMax ?? null,
+  });
 }
 
 function ViewLoader({ label }) {
@@ -243,8 +274,8 @@ export default function Construleads() {
     () => filterObrasByFilters(mapPreviewObras, filtros),
     [mapPreviewObras, filtros]
   );
-  const hasActiveMapFilters = useMemo(
-    () => hasMeaningfulFilters(filtros),
+  const mapFitRequestKey = useMemo(
+    () => getMapFitRequestKey(filtros),
     [filtros]
   );
   const [selectedResultObras, setSelectedResultObras] = useState([]);
@@ -259,9 +290,8 @@ export default function Construleads() {
     companias: false,
   });
   const previousTopLevelModule = useRef(topLevelModule);
-  const previousActiveView = useRef(activeView);
   const [moduleTransition, setModuleTransition] = useState(null);
-  const [enteredTopLevelModule, setEnteredTopLevelModule] = useState(null);
+  const [projectViewTransition, setProjectViewTransition] = useState(null);
   const [fichaTecnica, setFichaTecnica] = useState({
     isOpen: false, isLoading: false, isDownloading: false,
     data: null, title: '', obraKey: '', error: '', downloadError: '',
@@ -282,14 +312,13 @@ export default function Construleads() {
     const nextIndex = TOP_LEVEL_MODULE_ORDER[topLevelModule];
 
     if (previousModule !== topLevelModule && Number.isInteger(previousIndex) && Number.isInteger(nextIndex)) {
-      // El contenido llega desde el tab de origen: al venir de Proyectos entra
-      // por la izquierda; al venir de Licitaciones entra por la derecha.
+      // La vista nueva llega desde la dirección de la pestaña destino.
+      // Ej.: Proyectos → Compañías entra desde la derecha.
       setModuleTransition({
         id: `${previousModule}-${topLevelModule}-${Date.now()}`,
         target: topLevelModule,
-        direction: previousIndex < nextIndex ? 'left' : 'right',
+        direction: previousIndex < nextIndex ? 'right' : 'left',
       });
-      setEnteredTopLevelModule(topLevelModule);
     }
 
     previousTopLevelModule.current = topLevelModule;
@@ -297,22 +326,23 @@ export default function Construleads() {
 
   useEffect(() => {
     if (!moduleTransition) return undefined;
-    const timer = window.setTimeout(() => setModuleTransition(null), 440);
+    const timer = window.setTimeout(() => setModuleTransition(null), 280);
     return () => window.clearTimeout(timer);
   }, [moduleTransition]);
 
   useEffect(() => {
-    if (previousActiveView.current !== activeView && !moduleTransition) {
-      setEnteredTopLevelModule(null);
-    }
-    previousActiveView.current = activeView;
-  }, [activeView, moduleTransition]);
+    if (!projectViewTransition) return undefined;
+    const timer = window.setTimeout(() => setProjectViewTransition(null), 260);
+    return () => window.clearTimeout(timer);
+  }, [projectViewTransition]);
 
   const moduleEnterClass = moduleTransition?.target === topLevelModule
     ? `cl-module-enter-${moduleTransition.direction}`
     : undefined;
-  const isTopLevelTransitioning = Boolean(moduleEnterClass);
-  const suppressNestedEntry = enteredTopLevelModule === topLevelModule;
+
+  const projectViewEnterClass = (view) => (
+    projectViewTransition?.target === view ? 'cl-view-enter' : undefined
+  );
 
   const appColors = isDarkMode
     ? {
@@ -327,10 +357,10 @@ export default function Construleads() {
         textMuted: '#A3A3A3',
         inputBg: '#1F1F1F',
         shadow: '0 12px 30px rgba(0,0,0,.34)',
-        graphAccent: '#89AAFF',
-        graphAccentStrong: '#6F97FF',
-        graphSoft: 'rgba(137,170,255,.16)',
-        graphTrack: 'rgba(137,170,255,.16)',
+        graphAccent: '#475569',
+        graphAccentStrong: '#64748B',
+        graphSoft: 'rgba(71,85,105,.22)',
+        graphTrack: 'rgba(71,85,105,.28)',
         navBg: '#E85A37',
         navBorder: '#E85A37',
       }
@@ -346,10 +376,10 @@ export default function Construleads() {
         textMuted: '#6B7280',
         inputBg: '#FFFFFF',
         shadow: '0 8px 24px rgba(0,0,0,.10)',
-        graphAccent: '#1847B8',
-        graphAccentStrong: '#123DAB',
-        graphSoft: 'rgba(24,71,184,.10)',
-        graphTrack: 'rgba(24,71,184,.10)',
+        graphAccent: '#475569',
+        graphAccentStrong: '#334155',
+        graphSoft: 'rgba(71,85,105,.10)',
+        graphTrack: 'rgba(71,85,105,.14)',
         navBg: '#FF653F',
         navBorder: '#FF653F',
       };
@@ -444,13 +474,18 @@ export default function Construleads() {
       try {
         setLoadingCompanies(true);
         setCompaniesError('');
-        const cachedRelationships = await readCachedCompanyRelationships(userId);
+        // La lectura local y la descarga del WS no dependen una de otra. Al
+        // iniciarlas juntas reducimos el tiempo hasta contactos frescos sin
+        // perder el primer pintado inmediato desde caché.
+        const cachedRelationshipsPromise = readCachedCompanyRelationships(userId);
+        const relationshipsPromise = obtenerCompanias({ signal: abortController.signal });
+        const cachedRelationships = await cachedRelationshipsPromise;
         if (isActive && cachedRelationships?.length) {
           // Se pintan los perfiles de la última respuesta antes de esperar la
           // red. La respuesta nueva sólo enriquece/actualiza el mismo listado.
           setCompanyRelationships(cachedRelationships);
         }
-        const relationships = await obtenerCompanias({ signal: abortController.signal });
+        const relationships = await relationshipsPromise;
         if (isActive) {
           setCompanyRelationships(relationships);
           setCompaniesSessionKey(sessionKey);
@@ -474,22 +509,33 @@ export default function Construleads() {
     };
   }, [companiesSessionKey, isLicitacionesModule, isProfileModule, mountedViews.companias, obras.length, user.idSession, user.idUsuario]);
 
-  const changeView = useCallback((nextView) => {
+  const changeView = useCallback((nextView, { animateProjectView = false } = {}) => {
+    if (animateProjectView && nextView !== activeView) {
+      setProjectViewTransition({
+        id: `${nextView}-${Date.now()}`,
+        target: nextView,
+      });
+    }
     setMountedViews((current) => (
       current[nextView] ? current : { ...current, [nextView]: true }
     ));
     setActiveView(nextView);
-  }, []);
+  }, [activeView]);
 
   const openProjectView = useCallback((nextView) => {
-    changeView(nextView);
+    changeView(nextView, { animateProjectView: topLevelModule === 'proyectos' });
     navigate(`/construleads/proyectos/${nextView}`);
-  }, [changeView, navigate]);
+  }, [changeView, navigate, topLevelModule]);
 
   const openCompaniesView = useCallback(() => {
-    changeView('companias');
+    // Navegar antes de montar la vista evita un frame intermedio de
+    // "Compañías" dentro del shell de Proyectos, que era el origen del
+    // parpadeo/doble entrada al pulsar la pestaña superior.
+    setMountedViews((current) => (
+      current.companias ? current : { ...current, companias: true }
+    ));
     navigate('/construleads/companias');
-  }, [changeView, navigate]);
+  }, [navigate]);
 
   const openCompanyDetail = useCallback((companyName) => {
     const name = String(companyName || '').trim();
@@ -504,7 +550,7 @@ export default function Construleads() {
     openCompaniesView();
   }, [openCompaniesView]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const routeView = location.pathname.match(/\/proyectos\/(mapa|resultados|graficas)\/?$/)?.[1];
     if (routeView) changeView(routeView);
     if (isCompaniesModule) {
@@ -660,21 +706,18 @@ export default function Construleads() {
       <style>{`
         @keyframes cl-view-enter {
           0% { opacity: 0; transform: translate3d(18px, 0, 0); }
-          65% { opacity: 1; transform: translate3d(-2px, 0, 0); }
           100% { opacity: 1; transform: none; }
         }
         .cl-view-enter {
-          animation: cl-view-enter 360ms cubic-bezier(.22, 1, .36, 1) both;
+          animation: cl-view-enter 260ms cubic-bezier(.22, 1, .36, 1) both;
           backface-visibility: hidden;
         }
         @keyframes cl-module-enter-from-left {
-          0% { opacity: 0; transform: translate3d(-28px, 0, 0); }
-          68% { opacity: 1; transform: translate3d(3px, 0, 0); }
+          0% { opacity: 0; transform: translate3d(-24px, 0, 0); }
           100% { opacity: 1; transform: none; }
         }
         @keyframes cl-module-enter-from-right {
-          0% { opacity: 0; transform: translate3d(28px, 0, 0); }
-          68% { opacity: 1; transform: translate3d(-3px, 0, 0); }
+          0% { opacity: 0; transform: translate3d(24px, 0, 0); }
           100% { opacity: 1; transform: none; }
         }
         .cl-module-enter-left,
@@ -682,8 +725,8 @@ export default function Construleads() {
           backface-visibility: hidden;
           will-change: transform, opacity;
         }
-        .cl-module-enter-left { animation: cl-module-enter-from-left 420ms cubic-bezier(.22, 1, .36, 1) both; }
-        .cl-module-enter-right { animation: cl-module-enter-from-right 420ms cubic-bezier(.22, 1, .36, 1) both; }
+        .cl-module-enter-left { animation: cl-module-enter-from-left 280ms cubic-bezier(.22, 1, .36, 1) both; }
+        .cl-module-enter-right { animation: cl-module-enter-from-right 280ms cubic-bezier(.22, 1, .36, 1) both; }
         @media (prefers-reduced-motion: reduce) {
           .cl-view-enter,
           .cl-module-enter-left,
@@ -801,7 +844,7 @@ export default function Construleads() {
           )}
 
           <Box flex="1" minH="0" position="relative">
-            <Box className={activeView === 'mapa' && !isTopLevelTransitioning && !suppressNestedEntry ? 'cl-view-enter' : undefined}
+            <Box className={activeView === 'mapa' ? projectViewEnterClass('mapa') : undefined}
               display={activeView === 'mapa' ? 'block' : 'none'} h="100%" minH="0">
               <Mapa
                 key={`map-theme-${isDarkMode ? 'dark' : 'light'}`}
@@ -809,14 +852,14 @@ export default function Construleads() {
                 filtros={PREFILTERED_MAP_FILTERS}
                 isDataReady={!loadingObras}
                 isVisible={activeView === 'mapa'}
-                fitInitialBounds={hasActiveMapFilters}
+                fitRequestKey={mapFitRequestKey}
                 isDarkMode={isDarkMode}
                 onViewFicha={handleViewFicha}
               />
             </Box>
 
             {mountedViews.resultados && (
-              <Box className={activeView === 'resultados' && !isTopLevelTransitioning && !suppressNestedEntry ? 'cl-view-enter' : undefined}
+              <Box className={activeView === 'resultados' ? projectViewEnterClass('resultados') : undefined}
                 display={activeView === 'resultados' ? 'block' : 'none'} h="100%" minH="0">
                 <Suspense fallback={<ViewLoader label="resultados" />}>
                   <Resultados
@@ -831,7 +874,7 @@ export default function Construleads() {
             )}
 
             {mountedViews.graficas && (
-              <Box className={activeView === 'graficas' && !isTopLevelTransitioning && !suppressNestedEntry ? 'cl-view-enter' : undefined}
+              <Box className={activeView === 'graficas' ? projectViewEnterClass('graficas') : undefined}
                 display={activeView === 'graficas' ? 'block' : 'none'} h="100%" minH="0">
                 <Suspense fallback={<ViewLoader label="gráficas" />}>
                   <GraficasView
@@ -845,7 +888,7 @@ export default function Construleads() {
             )}
 
             {mountedViews.companias && (
-              <Box className={activeView === 'companias' && !isTopLevelTransitioning && !suppressNestedEntry ? 'cl-view-enter' : undefined}
+              <Box
                 display={activeView === 'companias' ? 'block' : 'none'} h="100%" minH="0">
                 <ModuleErrorBoundary resetKey={location.pathname}>
                   <Suspense fallback={<ViewLoader label="compañías" />}>

@@ -2,7 +2,7 @@ const DATABASE_NAME = 'construleads-performance-cache';
 const STORE_NAME = 'obras';
 const COMPANIES_STORE_NAME = 'companias';
 const DATABASE_VERSION = 2;
-const COMPANY_RELATIONSHIPS_CACHE_VERSION = 2;
+const COMPANY_RELATIONSHIPS_CACHE_VERSION = 3;
 
 function openDatabase() {
   return new Promise((resolve, reject) => {

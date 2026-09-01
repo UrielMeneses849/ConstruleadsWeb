@@ -28,6 +28,15 @@ function parseTableDate(value) {
   }
 
   const normalized = String(value).trim();
+  // Los valores seleccionados del filtro son llaves de mes (`AAAA-MM`).
+  // `new Date('2026-02')` se interpreta como UTC y en México termina siendo
+  // 31 de enero; los construimos localmente para no retroceder de mes/año.
+  const monthKeyMatch = normalized.match(/^(\d{4})-(\d{2})$/);
+  if (monthKeyMatch) {
+    const [, year, month] = monthKeyMatch;
+    return new Date(Number(year), Number(month) - 1, 1);
+  }
+
   const isoMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (isoMatch) {
     const [, year, month, day] = isoMatch;
@@ -89,6 +98,38 @@ function formatNumberMX(value) {
   return new Intl.NumberFormat('es-MX', {
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+function rowMatchesColumnFilters(row, filters, excludedFields = []) {
+  const excluded = new Set(excludedFields);
+
+  return Object.entries(filters).every(([field, values]) => {
+    if (excluded.has(field) || !values || values.length === 0) return true;
+
+    if (field === 'categoria') {
+      return values.some((token) => {
+        const [kind, genero, subgenero] = String(token).split('::');
+        if (kind === 'genero') return row.genero === genero;
+        return kind === 'subgenero' && row.genero === genero && row.subgenero === subgenero;
+      });
+    }
+
+    if (DATE_FIELDS.includes(field)) {
+      const monthGroup = getMonthGroupKey(row[`${field}Raw`] || row[field]);
+      return values.includes(monthGroup);
+    }
+
+    return values.includes(String(row[field] ?? ''));
+  });
+}
+
+function getFacetExclusions(field) {
+  // Estado y Proyecto comparten un solo menú. Al abrirlo mostramos las
+  // opciones compatibles con el resto de filtros, no sólo con su propia
+  // selección actual.
+  return field === 'estado' || field === 'proyecto'
+    ? ['estado', 'proyecto']
+    : [field];
 }
 
 function ResultadosView({
@@ -479,26 +520,10 @@ function ResultadosView({
     };
   }, []);
 
-  const filteredData = useMemo(() => tableData.filter((row) => {
-    return Object.entries(columnFilters).every(([field, values]) => {
-      if (!values || values.length === 0) return true;
-
-      if (field === 'categoria') {
-        return values.some((token) => {
-          const [kind, genero, subgenero] = String(token).split('::');
-          if (kind === 'genero') return row.genero === genero;
-          return kind === 'subgenero' && row.genero === genero && row.subgenero === subgenero;
-        });
-      }
-
-      if (DATE_FIELDS.includes(field)) {
-        const monthGroup = getMonthGroupKey(row[`${field}Raw`] || row[field]);
-        return values.includes(monthGroup);
-      }
-
-      return values.includes(String(row[field] ?? ''));
-    });
-  }), [tableData, columnFilters]);
+  const filteredData = useMemo(
+    () => tableData.filter((row) => rowMatchesColumnFilters(row, columnFilters)),
+    [tableData, columnFilters]
+  );
 
   const sortedData = useMemo(() => {
     if (!sortConfig.field) return filteredData;
@@ -583,7 +608,7 @@ function ResultadosView({
     [selectedRows]
   );
 
-  const uniqueValuesByField = useMemo(() => {
+  const facetedRowsByField = useMemo(() => {
     const fields = [
       'clave',
       'proyecto',
@@ -600,11 +625,22 @@ function ResultadosView({
     ];
 
     return fields.reduce((acc, field) => {
+      acc[field] = tableData.filter((row) => (
+        rowMatchesColumnFilters(row, columnFilters, getFacetExclusions(field))
+      ));
+      return acc;
+    }, {});
+  }, [tableData, columnFilters]);
+
+  const uniqueValuesByField = useMemo(() => {
+    return Object.entries(facetedRowsByField).reduce((acc, [field, rows]) => {
+      const selectedValues = columnFilters[field] || [];
       acc[field] = [
         ...new Set(
-          tableData
+          rows
             .map((row) => String(row[`${field}Raw`] || row[field] || ''))
             .filter(Boolean)
+            .concat(selectedValues)
         ),
       ].sort((a, b) => {
         const dateA = parseTableDate(a);
@@ -615,11 +651,16 @@ function ResultadosView({
 
       return acc;
     }, {});
-  }, [tableData]);
+  }, [columnFilters, facetedRowsByField]);
+
+  const genreFacetRows = useMemo(
+    () => tableData.filter((row) => rowMatchesColumnFilters(row, columnFilters, ['categoria'])),
+    [tableData, columnFilters]
+  );
 
   const genreHierarchy = useMemo(() => {
     const hierarchy = new Map();
-    tableData.forEach((row) => {
+    genreFacetRows.forEach((row) => {
       const genero = String(row.genero || '-');
       const subgenero = String(row.subgenero || '-');
       if (!hierarchy.has(genero)) hierarchy.set(genero, new Set());
@@ -632,7 +673,7 @@ function ResultadosView({
         subgeneros: [...subgeneros].sort((a, b) => a.localeCompare(b, 'es')),
       }))
       .sort((a, b) => a.genero.localeCompare(b.genero, 'es'));
-  }, [tableData]);
+  }, [genreFacetRows]);
 
   const allFilteredSelected =
     filteredData.length > 0 &&
@@ -743,8 +784,8 @@ function ResultadosView({
   };
 
   const renderHeaderCell = (field, label, { compact = false } = {}) => {
-    const controlSize = compact ? '16px' : '20px';
-    const controlHeight = compact ? '18px' : '20px';
+    const controlSize = compact ? '16px' : '18px';
+    const controlHeight = compact ? '18px' : '18px';
 
     return (
     <Flex align="center" justify="space-between" gap={1} minW={0} w="100%">
@@ -756,8 +797,8 @@ function ResultadosView({
         textTransform="none"
         whiteSpace="nowrap"
         minW={0}
-        overflow="hidden"
-        textOverflow="ellipsis"
+        overflow="visible"
+        textOverflow="clip"
       >
         {label}
       </Text>
@@ -778,7 +819,7 @@ function ResultadosView({
           aria-label={`Filtrar ${label}`}
           title={`Filtrar ${label}`}
         >
-          <FiSliders size={compact ? 10 : 11} color={ui.textMuted} />
+          <FiSliders size={compact ? 10 : 10} color={ui.textMuted} />
         </Button>
         <Button
           variant="ghost"
@@ -797,8 +838,8 @@ function ResultadosView({
           title={`Ordenar ${label}`}
         >
           <Flex direction="column" align="center" gap={0}>
-            <FiChevronUp size={compact ? 8 : 9} color={getSortIconColor(field, 'asc')} />
-            <FiChevronDown size={compact ? 8 : 9} color={getSortIconColor(field, 'desc')} />
+            <FiChevronUp size={compact ? 8 : 8} color={getSortIconColor(field, 'asc')} />
+            <FiChevronDown size={compact ? 8 : 8} color={getSortIconColor(field, 'desc')} />
           </Flex>
         </Button>
       </HStack>
@@ -822,9 +863,9 @@ function ResultadosView({
         <Button
           variant="ghost"
           size="xs"
-          minW="20px"
-          w="20px"
-          h="20px"
+          minW="18px"
+          w="18px"
+          h="18px"
           p={0}
           borderRadius="6px"
           _hover={{ bg: ui.hover }}
@@ -835,14 +876,14 @@ function ResultadosView({
           aria-label="Filtrar género y subgénero"
           title="Filtrar género y subgénero"
         >
-          <FiSliders size={11} color={ui.textMuted} />
+          <FiSliders size={10} color={ui.textMuted} />
         </Button>
         <Button
           variant="ghost"
           size="xs"
-          minW="20px"
-          w="20px"
-          h="20px"
+          minW="18px"
+          w="18px"
+          h="18px"
           p={0}
           borderRadius="6px"
           _hover={{ bg: ui.hover }}
@@ -854,8 +895,8 @@ function ResultadosView({
           title="Ordenar género"
         >
           <Flex direction="column" align="center" gap={0}>
-            <FiChevronUp size={9} color={getSortIconColor('genero', 'asc')} />
-            <FiChevronDown size={9} color={getSortIconColor('genero', 'desc')} />
+            <FiChevronUp size={8} color={getSortIconColor('genero', 'asc')} />
+            <FiChevronDown size={8} color={getSortIconColor('genero', 'desc')} />
           </Flex>
         </Button>
       </HStack>
@@ -1384,7 +1425,7 @@ function ResultadosView({
               .resultados-table .result-genre-title {
                 color: var(--cl-text-strong);
                 font-size: 12px;
-                font-weight: 600;
+                font-weight: 500;
                 line-height: 1.2;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -1413,14 +1454,14 @@ function ResultadosView({
             h="100%"
             minH="0"
             minW="0"
-            overflowX="hidden"
+            overflowX="auto"
             overflowY="scroll"
             overscrollBehavior="contain"
           >
           <table
             className="resultados-table"
             style={{
-              minWidth: '100%',
+              minWidth: '1240px',
               width: '100%',
               borderCollapse: 'collapse',
               fontSize: '14px',
@@ -1429,14 +1470,14 @@ function ResultadosView({
           >
           <colgroup>
             <col style={{ width: '2.5%' }} />
-            <col style={{ width: '6%' }} />
-            <col style={{ width: '20%' }} />
-            <col style={{ width: '9%' }} />
+            <col style={{ width: '7%' }} />
+            <col style={{ width: '19%' }} />
+            <col style={{ width: '9.5%' }} />
             <col style={{ width: '10%' }} />
             {/* Fechas: se comportan como un bloque continuo y compacto. */}
             <col style={{ width: '8%' }} />
             <col style={{ width: '8%' }} />
-            <col style={{ width: '11%' }} />
+            <col style={{ width: '10.5%' }} />
             <col style={{ width: '10%' }} />
             <col style={{ width: '9.5%' }} />
             <col style={{ width: '6%' }} />

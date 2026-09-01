@@ -8,6 +8,7 @@ const COMPANY_NAME_FIELDS = [
 
 const RFC_FIELDS = ['rfcCompania', 'rfc', 'RFC', 'rfcEmpresa'];
 const COMPANY_KEY_FIELDS = ['claveCompania', 'claveEmpresa', 'empresaClave'];
+const relationshipIndexesCache = new WeakMap();
 
 function cleanText(value) {
   return String(value || '').trim();
@@ -157,6 +158,28 @@ function buildCompanyDetailsIndex(relationships = []) {
   return index;
 }
 
+function getRelationshipIndexes(relationships = []) {
+  if (!Array.isArray(relationships)) {
+    return {
+      relationshipsByProject: new Map(),
+      companyDetailsIndex: new Map(),
+    };
+  }
+
+  const cached = relationshipIndexesCache.get(relationships);
+  if (cached) return cached;
+
+  // Las relaciones del WS no cambian cuando el usuario ajusta filtros. Al
+  // conservar estos dos índices por respuesta evitamos reconstruir todo el
+  // catálogo de compañías y contactos en cada render del panel.
+  const indexes = {
+    relationshipsByProject: buildRelationshipIndex(relationships),
+    companyDetailsIndex: buildCompanyDetailsIndex(relationships),
+  };
+  relationshipIndexesCache.set(relationships, indexes);
+  return indexes;
+}
+
 function getCompanyDetails(company, detailsIndex) {
   const entries = new Map();
   companyLookupKeys(company).forEach((lookupKey) => {
@@ -218,8 +241,7 @@ export function getCompanyGenreColor(genero) {
 
 export function buildCompanyRows(obras = [], relationships = []) {
   const companies = new Map();
-  const relationshipsByProject = buildRelationshipIndex(relationships);
-  const companyDetailsIndex = buildCompanyDetailsIndex(relationships);
+  const { relationshipsByProject, companyDetailsIndex } = getRelationshipIndexes(relationships);
 
   obras.forEach((obra, index) => {
     const projectKey = getObraKey(obra, index);

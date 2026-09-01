@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Box,
   VStack,
@@ -101,6 +102,9 @@ const TEXT_PRIMARY = 'var(--cl-text)';
 const TEXT_STRONG = 'var(--cl-text-strong)';
 const TEXT_SECONDARY = 'var(--cl-text-muted)';
 const ACCENT_GRAY = '#4B5563';
+const CALENDAR_POPOVER_WIDTH = 240;
+const CALENDAR_VIEWPORT_GAP = 12;
+const CALENDAR_ESTIMATED_HEIGHT = 292;
 
 function parseFilterDate(value) {
   if (!value) return null;
@@ -299,6 +303,9 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
   const [calendarMonth, setCalendarMonth] = useState(() =>
     parseFilterDate(savedFilters.dateRangeStart) || new Date()
   );
+  const [calendarPopover, setCalendarPopover] = useState(null);
+  const dateFieldRefs = useRef({});
+  const calendarPopoverRef = useRef(null);
 
   const [selectedValues, setSelectedValues] = useState(
     savedFilters.selectedValues || {}
@@ -385,6 +392,61 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
       window.removeEventListener('click', handleClickOutside);
     };
   }, []);
+
+  // El panel de filtros tiene scroll propio; un calendario absoluto dentro de
+  // él queda recortado aunque sus padres usen `overflow: visible`. Lo llevamos
+  // al `body` y lo anclamos con coordenadas de viewport para que pueda cubrir
+  // el mapa sin salirse nunca de la pantalla.
+  const positionCalendarPopover = useCallback((id) => {
+    const trigger = dateFieldRefs.current[id];
+    if (!trigger || typeof window === 'undefined') return;
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth;
+    const viewportHeight = document.documentElement.clientHeight;
+    const popoverWidth = Math.min(CALENDAR_POPOVER_WIDTH, viewportWidth - CALENDAR_VIEWPORT_GAP * 2);
+    const popoverHeight = calendarPopoverRef.current?.offsetHeight || CALENDAR_ESTIMATED_HEIGHT;
+    const preferredTop = triggerRect.bottom + 8;
+    const top = preferredTop + popoverHeight <= viewportHeight - CALENDAR_VIEWPORT_GAP
+      ? preferredTop
+      : Math.max(CALENDAR_VIEWPORT_GAP, triggerRect.top - popoverHeight - 8);
+    const left = Math.max(
+      CALENDAR_VIEWPORT_GAP,
+      Math.min(triggerRect.left, viewportWidth - popoverWidth - CALENDAR_VIEWPORT_GAP)
+    );
+    const computedStyle = window.getComputedStyle(trigger);
+
+    setCalendarPopover({
+      id,
+      top: Math.round(top),
+      left: Math.round(left),
+      theme: {
+        '--cl-surface': computedStyle.getPropertyValue('--cl-surface').trim() || '#FFFFFF',
+        '--cl-surface-muted': computedStyle.getPropertyValue('--cl-surface-muted').trim() || '#FAFAFA',
+        '--cl-border': computedStyle.getPropertyValue('--cl-border').trim() || '#E5E7EB',
+        '--cl-text': computedStyle.getPropertyValue('--cl-text').trim() || '#374151',
+        '--cl-text-strong': computedStyle.getPropertyValue('--cl-text-strong').trim() || '#202020',
+        '--cl-text-muted': computedStyle.getPropertyValue('--cl-text-muted').trim() || '#6B7280',
+        '--cl-shadow': computedStyle.getPropertyValue('--cl-shadow').trim() || '0 12px 30px rgba(0,0,0,.16)',
+      },
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!openDatePicker) return undefined;
+
+    const updatePosition = () => positionCalendarPopover(openDatePicker);
+    const animationFrame = window.requestAnimationFrame(updatePosition);
+    window.addEventListener('resize', updatePosition);
+    // El evento en captura también detecta el scroll del contenedor de filtros.
+    window.addEventListener('scroll', updatePosition, true);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [calendarMonth, openDatePicker, positionCalendarPopover]);
 
   const SUBGENEROS_POR_GENERO_CATALOG = {
     Vivienda: {
@@ -1569,6 +1631,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
         <Flex
           as="button"
           type="button"
+          ref={(element) => { dateFieldRefs.current[id] = element; }}
           w="100%"
           h="34px"
           px={2}
@@ -1584,8 +1647,12 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
           onClick={(event) => {
             event.stopPropagation();
             setCalendarMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 1));
-            setOpenDatePicker((current) => (current === id ? null : id));
+            const nextPicker = openDatePicker === id ? null : id;
+            if (nextPicker) positionCalendarPopover(nextPicker);
+            setOpenDatePicker(nextPicker);
           }}
+          aria-expanded={openDatePicker === id}
+          aria-haspopup="dialog"
         >
           <Text as="span" noOfLines={1}>
             {formatDateForDisplay(value)}
@@ -1595,25 +1662,27 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
           </Text>
         </Flex>
 
-        {openDatePicker === id && (
+        {openDatePicker === id && calendarPopover?.id === id && typeof document !== 'undefined' && createPortal(
           <Box
-            position="absolute"
-            top="58px"
-            left={id === 'desde' ? 0 : 'auto'}
-            right={id === 'hasta' ? 0 : 'auto'}
-            zIndex={120}
-            w="224px"
-            maxW="calc(100vw - 32px)"
+            ref={calendarPopoverRef}
+            role="dialog"
+            aria-label={`Calendario para ${label.toLowerCase()}`}
+            position="fixed"
+            top={`${calendarPopover.top}px`}
+            left={`${calendarPopover.left}px`}
+            zIndex={1400}
+            w="min(240px, calc(100vw - 24px))"
             p={2}
-            bg="var(--cl-surface)"
-            border="1px solid var(--cl-border)"
+            bg="var(--cl-surface, #FFFFFF)"
+            border="1px solid var(--cl-border, #E5E7EB)"
             borderRadius="10px"
-            boxShadow="var(--cl-shadow)"
+            boxShadow="var(--cl-shadow, 0 12px 30px rgba(0,0,0,.16))"
             overflow="visible"
+            style={calendarPopover.theme}
             onClick={(event) => event.stopPropagation()}
           >
             <Flex align="center" justify="space-between" mb={2}>
-              <Text fontSize="12px" fontWeight="700" color={TEXT_STRONG}>
+              <Text fontSize="12px" fontWeight="700" color="var(--cl-text-strong, #202020)">
                 {monthLabel}
               </Text>
 
@@ -1624,9 +1693,10 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                   w="28px"
                   h="28px"
                   borderRadius="8px"
-                  color={TEXT_SECONDARY}
-                  _hover={{ bg: 'var(--cl-surface-muted)' }}
+                  color="var(--cl-text-muted, #6B7280)"
+                  _hover={{ bg: 'var(--cl-surface-muted, #FAFAFA)' }}
                   onClick={() => setCalendarMonth((current) => addMonths(current, -1))}
+                  aria-label="Mes anterior"
                 >
                   ‹
                 </Box>
@@ -1636,9 +1706,10 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                   w="28px"
                   h="28px"
                   borderRadius="8px"
-                  color={TEXT_SECONDARY}
-                  _hover={{ bg: 'var(--cl-surface-muted)' }}
+                  color="var(--cl-text-muted, #6B7280)"
+                  _hover={{ bg: 'var(--cl-surface-muted, #FAFAFA)' }}
                   onClick={() => setCalendarMonth((current) => addMonths(current, 1))}
+                  aria-label="Mes siguiente"
                 >
                   ›
                 </Box>
@@ -1647,7 +1718,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
 
             <SimpleGrid columns={7} spacing={1} mb={1}>
               {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((day) => (
-                <Text key={day} fontSize="10px" fontWeight="700" color={TEXT_SECONDARY} textAlign="center">
+                <Text key={day} fontSize="10px" fontWeight="700" color="var(--cl-text-muted, #6B7280)" textAlign="center">
                   {day}
                 </Text>
               ))}
@@ -1670,11 +1741,11 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                     borderRadius="8px"
                     fontSize="11px"
                     fontWeight={isSelected ? '700' : '600'}
-                    color={isSelected ? 'white' : disabled ? 'var(--cl-text-muted)' : TEXT_PRIMARY}
+                    color={isSelected ? 'white' : disabled ? 'var(--cl-text-muted, #6B7280)' : 'var(--cl-text, #374151)'}
                     opacity={disabled ? 0.35 : 1}
                     bg={isSelected ? '#FF653F' : 'transparent'}
                     cursor={disabled ? 'default' : 'pointer'}
-                    _hover={disabled ? {} : { bg: isSelected ? '#FF653F' : 'var(--cl-surface-muted)' }}
+                    _hover={disabled ? {} : { bg: isSelected ? '#FF653F' : 'var(--cl-surface-muted, #FAFAFA)' }}
                     onClick={() => {
                       if (disabled) return;
 
@@ -1687,7 +1758,8 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                 );
               })}
             </SimpleGrid>
-          </Box>
+          </Box>,
+          document.body
         )}
       </Box>
     );
@@ -2440,6 +2512,114 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     );
   }
 
+  function renderSourcesAccordion() {
+    const sources = [
+      {
+        key: 'construleads',
+        label: 'Construleads',
+        detail: 'Base BIMSA',
+        color: '#FF653F',
+      },
+      {
+        key: 'explorer',
+        label: 'Explorer',
+        detail: 'Nueva fuente',
+        color: '#1847B8',
+      },
+    ];
+
+    return (
+      <FilterAccordion
+        title="Fuente"
+        expanded={!!openedAccordions.Fuente}
+        onToggle={() => toggleAccordion('Fuente')}
+      >
+        <Flex align="center" justify="space-between" mb={2}>
+          <Text fontSize="10px" color={TEXT_SECONDARY}>
+            Vista previa de fuentes
+          </Text>
+          <Text
+            px={1.5}
+            py={0.5}
+            borderRadius="full"
+            bg="var(--cl-surface-muted)"
+            border="1px solid var(--cl-border)"
+            color={TEXT_SECONDARY}
+            fontSize="8px"
+            fontWeight="700"
+            letterSpacing=".04em"
+          >
+            BETA
+          </Text>
+        </Flex>
+
+        <VStack align="stretch" spacing={1}>
+          {sources.map((source) => {
+            const isEnabled = sourcePreview[source.key];
+            return (
+              <Flex
+                as="button"
+                type="button"
+                key={source.key}
+                w="100%"
+                align="center"
+                justify="space-between"
+                gap={2}
+                px={2}
+                py={1.5}
+                borderRadius="9px"
+                bg={isEnabled ? 'var(--cl-surface-muted)' : 'transparent'}
+                cursor="pointer"
+                textAlign="left"
+                transition="background 160ms ease"
+                _hover={{ bg: 'var(--cl-surface-muted)' }}
+                onClick={() => setSourcePreview((current) => ({
+                  ...current,
+                  [source.key]: !current[source.key],
+                }))}
+                role="switch"
+                aria-checked={isEnabled}
+                aria-label={`${source.label} ${isEnabled ? 'visible' : 'oculta'}; maqueta`}
+              >
+                <Flex align="center" gap={2} minW={0}>
+                  <Box w="7px" h="7px" borderRadius="full" bg={source.color} flexShrink={0} />
+                  <Box minW={0}>
+                    <Text fontSize="11px" fontWeight="600" color={TEXT_STRONG} lineHeight="1.15">
+                      {source.label}
+                    </Text>
+                    <Text mt={0.5} fontSize="9px" color={TEXT_SECONDARY} lineHeight="1.1">
+                      {source.detail}
+                    </Text>
+                  </Box>
+                </Flex>
+                <Flex
+                  w="28px"
+                  h="16px"
+                  p="2px"
+                  borderRadius="full"
+                  bg={isEnabled ? source.color : 'var(--cl-border)'}
+                  flexShrink={0}
+                  align="center"
+                  transition="background 180ms ease"
+                >
+                  <Box
+                    w="12px"
+                    h="12px"
+                    borderRadius="full"
+                    bg="white"
+                    boxShadow="0 1px 3px rgba(0,0,0,.2)"
+                    transform={isEnabled ? 'translateX(12px)' : 'translateX(0)'}
+                    transition="transform 180ms ease"
+                  />
+                </Flex>
+              </Flex>
+            );
+          })}
+        </VStack>
+      </FilterAccordion>
+    );
+  }
+
   return (
     <Box
       w="var(--cl-sidebar-width)"
@@ -2500,6 +2680,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
           pr={1}
           pb={2}
         >
+          {renderSourcesAccordion()}
           {renderPrincipales()}
           {renderSimpleAccordion(
             'Tipo desarrollo',
@@ -2512,112 +2693,6 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
           {renderInversionAccordion()}
         </VStack>
 
-        <Box
-          mt={2}
-          pt={2.5}
-          borderTop="1px solid var(--cl-border)"
-          flexShrink={0}
-        >
-          <Flex align="center" justify="space-between" mb={2}>
-            <Box>
-              <Text fontSize="12px" fontWeight="700" color={TEXT_STRONG}>
-                Fuentes de información
-              </Text>
-              <Text mt={0.5} fontSize="9px" color={TEXT_SECONDARY}>
-                Vista previa de fuentes
-              </Text>
-            </Box>
-            <Text
-              px={1.5}
-              py={0.5}
-              borderRadius="full"
-              bg="var(--cl-surface-muted)"
-              border="1px solid var(--cl-border)"
-              color={TEXT_SECONDARY}
-              fontSize="8px"
-              fontWeight="700"
-              letterSpacing=".04em"
-            >
-              BETA
-            </Text>
-          </Flex>
-
-          {[
-            {
-              key: 'construleads',
-              label: 'Construleads',
-              detail: 'Base BIMSA',
-              color: '#FF653F',
-            },
-            {
-              key: 'explorer',
-              label: 'Explorer',
-              detail: 'Nueva fuente',
-              color: '#1847B8',
-            },
-          ].map((source) => {
-            const isEnabled = sourcePreview[source.key];
-            return (
-              <Flex
-                as="button"
-                type="button"
-                key={source.key}
-                w="100%"
-                align="center"
-                justify="space-between"
-                gap={2}
-                px={2}
-                py={1.5}
-                mb={source.key === 'construleads' ? 1 : 0}
-                borderRadius="9px"
-                bg={isEnabled ? 'var(--cl-surface-muted)' : 'transparent'}
-                cursor="pointer"
-                textAlign="left"
-                transition="background 160ms ease"
-                _hover={{ bg: 'var(--cl-surface-muted)' }}
-                onClick={() => setSourcePreview((current) => ({
-                  ...current,
-                  [source.key]: !current[source.key],
-                }))}
-                role="switch"
-                aria-checked={isEnabled}
-                aria-label={`${source.label} ${isEnabled ? 'visible' : 'oculta'}; maqueta`}
-              >
-                <Flex align="center" gap={2} minW={0}>
-                  <Box w="7px" h="7px" borderRadius="full" bg={source.color} flexShrink={0} />
-                  <Box minW={0}>
-                    <Text fontSize="11px" fontWeight="600" color={TEXT_STRONG} lineHeight="1.15">
-                      {source.label}
-                    </Text>
-                    <Text mt={0.5} fontSize="9px" color={TEXT_SECONDARY} lineHeight="1.1">
-                      {source.detail}
-                    </Text>
-                  </Box>
-                </Flex>
-                <Flex
-                  w="28px"
-                  h="16px"
-                  p="2px"
-                  borderRadius="full"
-                  bg={isEnabled ? source.color : 'var(--cl-border)'}
-                  flexShrink={0}
-                  align="center"
-                  transition="background 180ms ease"
-                >
-                  <Box
-                    w="12px"
-                    h="12px"
-                    borderRadius="full"
-                    bg="white"
-                    boxShadow="0 1px 3px rgba(0,0,0,.2)"
-                    transform={isEnabled ? 'translateX(12px)' : 'translateX(0)'}
-                    transition="transform 180ms ease"
-                  />
-                </Flex>
-              </Flex>
-            );
-          })}
-        </Box>
       </Box>
     </Box>
   );

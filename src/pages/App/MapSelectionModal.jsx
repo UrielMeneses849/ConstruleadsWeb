@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react';
 import { Box, Button, Flex, Text } from '@chakra-ui/react';
 import {
   FiDownload,
+  FiEye,
   FiMapPin,
   FiNavigation,
+  FiTrash2,
   FiX,
 } from 'react-icons/fi';
 
@@ -198,7 +200,7 @@ async function exportSelectionToExcel(obras, route) {
   XLSX.writeFile(workbook, `construleads-ruta-${date}.xlsx`, { compression: true });
 }
 
-export default function MapSelectionModal({ obras = [], onClose, onViewProject }) {
+export default function MapSelectionModal({ obras = [], onClose, onViewProject, onRemoveProject }) {
   const [isExporting, setIsExporting] = useState(false);
   const states = new Set(obras.map((obra) => obra?.estado).filter(Boolean));
   const investment = obras.reduce((total, obra) => total + (Number(obra?.inversion) || 0), 0);
@@ -358,17 +360,31 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject }
             </Flex>
 
             <Box border="1px solid var(--cl-border)" borderRadius="12px" overflow="hidden">
+              <Box
+                display="grid"
+                gridTemplateColumns="28px minmax(0, 1fr) minmax(74px, auto) 76px"
+                alignItems="center"
+                gap={3}
+                px={3.5}
+                py={2}
+                bg="var(--cl-surface-muted)"
+                borderBottom={obras.length ? '1px solid var(--cl-border)' : '0'}
+              >
+                <Box />
+                <Text fontSize="9px" fontWeight="700" textTransform="uppercase" letterSpacing=".04em" color="var(--cl-text-muted)">Proyecto</Text>
+                <Text fontSize="9px" fontWeight="700" textAlign="right" textTransform="uppercase" letterSpacing=".04em" color="var(--cl-text-muted)">Inversión</Text>
+                <Text fontSize="9px" fontWeight="700" textAlign="center" textTransform="uppercase" letterSpacing=".04em" color="var(--cl-text-muted)">Acciones</Text>
+              </Box>
               {obras.slice(0, 12).map((obra, index) => (
-                <Flex
+                <Box
                   key={`${obra?.id || obra?.clave || obra?.proyecto || 'obra'}-${index}`}
-                  align="center"
+                  display="grid"
+                  gridTemplateColumns="28px minmax(0, 1fr) minmax(74px, auto) 76px"
+                  alignItems="center"
                   gap={3}
                   px={3.5}
                   py={2.5}
                   borderBottom={index < Math.min(obras.length, 12) - 1 ? '1px solid var(--cl-border)' : '0'}
-                  cursor={onViewProject ? 'pointer' : 'default'}
-                  _hover={onViewProject ? { bg: 'var(--cl-hover)' } : undefined}
-                  onClick={() => onViewProject?.(obra)}
                 >
                   <Flex w="28px" h="28px" borderRadius="full" align="center" justify="center" bg="var(--cl-surface-muted)" color="#FF653F" fontSize="10px" fontWeight="700" flexShrink={0}>
                     {String(obra?.estado || 'MX').slice(0, 2).toUpperCase()}
@@ -382,7 +398,39 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject }
                     </Text>
                   </Box>
                   <Text fontSize="11px" fontWeight="500" color="var(--cl-text)" whiteSpace="nowrap">{formatMdp(obra?.inversion)}</Text>
-                </Flex>
+                  <Flex justify="center" gap={1}>
+                    <Button
+                      aria-label={`Ver ficha de ${getProjectName(obra)}`}
+                      title="Ver ficha"
+                      variant="ghost"
+                      minW="30px"
+                      w="30px"
+                      h="30px"
+                      p={0}
+                      borderRadius="8px"
+                      color="var(--cl-text-muted)"
+                      _hover={{ bg: 'var(--cl-hover)', color: '#FF653F' }}
+                      onClick={() => onViewProject?.(obra)}
+                    >
+                      <FiEye size={15} />
+                    </Button>
+                    <Button
+                      aria-label={`Eliminar ${getProjectName(obra)} de la ruta`}
+                      title="Eliminar de la ruta"
+                      variant="ghost"
+                      minW="30px"
+                      w="30px"
+                      h="30px"
+                      p={0}
+                      borderRadius="8px"
+                      color="var(--cl-text-muted)"
+                      _hover={{ bg: 'rgba(255, 101, 63, .12)', color: '#D94E2D' }}
+                      onClick={() => onRemoveProject?.(obra)}
+                    >
+                      <FiTrash2 size={15} />
+                    </Button>
+                  </Flex>
+                </Box>
               ))}
             </Box>
             {obras.length > 12 && (

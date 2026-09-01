@@ -15,9 +15,15 @@ const INK = { r: 0.125, g: 0.125, b: 0.125 };
 const MUTED = { r: 0.42, g: 0.45, b: 0.5 };
 const BORDER = { r: 0.89, g: 0.9, b: 0.92 };
 const PANEL = { r: 0.975, g: 0.978, b: 0.982 };
-const BAR = { r: 0.58, g: 0.65, b: 0.75 };
+const BAR = { r: 0.278, g: 0.333, b: 0.412 };
+const BAR_LIGHT = { r: 0.9, g: 0.92, b: 0.94 };
 const CHIP_FILL = { r: 1, g: 0.955, b: 0.935 };
 const CHIP_BORDER = { r: 1, g: 0.73, b: 0.64 };
+const REPORT_MARGIN_X = 40;
+const REPORT_CONTENT_WIDTH = PAGE_SIZE[0] - REPORT_MARGIN_X * 2;
+const METRIC_PANEL_HEIGHT = 130;
+const METRIC_PANEL_GAP = 14;
+const METRIC_PANEL_BOTTOM = 38;
 const METRICS = [
   { key: 'proyectos', label: 'Proyectos', suffix: '' },
   { key: 'inversion', label: 'Inversión', suffix: 'MDP' },
@@ -311,14 +317,14 @@ function drawTimeline({ page, items, metric, bounds, fonts, rgb, max }) {
       start: { x: point.x, y: plotY },
       end: point,
       thickness: 0.75,
-      color: rgb(0.65, 0.68, 0.73),
+      color: rgbValue(BORDER, rgb),
     });
     if (previousPoint) {
       page.drawLine({
         start: previousPoint,
         end: point,
         thickness: 2.5,
-        color: rgbValue(ACCENT, rgb),
+        color: rgbValue(BAR, rgb),
       });
     }
     page.drawCircle({
@@ -326,25 +332,25 @@ function drawTimeline({ page, items, metric, bounds, fonts, rgb, max }) {
       y: point.y,
       size: 4.1,
       color: rgb(1, 1, 1),
-      borderColor: rgbValue(ACCENT, rgb),
+      borderColor: rgbValue(BAR, rgb),
       borderWidth: 1.6,
     });
     page.drawCircle({
       x: point.x,
       y: point.y,
       size: 1.8,
-      color: rgbValue(BAR, rgb),
+      color: rgbValue(ACCENT, rgb),
     });
     drawText(page, formatNumber(value), {
       x: Math.max(x, Math.min(point.x - 8, x + width - 35)),
       y: point.y + 7,
-      size: 6.2,
+      size: 7,
       color: rgbValue(INK, rgb),
     }, bold);
     drawText(page, truncate(item.label, 10), {
       x: Math.max(x, Math.min(point.x - 13, x + width - 42)),
       y,
-      size: 5.8,
+      size: 6.2,
       color: rgbValue(MUTED, rgb),
     }, regular);
     previousPoint = point;
@@ -381,13 +387,13 @@ function drawColumns({ page, items, metric, bounds, fonts, rgb, max }) {
     drawText(page, formatNumber(value), {
       x: barX,
       y: y + barHeight + 20,
-      size: 6.1,
+      size: 7,
       color: rgbValue(INK, rgb),
     }, bold);
     drawText(page, truncate(item.label, 10), {
       x: barX,
       y,
-      size: 5.7,
+      size: 6.1,
       color: rgbValue(MUTED, rgb),
     }, regular);
   });
@@ -451,9 +457,9 @@ function drawTreemap({ page, items, metric, bounds, fonts, rgb }) {
 function drawBars({ page, items, metric, bounds, fonts, rgb, max }) {
   const { regular, bold } = fonts;
   const { x, y, width, height } = bounds;
-  const labelWidth = Math.min(95, width * 0.28);
-  const gap = 7;
-  const rowHeight = Math.min(15, (height - gap * (items.length - 1)) / items.length);
+  const labelWidth = Math.min(172, width * 0.26);
+  const gap = 8;
+  const rowHeight = Math.min(16, (height - gap * (items.length - 1)) / items.length);
   const contentHeight = rowHeight * items.length + gap * Math.max(0, items.length - 1);
   const topOffset = Math.max(0, height - contentHeight);
 
@@ -461,14 +467,14 @@ function drawBars({ page, items, metric, bounds, fonts, rgb, max }) {
     const value = metricValue(item.value, metric.key);
     const rowY = y + topOffset + (items.length - 1 - index) * (rowHeight + gap);
     const barX = x + labelWidth;
-    const valueWidth = Math.min(70, width * 0.22);
+    const valueWidth = Math.min(112, width * 0.24);
     const maxBarWidth = width - labelWidth - valueWidth;
     const barWidth = Math.max(3, (value / max) * maxBarWidth);
 
     drawText(page, truncate(item.label, Math.max(9, Math.floor(labelWidth / 4.8))), {
       x,
       y: rowY + 2,
-      size: 6.5,
+      size: 7.6,
       color: rgbValue(INK, rgb),
     }, regular);
     drawRoundedFill(page, {
@@ -477,7 +483,7 @@ function drawBars({ page, items, metric, bounds, fonts, rgb, max }) {
       width: maxBarWidth,
       height: rowHeight,
       radius: 8,
-      color: rgb(0.91, 0.92, 0.94),
+      color: rgbValue(BAR_LIGHT, rgb),
     });
     drawRoundedFill(page, {
       x: barX,
@@ -490,7 +496,7 @@ function drawBars({ page, items, metric, bounds, fonts, rgb, max }) {
     drawText(page, `${formatNumber(value)}${metric.suffix ? ` ${metric.suffix}` : ''}`, {
       x: barX + maxBarWidth + 8,
       y: rowY + 2,
-      size: 6.3,
+      size: 7.2,
       color: rgbValue(INK, rgb),
     }, bold);
   });
@@ -498,9 +504,10 @@ function drawBars({ page, items, metric, bounds, fonts, rgb, max }) {
 
 function drawMetricPanel({ page, metric, x, y, width, height, fonts, rgb, chartType }) {
   const { regular, bold } = fonts;
-  const items = metric.items.slice(0, chartType === 'timeline' ? 9 : chartType === 'columns' ? 6 : chartType === 'treemap' ? 5 : 6);
+  const items = metric.items.slice(0, chartType === 'timeline' ? 7 : chartType === 'columns' ? 5 : chartType === 'treemap' ? 5 : 4);
   const total = metric.items.reduce((sum, item) => sum + metricValue(item.value, metric.key), 0);
   const max = Math.max(...items.map((item) => metricValue(item.value, metric.key)), 1);
+  const totalText = `Total: ${formatNumber(total)}${metric.suffix ? ` ${metric.suffix}` : ''}`;
 
   drawRoundedPanel(page, {
     x,
@@ -523,13 +530,13 @@ function drawMetricPanel({ page, metric, x, y, width, height, fonts, rgb, chartT
   drawText(page, metric.label, {
     x: x + 16,
     y: y + height - 25,
-    size: 8,
+    size: 9.4,
     color: rgbValue(INK, rgb),
   }, bold);
-  drawText(page, `Total: ${formatNumber(total)}${metric.suffix ? ` ${metric.suffix}` : ''}`, {
-    x: x + width - Math.min(145, width * 0.39),
-    y: y + height - 24,
-    size: 7.5,
+  drawText(page, totalText, {
+    x: x + width - 16 - bold.widthOfTextAtSize(safePdfText(totalText), 8.1),
+    y: y + height - 24.5,
+    size: 8.1,
     color: rgbValue(MUTED, rgb),
   }, bold);
 
@@ -670,22 +677,18 @@ export async function generateChartsPdf({
     }, fonts.bold);
     drawFilterChips({ page, chips: filterChips, fonts, rgb });
 
-    const cardWidth = 374;
-    const cardHeight = 190;
-    const cardGap = 14;
-    const metricPositions = [
-      { x: 40, y: 266 },
-      { x: 40 + cardWidth + cardGap, y: 266 },
-      { x: (PAGE_SIZE[0] - cardWidth) / 2, y: 54 },
-    ];
+    const metricPositions = definition.metrics.map((_, metricIndex) => ({
+      x: REPORT_MARGIN_X,
+      y: METRIC_PANEL_BOTTOM + (definition.metrics.length - metricIndex - 1) * (METRIC_PANEL_HEIGHT + METRIC_PANEL_GAP),
+    }));
 
     definition.metrics.forEach((metric, metricIndex) => {
       drawMetricPanel({
         page,
         metric,
         ...metricPositions[metricIndex],
-        width: cardWidth,
-        height: cardHeight,
+        width: REPORT_CONTENT_WIDTH,
+        height: METRIC_PANEL_HEIGHT,
         fonts,
         rgb,
         chartType: definition.chartType,

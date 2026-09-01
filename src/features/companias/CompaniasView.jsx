@@ -120,6 +120,7 @@ const QUICK_FILTERS = [
 
 const COMPANY_LIST_ROW_HEIGHT = 76;
 const COMPANY_LIST_OVERSCAN = 8;
+const FEATURED_CONTACTS_LIMIT = 8;
 
 const ESTADOS_POR_REGION_CATALOG = {
   Oeste: ['Jalisco', 'Colima', 'Michoacán', 'Nayarit', 'Aguascalientes'],
@@ -340,19 +341,31 @@ function hasDatasetContactMethod(contact = {}) {
   return Boolean(String(contact.email || '').trim() || contactPhones(contact).length);
 }
 
-function prioritizedCompanyContacts(company = {}) {
-  const datasetContacts = (company.datasetContacts || []).map((contact) => ({ ...contact, source: 'contacto' }));
-  const linkedinContacts = (company.linkedinContacts || []).map((contact) => ({ ...contact, source: 'linkedin' }));
+function prioritizedCompanyContacts(company = {}, limit = Number.POSITIVE_INFINITY) {
+  const contacts = [];
+  const append = (items, source, shouldInclude = () => true) => {
+    for (const contact of items || []) {
+      if (!shouldInclude(contact)) continue;
+      contacts.push({ ...contact, source });
+      if (contacts.length >= limit) return true;
+    }
+    return false;
+  };
 
-  return [
-    ...datasetContacts.filter(hasDatasetContactMethod),
-    ...datasetContacts.filter((contact) => !hasDatasetContactMethod(contact)),
-    ...linkedinContacts,
-  ];
+  const datasetContacts = company.datasetContacts || [];
+  if (append(datasetContacts, 'contacto', hasDatasetContactMethod)) return contacts;
+  if (append(datasetContacts, 'contacto', (contact) => !hasDatasetContactMethod(contact))) return contacts;
+  append(company.linkedinContacts || [], 'linkedin');
+  return contacts;
 }
 
 function Contacts({ company, onShowAll, isLoading = false }) {
-  const contacts = prioritizedCompanyContacts(company);
+  // La tarjeta resume el perfil. La lista completa se monta sólo al abrir
+  // "Ver todos", evitando pintar cientos de filas al cambiar de compañía.
+  const contacts = useMemo(
+    () => prioritizedCompanyContacts(company, FEATURED_CONTACTS_LIMIT),
+    [company],
+  );
   const totalContacts = (company.datasetContacts?.length || 0) + (company.linkedinContacts?.length || 0);
   return <Box className="company-bottom-card company-contacts-card"><Flex className="company-bottom-title" align="center" justify="space-between"><Text>Contactos destacados</Text><Flex align="center" gap={3} flexShrink={0}><Text>{isLoading ? '…' : formatNumber(totalContacts)}</Text>{totalContacts > 0 && <button type="button" className="company-bottom-link company-bottom-header-link" onClick={onShowAll}>Ver todos <FiArrowRight size={14} /></button>}</Flex></Flex><Box className="company-contacts">{contacts.map((contact, index) => {
     const phones = contactPhones(contact);
@@ -424,7 +437,25 @@ function Dashboard({ company, saved, alertEnabled, isLoadingCompanies, onSave, o
   const companyPhone = company.phones?.[0] || '';
   const companyEmail = company.emails?.[0] || '';
   return <Box className="company-dashboard">
-    <Flex className="company-profile" align="center" gap={3.5}><Flex className="company-mark" align="center" justify="center">{initials(company.name)}</Flex><Box flex="1" minW={0}><Text className="company-name" lineClamp={1}>{company.name}</Text><Flex align="center" gap={2}><Text className="company-role" lineClamp={1}>{company.roles[0] || 'Compañía constructora'}</Text>{alertEnabled && <Text className="company-watch-status"><FiBell size={10} /> En seguimiento</Text>}</Flex><Flex className="company-location" align="center" gap={1.5}><FiMapPin size={13} /><Text lineClamp={1}>{location}</Text></Flex>{(companyPhone || companyEmail) && <Flex className="company-contact-info" align="center" gap={3}>{companyPhone && <a href={`tel:${companyPhone.replace(/\s+/g, '')}`}><FiPhone size={12} /><Text lineClamp={1}>{companyPhone}</Text></a>}{companyEmail && <a href={`mailto:${companyEmail}`}><FiMail size={12} /><Text lineClamp={1}>{companyEmail}</Text></a>}</Flex>}</Box><Flex className="company-actions" gap={2} align="center">{linkedin ? <a href={linkedin} target="_blank" rel="noreferrer" className="company-linkedin">LinkedIn <FiExternalLink size={13} /></a> : <span className="company-linkedin disabled">LinkedIn <FiLinkedin size={13} /></span>}<button type="button" className={`company-alert${alertEnabled ? ' active' : ''}`} onClick={onOpenAlert}><FiBell size={14} /> {alertEnabled ? 'Alerta activa' : 'Alertar actividad'}</button><button type="button" className={`company-save${saved ? ' saved' : ''}`} onClick={onSave}><FiBookmark size={14} /> {saved ? 'Guardada' : 'Guardar'}</button><button type="button" className="company-download" onClick={onDownload} title="Descargar CSV" aria-label="Descargar compañías en CSV"><FiDownload size={15} /></button></Flex></Flex>
+    <Flex className="company-profile" align="center" gap={3.5}>
+      <Flex className="company-mark" align="center" justify="center">{initials(company.name)}</Flex>
+      <Box flex="1" minW={0}>
+        <Text className="company-name" lineClamp={1}>{company.name}</Text>
+        <Flex align="center" gap={2}>
+          <Text className="company-role" lineClamp={1}>{company.roles[0] || 'Compañía constructora'}</Text>
+          {alertEnabled && <Text className="company-watch-status"><FiBell size={10} /> En seguimiento</Text>}
+        </Flex>
+        <Flex className="company-context-row" align="center" gap={3}>
+          <Flex className="company-location" align="center" gap={1.5} minW={0}>
+            <FiMapPin size={13} />
+            <Text lineClamp={1}>{location}</Text>
+          </Flex>
+          {companyPhone && <a className="company-context-phone" href={`tel:${companyPhone.replace(/\s+/g, '')}`}><FiPhone size={12} /><Text>{companyPhone}</Text></a>}
+        </Flex>
+        {companyEmail && <Flex className="company-contact-info" align="center"><a href={`mailto:${companyEmail}`}><FiMail size={12} /><Text lineClamp={1}>{companyEmail}</Text></a></Flex>}
+      </Box>
+      <Flex className="company-actions" gap={2} align="center">{linkedin ? <a href={linkedin} target="_blank" rel="noreferrer" className="company-linkedin">LinkedIn <FiExternalLink size={13} /></a> : <span className="company-linkedin disabled">LinkedIn <FiLinkedin size={13} /></span>}<button type="button" className={`company-alert${alertEnabled ? ' active' : ''}`} onClick={onOpenAlert}><FiBell size={14} /> {alertEnabled ? 'Alerta activa' : 'Alertar actividad'}</button><button type="button" className={`company-save${saved ? ' saved' : ''}`} onClick={onSave}><FiBookmark size={14} /> {saved ? 'Guardada' : 'Guardar'}</button><button type="button" className="company-download" onClick={onDownload} title="Descargar CSV" aria-label="Descargar compañías en CSV"><FiDownload size={15} /></button></Flex>
+    </Flex>
     <Box className="company-metrics"><Metric label="Obras" value={formatNumber(company.projectCount)} detail="Proyectos publicados" /><Metric label="Inversión total" value={formatCompactInvestment(company.totalInvestment)} detail="Monto identificado" /><Metric label="Estados" value={formatNumber(company.stateCount)} detail="Donde tiene presencia" /><Metric label="Superficie total" value={`${formatNumber(company.totalSurface)} m²`} detail="Construidos" /></Box>
     <Flex className="company-signal" align="center" gap={3}><Flex align="center" justify="center"><FiTrendingUp size={18} /></Flex><Box flex="1" minW={0}><Text>Señal comercial</Text><Text>{recent.projects.value ? `${recent.projects.value} obras identificadas en la actividad más reciente.` : 'Actividad registrada en su portafolio.'} Mayor presencia en {company.states[0] || 'sus estados activos'}.</Text></Box><Box className="company-trend"><ResponsiveContainer width="100%" height="100%"><LineChart data={trend} margin={{ top: 5, right: 2, bottom: 0, left: 2 }}><Line type="monotone" dataKey="value" stroke="#FF5D32" strokeWidth={2} dot={{ r: 2, fill: '#FF5D32', strokeWidth: 0 }} activeDot={{ r: 4 }} /><Tooltip formatter={(value) => [`${value} obras`, 'Publicaciones']} /></LineChart></ResponsiveContainer></Box></Flex>
     <Box className="company-insights"><Genres company={company} /><States company={company} /><Activity company={company} alertEnabled={alertEnabled} /></Box><Box className="company-bottom"><Projects company={company} onViewFicha={onViewFicha} onShowAll={onShowProjects} /><Contacts company={company} onShowAll={onShowContacts} isLoading={isLoadingCompanies} /></Box>
@@ -832,6 +863,11 @@ export default function CompaniasView({ filteredObras = [], sourceObras = [], fi
       .companias-view .company-legend p:nth-child(2) { color: #445268; font-size: 12px; font-weight: 700; }
       .companias-view .company-legend p:last-child { color: #263348; font-size: 12px; font-weight: 800; }
       .companias-view .company-bottom-header-link { align-items: center; display: inline-flex; flex-shrink: 0; margin: 0; white-space: nowrap; }
+      .companias-view .company-context-row { flex-wrap: wrap; margin-top: 5px; min-width: 0; }
+      .companias-view .company-context-row .company-location { flex: 0 1 auto; margin-top: 0; max-width: min(100%, 310px); }
+      .companias-view .company-context-phone { align-items: center; color: #536176; display: inline-flex; flex: 0 0 auto; font-size: 11px; font-weight: 650; gap: 5px; text-decoration: none; white-space: nowrap; }
+      .companias-view .company-context-phone:hover { color: #D94F2C; text-decoration: underline; }
+      .companias-view .company-context-phone svg { color: #FF653F; flex: 0 0 auto; }
       .companias-view .company-contact-info { flex-wrap: wrap; margin-top: 5px; min-width: 0; }
       .companias-view .company-contact-info a { align-items: center; color: #536176; display: inline-flex; font-size: 11px; font-weight: 650; gap: 5px; max-width: min(100%, 290px); min-width: 0; text-decoration: none; }
       .companias-view .company-contact-info a:hover { color: #D94F2C; text-decoration: underline; }
@@ -845,6 +881,8 @@ export default function CompaniasView({ filteredObras = [], sourceObras = [], fi
       .companias-view.company-dark .company-directory-title span, .companias-view.company-dark .company-directory-summary p:last-child, .companias-view.company-dark .company-role, .companias-view.company-dark .company-location, .companias-view.company-dark .company-metric p:first-child, .companias-view.company-dark .company-metric p:last-child, .companias-view.company-dark .company-list-item small, .companias-view.company-dark .company-project-head, .companias-view.company-dark .company-project-row, .companias-view.company-dark .company-project-row small, .companias-view.company-dark .company-contacts > div > div:nth-child(2) > p:last-child, .companias-view.company-dark .company-card-title span, .companias-view.company-dark .company-card-empty { color: #B9C3D0; }
       .companias-view.company-dark .company-contact-info a { color: #C8D2DE; }
       .companias-view.company-dark .company-contact-info a:hover { color: #FFB5A0; }
+      .companias-view.company-dark .company-context-phone { color: #C8D2DE; }
+      .companias-view.company-dark .company-context-phone:hover { color: #FFB5A0; }
       .companias-view.company-dark .company-search, .companias-view.company-dark .company-filter-trigger, .companias-view.company-dark .company-saved-filter, .companias-view.company-dark .company-linkedin, .companias-view.company-dark .company-download { background: #202731; border-color: #3B4655; color: #DDE5EF; }
       .companias-view.company-dark .company-search input { color: #F8FAFC; }
       .companias-view.company-dark .company-search input::placeholder { color: #9CA9BA; }

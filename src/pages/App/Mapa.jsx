@@ -40,6 +40,9 @@ const FILTER_FIT_SAFETY_ZOOM = 0.06;
 const MAP_MIN_ZOOM = 4;
 const MAP_MAX_ZOOM = 18;
 const CLUSTER_MOTION_DURATION = 360;
+const FOOTPRINT_MIN_ZOOM = 14;
+const FOOTPRINT_RENDER_LIMIT = 120;
+const METERS_PER_LATITUDE_DEGREE = 111320;
 const UNCLUSTERED_MARKER_LIMITS = Object.freeze({
   overview: 520,
   regional: 850,
@@ -57,7 +60,6 @@ const MEXICO_MAP_BOUNDS = Object.freeze({
 // Conservamos la cámara entre esas recreaciones para que cambiar de tema no
 // se sienta como navegar de nuevo por el mapa.
 let lastMapCamera = null;
-let lastMountedMapTheme = null;
 
 function isCoordinateInsideMexicoMap(lat, lng) {
   return lat >= MEXICO_MAP_BOUNDS.south &&
@@ -161,6 +163,58 @@ function getObraCoordinates(obra) {
   return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
 }
 
+function getObraFootprintBounds(obra) {
+  const { lat, lng } = getObraCoordinates(obra) || {};
+  const rawSurface = obra?.superficie ?? obra?.Superficie ?? obra?.superficieTotal;
+  const squareMeters = Number(String(rawSurface ?? '').replace(/[^0-9.-]/g, ''));
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(squareMeters) || squareMeters <= 0) {
+    return null;
+  }
+
+  // No conocemos la geometría catastral. Esta es una huella visual: un
+  // cuadrado centrado en el punto cuyo lado es √m². Limitamos valores extremos
+  // para evitar que un dato erróneo cubra la ciudad completa.
+  const sideMeters = Math.min(2500, Math.max(8, Math.sqrt(squareMeters)));
+  const halfSide = sideMeters / 2;
+  const latitudeOffset = halfSide / METERS_PER_LATITUDE_DEGREE;
+  const longitudeOffset = halfSide / (
+    METERS_PER_LATITUDE_DEGREE * Math.max(0.15, Math.cos((lat * Math.PI) / 180))
+  );
+
+  return {
+    north: lat + latitudeOffset,
+    south: lat - latitudeOffset,
+    east: lng + longitudeOffset,
+    west: lng - longitudeOffset,
+  };
+}
+
+function getRoundedFootprintPath(bounds, segmentsPerCorner = 3) {
+  const latitudeSpan = bounds.north - bounds.south;
+  const longitudeSpan = bounds.east - bounds.west;
+  const cornerLatitudeRadius = latitudeSpan * 0.16;
+  const cornerLongitudeRadius = longitudeSpan * 0.16;
+  const corners = [
+    { lat: bounds.north - cornerLatitudeRadius, lng: bounds.east - cornerLongitudeRadius, start: 90, end: 0 },
+    { lat: bounds.south + cornerLatitudeRadius, lng: bounds.east - cornerLongitudeRadius, start: 0, end: -90 },
+    { lat: bounds.south + cornerLatitudeRadius, lng: bounds.west + cornerLongitudeRadius, start: -90, end: -180 },
+    { lat: bounds.north - cornerLatitudeRadius, lng: bounds.west + cornerLongitudeRadius, start: 180, end: 90 },
+  ];
+
+  return corners.flatMap((corner) => Array.from(
+    { length: segmentsPerCorner + 1 },
+    (_, index) => {
+      const progress = index / segmentsPerCorner;
+      const angle = (corner.start + (corner.end - corner.start) * progress) * (Math.PI / 180);
+      return {
+        lat: corner.lat + cornerLatitudeRadius * Math.sin(angle),
+        lng: corner.lng + cornerLongitudeRadius * Math.cos(angle),
+      };
+    }
+  ));
+}
+
 const projectDateFormatter = new Intl.DateTimeFormat('es-MX', {
   day: '2-digit', month: 'short', year: 'numeric',
 });
@@ -204,6 +258,7 @@ function Mapa({
   isDataReady = true,
   isVisible = true,
   fitInitialBounds = false,
+  fitRequestKey = null,
   isDarkMode = false,
   onFilteredData,
   onViewFicha,
@@ -223,6 +278,7 @@ function Mapa({
   const [selectedObraKeys, setSelectedObraKeys] = useState([]);
   const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
   const [selectionFeedback, setSelectionFeedback] = useState('');
+  const [mapRefreshEpoch, setMapRefreshEpoch] = useState(0);
   const projectPopupTone = isDarkMode
     ? {
         accentSoft: 'rgba(255, 101, 63, .16)',
@@ -247,6 +303,7 @@ function Mapa({
   const selectedProjectRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const mapReadyRef = useRef(false);
+  const isVisibleRef = useRef(isVisible);
   const markerLibraryReadyRef = useRef(false);
   const markerClusterRef = useRef(null);
   const markerClusterFactoryRef = useRef(null);
@@ -257,13 +314,17 @@ function Mapa({
   const activeMarkerKeysRef = useRef(new Set());
   const markerUpdateTokenRef = useRef(0);
   const fitRequestTokenRef = useRef(0);
+  const mapNeedsRefreshRef = useRef(false);
+  const footprintOverlaysRef = useRef(new Map());
+  const footprintRenderFrameRef = useRef(null);
+  const renderFootprintsRef = useRef(null);
+  const clusterRenderFrameRef = useRef(null);
+  const mapFocusTokenRef = useRef(0);
+  const lastAppliedFitRequestKeyRef = useRef(null);
   const cameraAnimationFrameRef = useRef(null);
   const clusterMotionRef = useRef('idle');
   const clusterMotionTimerRef = useRef(null);
   const lastClusterZoomRef = useRef(MAP_MIN_ZOOM);
-  const suppressProgressiveClusterRenderRef = useRef(
-    lastMountedMapTheme !== null && lastMountedMapTheme !== isDarkMode
-  );
   const selectionDragRef = useRef(null);
   const selectionOpenTimerRef = useRef(null);
   const selectedObraKeysRef = useRef(new Set());
@@ -274,7 +335,6 @@ function Mapa({
   const onFilteredDataRef = useRef(onFilteredData);
   const lastPublishedCount = useRef(-1);
   const didFitInitialBoundsRef = useRef(false);
-  const hasRenderedMarkerSetRef = useRef(false);
   const debugLog = () => {};
 
   const showMapLoader = isMapLoading || !isDataReady;
@@ -346,9 +406,91 @@ function Mapa({
     });
   }, []);
 
+  const renderFootprints = useCallback(() => {
+    const map = mapInstanceRef.current;
+    const Polygon = window.google?.maps?.Polygon;
+    const zoom = Number(map?.getZoom?.()) || MAP_MIN_ZOOM;
+
+    const clearFootprints = () => {
+      footprintOverlaysRef.current.forEach((overlay) => overlay.setMap(null));
+      footprintOverlaysRef.current.clear();
+    };
+
+    if (!map || !Polygon || zoom < FOOTPRINT_MIN_ZOOM) {
+      clearFootprints();
+      return;
+    }
+
+    const mapBounds = map.getBounds?.();
+    const visibleFootprints = filteredObras
+      .map((obra, index) => ({
+        key: getObraMarkerKey(obra, index),
+        bounds: getObraFootprintBounds(obra),
+        coordinates: getObraCoordinates(obra),
+      }))
+      .filter(({ bounds, coordinates }) => {
+        if (!bounds || !coordinates) return false;
+        return !mapBounds || mapBounds.contains(coordinates);
+      })
+      .slice(0, FOOTPRINT_RENDER_LIMIT);
+    const nextKeys = new Set(visibleFootprints.map(({ key }) => key));
+
+    footprintOverlaysRef.current.forEach((overlay, key) => {
+      if (!nextKeys.has(key)) {
+        overlay.setMap(null);
+        footprintOverlaysRef.current.delete(key);
+      }
+    });
+
+    visibleFootprints.forEach(({ key, bounds }) => {
+      const current = footprintOverlaysRef.current.get(key);
+      if (current) {
+        current.setOptions({ paths: getRoundedFootprintPath(bounds), map });
+        return;
+      }
+
+      const overlay = new Polygon({
+        paths: getRoundedFootprintPath(bounds),
+        map,
+        clickable: false,
+        geodesic: false,
+        fillColor: '#FF653F',
+        fillOpacity: 0.08,
+        strokeColor: '#FF653F',
+        strokeOpacity: 0.8,
+        strokeWeight: 1.5,
+        zIndex: 1,
+      });
+      footprintOverlaysRef.current.set(key, overlay);
+    });
+  }, [filteredObras]);
+
+  const scheduleFootprints = useCallback(() => {
+    if (footprintRenderFrameRef.current !== null) return;
+    footprintRenderFrameRef.current = window.requestAnimationFrame(() => {
+      footprintRenderFrameRef.current = null;
+      renderFootprintsRef.current?.();
+    });
+  }, []);
+
+  const scheduleClusterRender = useCallback(() => {
+    if (clusterRenderFrameRef.current !== null) return;
+    clusterRenderFrameRef.current = window.requestAnimationFrame(() => {
+      clusterRenderFrameRef.current = null;
+      if (isClusteringEnabledRef.current && markerElementsRef.current.length) {
+        markerClusterRef.current?.render?.();
+      }
+    });
+  }, []);
+
   useEffect(() => {
     renderUnclusteredMarkersRef.current = renderUnclusteredMarkers;
   }, [renderUnclusteredMarkers]);
+
+  useEffect(() => {
+    renderFootprintsRef.current = renderFootprints;
+    scheduleFootprints();
+  }, [renderFootprints, scheduleFootprints]);
 
   useEffect(() => {
     selectedObraKeysRef.current = new Set(selectedObraKeys);
@@ -385,6 +527,7 @@ function Mapa({
       const createClusterer = markerClusterFactoryRef.current;
       if (createClusterer) {
         markerClusterRef.current = createClusterer(map, markerElementsRef.current);
+        scheduleClusterRender();
       }
       return;
     }
@@ -394,7 +537,8 @@ function Mapa({
     clusterer.setMap(null);
     unclusteredMarkerElementsRef.current = new Set();
     renderUnclusteredMarkers();
-  }, [isClusteringEnabled, renderUnclusteredMarkers]);
+    scheduleFootprints();
+  }, [isClusteringEnabled, renderUnclusteredMarkers, scheduleClusterRender, scheduleFootprints]);
 
   useEffect(() => {
     if (!isRouteMode && !isBoxSelecting && !isSelectionModalOpen && !selectionConfirmation) return undefined;
@@ -436,8 +580,6 @@ function Mapa({
   });
 
   useEffect(() => {
-    lastMountedMapTheme = isDarkMode;
-
     return () => {
       const map = mapInstanceRef.current;
       const center = map?.getCenter?.();
@@ -469,6 +611,30 @@ function Mapa({
       zoomControl: !isLocked,
     });
   }, [selectedProject]);
+
+  // Al ocultar el mapa para visitar otro módulo la instancia se conserva. Al
+  // volver sólo avisamos a Google del nuevo tamaño; no reconstruimos pines ni
+  // volvemos a animar la cámara, por lo que el mapa permanece fijo.
+  useEffect(() => {
+    isVisibleRef.current = isVisible;
+    if (!isVisible || !mapInstanceRef.current) return undefined;
+
+    const resizeFrame = window.requestAnimationFrame(() => {
+      const map = mapInstanceRef.current;
+      if (!map) return;
+      if (window.google?.maps?.event) {
+        window.google.maps.event.trigger(map, 'resize');
+      }
+      if (mapNeedsRefreshRef.current) {
+        mapNeedsRefreshRef.current = false;
+        setMapRefreshEpoch((current) => current + 1);
+      }
+      scheduleClusterRender();
+      scheduleFootprints();
+    });
+
+    return () => window.cancelAnimationFrame(resizeFrame);
+  }, [isVisible, scheduleClusterRender, scheduleFootprints]);
 
 
   useEffect(() => {
@@ -988,9 +1154,17 @@ debugLog(
 
   }, [obras, filtros]);
 
-useEffect(() => {
-    if (!isVisible) return undefined;
+  useEffect(() => {
+    if (!isVisibleRef.current) {
+      mapNeedsRefreshRef.current = true;
+      return undefined;
+    }
     let cancelled = false;
+    const footprintOverlays = footprintOverlaysRef.current;
+
+    if (!fitRequestKey) {
+      lastAppliedFitRequestKeyRef.current = null;
+    }
 
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     if (!apiKey) return;
@@ -1020,6 +1194,8 @@ useEffect(() => {
       });
       unclusteredMarkerElementsRef.current = new Set();
       setUnclusteredSummary(null);
+      footprintOverlays.forEach((rectangle) => rectangle.setMap(null));
+      footprintOverlays.clear();
 
       if (clearCache) {
         markerCacheRef.current.forEach((marker) => {
@@ -1088,28 +1264,27 @@ useEffect(() => {
         );
       }
       markerContent.innerHTML = `
-        <svg width="30" height="38" viewBox="0 0 30 38" aria-hidden="true" focusable="false">
-          <path
-            d="M15 1.5C7.82 1.5 2 7.18 2 14.18c0 9.22 10.6 20.01 12.15 21.54a1.2 1.2 0 0 0 1.7 0C17.4 34.19 28 23.4 28 14.18 28 7.18 22.18 1.5 15 1.5Z"
-            fill="#FF5A36"
-            stroke="#FFFFFF"
-            stroke-width="2.5"
-          />
-          <circle cx="15" cy="14" r="5.25" fill="#FFFFFF" />
-          <circle cx="15" cy="14" r="2.25" fill="#FF5A36" />
+        <svg width="40" height="52" viewBox="0 0 40 52" aria-hidden="true" focusable="false">
+          <line x1="20" y1="34" x2="20" y2="47" stroke="#FF653F" stroke-width="2" stroke-linecap="round" />
+          <circle class="cl-project-marker__ring" cx="20" cy="18" r="17" fill="rgba(255, 101, 63, .08)" stroke="#FF653F" stroke-width="1.25" />
+          <circle class="cl-project-marker__core" cx="20" cy="18" r="12" fill="#FF653F" />
+          <circle cx="20" cy="48" r="2" fill="#FF653F" />
         </svg>`;
       Object.assign(markerContent.style, {
-        width: '30px',
-        height: '38px',
+        width: '40px',
+        height: '52px',
         display: 'block',
         position: 'relative',
-        filter: 'drop-shadow(0 2px 3px rgba(83, 35, 21, 0.34))',
-        transform: 'translateY(1px)',
+        filter: 'drop-shadow(0 2px 4px rgba(83, 35, 21, 0.32))',
       });
 
       const marker = new window.google.maps.marker.AdvancedMarkerElement({
         position: { lat: latNum, lng: lonNum },
         content: markerContent,
+        anchorLeft: '-50%',
+        anchorTop: '-100%',
+        collisionBehavior: window.google.maps.CollisionBehavior?.REQUIRED_AND_HIDES_OPTIONAL || 'REQUIRED',
+        zIndex: 1000,
       });
 
       marker.addListener('click', (event) => {
@@ -1129,67 +1304,146 @@ useEffect(() => {
         const clickedPosition = event?.latLng || marker.position;
         const clickedLat = typeof clickedPosition?.lat === 'function' ? clickedPosition.lat() : clickedPosition?.lat ?? latNum;
         const clickedLng = typeof clickedPosition?.lng === 'function' ? clickedPosition.lng() : clickedPosition?.lng ?? lonNum;
-        const project = {
-          clave: obra.clave,
-          proyecto: obra.proyecto,
-          inversion: formatInvestment(obra.inversion),
-          superficie: `${Number(obra.superficie || 0).toLocaleString()} m²`,
-          genero: getSingleTaxonomyValue(obra.genero),
-          estado: obra.estado,
-          subgenero: getSingleTaxonomyValue(obra.subgenero),
-          fechaInicio: obra.fechaInicioDate || obra.fechaInicio,
-          fechaFin: obra.fechaTerminoDate || obra.fechaFinDate || obra.fechaTermino || obra.fechaFin,
-          lat: clickedLat,
-          lng: clickedLng,
-        };
-        selectedProjectRef.current = project;
-        setPopupPosition(null);
-        setSelectedProject(project);
         const activeMap = mapInstanceRef.current;
         const targetLatLng = new window.google.maps.LatLng(clickedLat, clickedLng);
+        const footprintBounds = getObraFootprintBounds(obra);
+        mapFocusTokenRef.current += 1;
+        const focusToken = mapFocusTokenRef.current;
 
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-          if (!mapRef.current || !popupCardRef.current) return;
+        const openProjectCard = () => {
+          const project = {
+            clave: obra.clave,
+            proyecto: obra.proyecto,
+            inversion: formatInvestment(obra.inversion),
+            superficie: `${Number(obra.superficie || 0).toLocaleString()} m²`,
+            genero: getSingleTaxonomyValue(obra.genero),
+            estado: obra.estado,
+            subgenero: getSingleTaxonomyValue(obra.subgenero),
+            fechaInicio: obra.fechaInicioDate || obra.fechaInicio,
+            fechaFin: obra.fechaTerminoDate || obra.fechaFinDate || obra.fechaTermino || obra.fechaFin,
+            lat: clickedLat,
+            lng: clickedLng,
+          };
+          selectedProjectRef.current = project;
+          setPopupPosition(null);
+          setSelectedProject(project);
 
-          const mapWidth = mapRef.current.clientWidth;
-          const mapHeight = mapRef.current.clientHeight;
-          const cardWidth = popupCardRef.current.offsetWidth;
-          const cardHeight = popupCardRef.current.offsetHeight;
-          const padding = 12;
-          const pointerSize = 16;
-          const pointerGap = 4;
-          const left = Math.max(
-            padding,
-            Math.min((mapWidth - cardWidth) / 2, mapWidth - cardWidth - padding)
-          );
-          const top = Math.max(
-            padding,
-            Math.min((mapHeight - cardHeight) / 2, mapHeight - cardHeight - padding)
-          );
-          const markerPointY = Math.min(
-            mapHeight - padding,
-            top + cardHeight + pointerSize / 2 + pointerGap
-          );
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (!mapRef.current || !popupCardRef.current) return;
 
-          setPopupPosition({
-            left,
-            top,
-            placement: 'above',
-            pointerLeft: Math.max(22, Math.min(cardWidth / 2 - pointerSize / 2, cardWidth - 38)),
+            const mapWidth = mapRef.current.clientWidth;
+            const mapHeight = mapRef.current.clientHeight;
+            const cardWidth = popupCardRef.current.offsetWidth;
+            const cardHeight = popupCardRef.current.offsetHeight;
+            const padding = 12;
+            const pointerSize = 16;
+            const pointerGap = 4;
+            const left = Math.max(
+              padding,
+              Math.min((mapWidth - cardWidth) / 2, mapWidth - cardWidth - padding)
+            );
+            const top = Math.max(
+              padding,
+              Math.min((mapHeight - cardHeight) / 2, mapHeight - cardHeight - padding)
+            );
+            const markerPointY = Math.min(
+              mapHeight - padding,
+              top + cardHeight + pointerSize / 2 + pointerGap
+            );
+
+            setPopupPosition({
+              left,
+              top,
+              placement: 'above',
+              pointerLeft: Math.max(22, Math.min(cardWidth / 2 - pointerSize / 2, cardWidth - 38)),
+            });
+
+            const projection = activeMap?.getProjection();
+            const zoom = activeMap?.getZoom();
+            if (activeMap && projection && Number.isFinite(zoom)) {
+              const worldPoint = projection.fromLatLngToPoint(targetLatLng);
+              const worldOffsetY = (mapHeight / 2 - markerPointY) / (2 ** zoom);
+              activeMap.panTo(projection.fromPointToLatLng(
+                new window.google.maps.Point(worldPoint.x, worldPoint.y + worldOffsetY)
+              ));
+            } else {
+              activeMap?.panTo(targetLatLng);
+            }
+          }));
+        };
+
+        // Sólo las obras con superficie conocida reciben un acercamiento. Así
+        // la huella calculada queda visible antes de abrir la ficha; los demás
+        // pines conservan el comportamiento de apertura inmediata.
+        if (!footprintBounds || !activeMap || !window.google?.maps?.LatLngBounds) {
+          openProjectCard();
+          return;
+        }
+
+        // `fitBounds` salta directo al zoom final y, al pedir mosaicos nuevos,
+        // deja el mapa momentáneamente sin detalle. Hacemos el viaje de cámara
+        // en frames espaciados: se siente como un zoom cinematográfico y no
+        // satura al renderer de Google con actualizaciones en cada frame.
+        if (cameraAnimationFrameRef.current !== null) {
+          window.cancelAnimationFrame(cameraAnimationFrameRef.current);
+          cameraAnimationFrameRef.current = null;
+        }
+
+        const currentCenter = activeMap.getCenter?.();
+        const currentZoom = Number(activeMap.getZoom?.());
+        const from = {
+          lat: Number(currentCenter?.lat?.()),
+          lng: Number(currentCenter?.lng?.()),
+          zoom: Number.isFinite(currentZoom) ? currentZoom : MAP_MIN_ZOOM,
+        };
+        const target = {
+          lat: (footprintBounds.north + footprintBounds.south) / 2,
+          lng: (footprintBounds.east + footprintBounds.west) / 2,
+          zoom: MAP_MAX_ZOOM,
+        };
+        const zoomDistance = Math.abs(target.zoom - from.zoom);
+        const centerDistance = Math.hypot(target.lat - from.lat, target.lng - from.lng);
+        const duration = Math.min(1250, Math.max(680, 440 + zoomDistance * 58 + centerDistance * 6));
+        const startedAt = performance.now();
+        let lastCameraUpdateAt = 0;
+        const easeOutQuart = (progress) => 1 - ((1 - progress) ** 4);
+
+        const animateFocus = (now) => {
+          if (mapFocusTokenRef.current !== focusToken || mapInstanceRef.current !== activeMap) {
+            cameraAnimationFrameRef.current = null;
+            return;
+          }
+
+          const progress = Math.min(1, (now - startedAt) / duration);
+          if (progress < 1 && now - lastCameraUpdateAt < 28) {
+            cameraAnimationFrameRef.current = window.requestAnimationFrame(animateFocus);
+            return;
+          }
+
+          lastCameraUpdateAt = now;
+          const eased = easeOutQuart(progress);
+          activeMap.moveCamera({
+            center: {
+              lat: from.lat + (target.lat - from.lat) * eased,
+              lng: from.lng + (target.lng - from.lng) * eased,
+            },
+            zoom: from.zoom + (target.zoom - from.zoom) * eased,
           });
 
-          const projection = activeMap?.getProjection();
-          const zoom = activeMap?.getZoom();
-          if (activeMap && projection && Number.isFinite(zoom)) {
-            const worldPoint = projection.fromLatLngToPoint(targetLatLng);
-            const worldOffsetY = (mapHeight / 2 - markerPointY) / (2 ** zoom);
-            activeMap.panTo(projection.fromPointToLatLng(
-              new window.google.maps.Point(worldPoint.x, worldPoint.y + worldOffsetY)
-            ));
-          } else {
-            activeMap?.panTo(targetLatLng);
+          if (progress < 1) {
+            cameraAnimationFrameRef.current = window.requestAnimationFrame(animateFocus);
+            return;
           }
-        }));
+
+          activeMap.moveCamera({ center: { lat: target.lat, lng: target.lng }, zoom: target.zoom });
+          cameraAnimationFrameRef.current = null;
+          renderFootprintsRef.current?.();
+          window.setTimeout(() => {
+            if (mapFocusTokenRef.current === focusToken) openProjectCard();
+          }, 100);
+        };
+
+        cameraAnimationFrameRef.current = window.requestAnimationFrame(animateFocus);
       });
 
       return marker;
@@ -1311,12 +1565,16 @@ useEffect(() => {
           map.setCenter(MAP_DEFAULT_CENTER);
         }
 
-        if (!isClusteringEnabledRef.current) {
+        if (isClusteringEnabledRef.current) {
+          scheduleClusterRender();
+        } else {
           scheduleUnclusteredMarkers();
         }
+        scheduleFootprints();
       });
 
       map.addListener('click', () => {
+        mapFocusTokenRef.current += 1;
         selectedProjectRef.current = null;
         setSelectedProject(null);
         setPopupPosition(null);
@@ -1371,14 +1629,7 @@ useEffect(() => {
       let builtMarkers = 0;
       const firstMarkerBatchSize = Math.min(48, filteredObras.length);
       const markerBatchSize = 400;
-      // Durante el cambio claro/oscuro esperamos a tener todo el conjunto.
-      // Así los clústeres no se reacomodan por lotes y el único cambio
-      // perceptible es el color del mapa.
-      const suppressProgressiveClusterRender = suppressProgressiveClusterRenderRef.current;
       let nextBatchEnd = firstMarkerBatchSize;
-      let markerBatch = [];
-      let renderedPreview = false;
-      let pendingClusterRender = false;
 
       for (let index = 0; index < filteredObras.length; index += 1) {
         if (markerUpdateTokenRef.current !== updateToken) return;
@@ -1399,30 +1650,12 @@ useEffect(() => {
           markers.push(marker);
           markerKeys.push(key);
           markerKeyByElementRef.current.set(marker, key);
-          if (!activeMarkerKeysRef.current.has(key)) {
-            markerBatch.push(marker);
-          }
         }
 
         const completesBatch =
           index + 1 >= nextBatchEnd || index === filteredObras.length - 1;
 
         if (completesBatch) {
-          if (markerBatch.length && markerClusterRef.current) {
-            markerClusterRef.current.addMarkers(markerBatch, true);
-            if (
-              isClusteringEnabledRef.current &&
-              !suppressProgressiveClusterRender &&
-              !renderedPreview
-            ) {
-              markerClusterRef.current.render();
-              renderedPreview = true;
-            } else if (isClusteringEnabledRef.current) {
-              pendingClusterRender = true;
-            }
-            markerBatch = [];
-          }
-          markerElementsRef.current = [...markers];
           setMarkerProgress({ loaded: index + 1, total: filteredObras.length });
           setMapLoadingMessage(
             `${(index + 1).toLocaleString()} de ${filteredObras.length.toLocaleString()} proyectos`
@@ -1438,32 +1671,16 @@ useEffect(() => {
       const markerSetChanged =
         nextMarkerKeys.size !== activeMarkerKeysRef.current.size ||
         markerKeys.some((key) => !activeMarkerKeysRef.current.has(key));
-      const removedMarkers = [];
-      activeMarkerKeysRef.current.forEach((key) => {
-        if (nextMarkerKeys.has(key)) return;
-        const marker = markerCacheRef.current.get(key);
-        if (marker) removedMarkers.push(marker);
-      });
-
-      if (removedMarkers.length && markerClusterRef.current) {
-        markerClusterRef.current.removeMarkers(removedMarkers, true);
-        pendingClusterRender = isClusteringEnabledRef.current;
+      // La construcción es progresiva para no bloquear la interfaz, pero el
+      // cambio visible es atómico. Antes cada lote se insertaba de inmediato:
+      // al alternar estados rápido, un lote cancelado podía quedarse dentro
+      // del clusterer y terminar mostrando proyectos de toda la República.
+      if (markerClusterRef.current) {
+        markerElementsRef.current.forEach((marker) => { marker.map = null; });
+        markerClusterRef.current.clearMarkers(true);
+        markerClusterRef.current.addMarkers(markers, true);
+        if (isClusteringEnabledRef.current) markerClusterRef.current.render();
       }
-
-      if (markerBatch.length && markerClusterRef.current) {
-        markerClusterRef.current.addMarkers(markerBatch, true);
-        pendingClusterRender = isClusteringEnabledRef.current;
-      }
-
-      if (
-        isClusteringEnabledRef.current &&
-        markerClusterRef.current &&
-        (pendingClusterRender || !renderedPreview)
-      ) {
-        markerClusterRef.current.render();
-      }
-      suppressProgressiveClusterRenderRef.current = false;
-
       if (markerUpdateTokenRef.current === updateToken) {
         setMarkerProgress({
           loaded: filteredObras.length,
@@ -1477,13 +1694,26 @@ useEffect(() => {
       if (!isClusteringEnabledRef.current) {
         renderUnclusteredMarkersRef.current?.();
       }
+      scheduleClusterRender();
+      scheduleFootprints();
+
+      const shouldFitToCurrentFilters = Boolean(fitRequestKey) &&
+        fitRequestKey !== lastAppliedFitRequestKeyRef.current;
+      const shouldApplyLegacyInitialFit = !fitRequestKey && fitInitialBounds &&
+        !didFitInitialBoundsRef.current;
 
       if (
-        (hasRenderedMarkerSetRef.current || fitInitialBounds) &&
+        (shouldFitToCurrentFilters || shouldApplyLegacyInitialFit) &&
         markerSetChanged &&
         markers.length &&
         mapInstanceRef.current
       ) {
+        if (shouldFitToCurrentFilters) {
+          // Registramos la solicitud al confirmar el conjunto de marcadores,
+          // no al comenzar el filtrado. Así sólo la última selección estable
+          // puede mover la cámara.
+          lastAppliedFitRequestKeyRef.current = fitRequestKey;
+        }
         const fitRequestToken = fitRequestTokenRef.current + 1;
         fitRequestTokenRef.current = fitRequestToken;
         const validPositions = filteredObras.reduce((positions, obra) => {
@@ -1556,7 +1786,6 @@ useEffect(() => {
           cameraAnimationFrameRef.current = window.requestAnimationFrame(animateCamera);
         }
       }
-      hasRenderedMarkerSetRef.current = true;
 
       if (AUTO_FIT_INITIAL_BOUNDS && !didFitInitialBoundsRef.current && markers.length && mapInstanceRef.current) {
         const bounds = new window.google.maps.LatLngBounds();
@@ -1610,10 +1839,31 @@ useEffect(() => {
         window.cancelAnimationFrame(unclusteredRenderFrameRef.current);
         unclusteredRenderFrameRef.current = null;
       }
+      if (footprintRenderFrameRef.current !== null) {
+        window.cancelAnimationFrame(footprintRenderFrameRef.current);
+        footprintRenderFrameRef.current = null;
+      }
+      if (clusterRenderFrameRef.current !== null) {
+        window.cancelAnimationFrame(clusterRenderFrameRef.current);
+        clusterRenderFrameRef.current = null;
+      }
+      footprintOverlays.forEach((rectangle) => rectangle.setMap(null));
+      footprintOverlays.clear();
       markerUpdateTokenRef.current += 1;
       fitRequestTokenRef.current += 1;
+      mapFocusTokenRef.current += 1;
     };
-  }, [filteredObras, fitInitialBounds, isDataReady, isVisible, isDarkMode, scheduleUnclusteredMarkers]);
+  }, [
+    filteredObras,
+    fitInitialBounds,
+    fitRequestKey,
+    isDataReady,
+    isDarkMode,
+    mapRefreshEpoch,
+    scheduleClusterRender,
+    scheduleFootprints,
+    scheduleUnclusteredMarkers,
+  ]);
 
   const clearZoneSelection = () => {
     if (selectionOpenTimerRef.current) {
@@ -1624,6 +1874,19 @@ useEffect(() => {
     selectedObraKeysRef.current = new Set();
     setSelectedObraKeys([]);
     setIsSelectionModalOpen(false);
+    setSelectionFeedback('');
+  };
+
+  const removeRouteProject = (obra) => {
+    const obraIndex = filteredObras.indexOf(obra);
+    if (obraIndex < 0) return;
+
+    const markerKey = getObraMarkerKey(obra, obraIndex);
+    setSelectedObraKeys((current) => {
+      const nextSelection = current.filter((key) => key !== markerKey);
+      selectedObraKeysRef.current = new Set(nextSelection);
+      return nextSelection;
+    });
     setSelectionFeedback('');
   };
 
@@ -1847,15 +2110,17 @@ useEffect(() => {
           .cl-map-cluster--merge { animation: none; }
         }
         .cl-project-marker {
-          transform-origin: 50% 100%;
+          transform-origin: center;
           transition: transform 150ms ease, filter 150ms ease;
         }
         .cl-project-marker--selected {
-          transform: translateY(1px) scale(1.18) !important;
-          filter: drop-shadow(0 4px 9px rgba(24, 71, 184, .58)) !important;
+          transform: scale(1.18) !important;
+          filter: drop-shadow(0 4px 9px rgba(217, 78, 45, .52)) !important;
         }
-        .cl-project-marker--selected svg path { fill: #1847B8; stroke: #FFFFFF; }
-        .cl-project-marker--selected svg circle:last-child { fill: #1847B8; }
+        .cl-project-marker--selected .cl-project-marker__ring { stroke: #D94E2D; stroke-width: 2; }
+        .cl-project-marker--selected .cl-project-marker__core { fill: #D94E2D; }
+        .cl-project-marker--selected line,
+        .cl-project-marker--selected svg circle:last-child { stroke: #D94E2D; fill: #D94E2D; }
         .cl-project-marker--selected::after {
           content: attr(data-route-order);
           position: absolute;
@@ -2390,6 +2655,7 @@ useEffect(() => {
               onViewProject={(obra) => {
                 onViewFicha?.(obra);
               }}
+              onRemoveProject={removeRouteProject}
             />
           )}
 

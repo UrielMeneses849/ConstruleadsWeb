@@ -3,8 +3,6 @@ import { Box, Flex, Spinner, Text } from '@chakra-ui/react';
 import { importLibrary, setOptions } from '@googlemaps/js-api-loader';
 import { MarkerClusterer, SuperClusterAlgorithm } from '@googlemaps/markerclusterer';
 
-import { getCompanyGenreColor } from './companyData';
-
 const MAP_CENTER = Object.freeze({ lat: 23.6, lng: -102.0 });
 const MAP_BOUNDS = Object.freeze({ north: 34.9, south: 12.0, west: -119, east: -84 });
 const MAP_PADDING = Object.freeze({ top: 46, right: 36, bottom: 46, left: 36 });
@@ -19,6 +17,23 @@ function getProjectKey(obra, index) {
     obra?.id || obra?.clave ||
     `${obra?.lat || 'lat'}-${obra?.lng || 'lng'}-${index}`
   );
+}
+
+function createProjectTargetMarker(title) {
+  const content = document.createElement('div');
+  content.setAttribute('aria-label', `Proyecto ${title}`);
+  content.innerHTML = `
+    <svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true" focusable="false">
+      <circle cx="18" cy="18" r="17" fill="rgba(255, 22, 52, .04)" stroke="#FF1634" stroke-width="1" />
+      <circle cx="18" cy="18" r="12" fill="#FF1634" />
+    </svg>`;
+  Object.assign(content.style, {
+    display: 'block',
+    filter: 'drop-shadow(0 2px 4px rgba(83, 35, 21, .32))',
+    height: '36px',
+    width: '36px',
+  });
+  return content;
 }
 
 function clusterRenderer({ count, position }) {
@@ -74,7 +89,6 @@ export default function CompaniasMap({
       key: getProjectKey(obra, index),
       lat,
       lng,
-      color: getCompanyGenreColor(obra?.genero),
       title: obra?.proyecto || obra?.clave || 'Proyecto',
     });
     return result;
@@ -160,7 +174,7 @@ export default function CompaniasMap({
 
     const appendMarkers = async () => {
       const additions = [];
-      const { AdvancedMarkerElement, PinElement } = markerLibraryRef.current;
+      const { AdvancedMarkerElement } = markerLibraryRef.current;
 
       for (let index = 0; index < points.length; index += 1) {
         if (cancelled || updateTokenRef.current !== token) return;
@@ -168,15 +182,11 @@ export default function CompaniasMap({
         let marker = markersRef.current.get(point.key);
 
         if (!marker) {
-          const pin = new PinElement({
-            background: point.color,
-            borderColor: '#FFFFFF',
-            glyphColor: '#FFFFFF',
-            scale: 0.9,
-          });
           marker = new AdvancedMarkerElement({
             position: { lat: point.lat, lng: point.lng },
-            content: pin.element,
+            anchorLeft: '-50%',
+            anchorTop: '-50%',
+            content: createProjectTargetMarker(point.title),
             title: point.title,
           });
           markersRef.current.set(point.key, marker);

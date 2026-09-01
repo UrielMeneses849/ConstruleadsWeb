@@ -111,19 +111,29 @@ function AccordionSection({ id, label, count = 0, openSection, setOpenSection, c
   );
 }
 
-function SelectContent({ value, options, onChange }) {
+function SelectContent({ value, options, onChange, radioName }) {
   return (
     <Stack p={2} gap={0.5}>
       {options.map((option, index) => {
         const selected = Number(value) === index;
-        return <Flex as="button" type="button" key={option} align="center" gap={2} px={2} py={1.5}
-          borderRadius="8px" textAlign="left" bg={selected ? 'var(--cl-orange-soft)' : 'transparent'}
-          _hover={{ bg: selected ? 'var(--cl-orange-soft)' : 'var(--cl-hover)' }} onClick={() => onChange(index)}>
-          <Box w="13px" h="13px" flexShrink={0} borderRadius="full" border="1.5px solid"
-            borderColor={selected ? 'var(--cl-orange)' : 'var(--cl-text-muted)'} p="3px">
-            {selected && <Box w="100%" h="100%" borderRadius="full" bg="var(--cl-orange)" />}
-          </Box>
-          <Text fontSize="11px" fontWeight={selected ? 700 : 500} color="var(--cl-text)">{option}</Text>
+        return <Flex key={option} align="center" px={2} py={1} borderRadius="8px" cursor="pointer"
+          transition="all 180ms ease" bg={selected ? 'var(--cl-surface-muted)' : 'var(--cl-surface)'}
+          boxShadow={selected ? 'inset 0 0 0 1px var(--cl-border)' : 'none'}
+          _hover={{ bg: 'var(--cl-surface-muted)' }} onClick={() => onChange(index)}>
+          <input
+            type="radio"
+            name={radioName}
+            checked={selected}
+            readOnly
+            style={{
+              marginRight: 8,
+              accentColor: '#4B5563',
+              width: 12,
+              height: 12,
+              cursor: 'pointer',
+            }}
+          />
+          <Text flex={1} fontSize="13px" fontWeight="400" color="var(--cl-text)">{option}</Text>
         </Flex>;
       })}
     </Stack>
@@ -171,6 +181,8 @@ function MultiContent({ field, options, filters, setFilters }) {
 }
 
 export default function LicitacionesSidebar({ data, filters, setFilters, onClear, availableStates, amountBounds, amountRange }) {
+  // Un único panel abierto mantiene la barra ordenada. Las selecciones dentro
+  // del panel no modifican este estado, así que no lo cierran accidentalmente.
   const [openSection, setOpenSection] = useState(null);
   const dynamic = useMemo(() => ({
     states: (() => {
@@ -201,11 +213,13 @@ export default function LicitacionesSidebar({ data, filters, setFilters, onClear
       <Stack gap={2}>
         <AccordionSection id="date" label="Tipo de fecha" {...{ openSection, setOpenSection }}>
           <SelectContent value={DATE_FIELDS.indexOf(filters.dateField)} options={DATE_OPTIONS}
-            onChange={(value) => { setFilters((current) => ({ ...current, dateField: DATE_FIELDS[Number(value)] })); setOpenSection(null); }} />
+            radioName="licitaciones-tipo-fecha"
+            onChange={(value) => setFilters((current) => ({ ...current, dateField: DATE_FIELDS[Number(value)] }))} />
         </AccordionSection>
         <AccordionSection id="period" label="Periodo de consulta" {...{ openSection, setOpenSection }}>
           <SelectContent value={filters.periodIndex + 1} options={PERIOD_OPTIONS}
-            onChange={(value) => { setFilters((current) => ({ ...current, periodIndex: Number(value) - 1 })); setOpenSection(null); }} />
+            radioName="licitaciones-periodo-consulta"
+            onChange={(value) => setFilters((current) => ({ ...current, periodIndex: Number(value) - 1 }))} />
         </AccordionSection>
         <AccordionSection id="amount" label="Monto del contrato" count={Number(Boolean(amountRange?.active)) + Number(Boolean(amountRange?.includeMissing))}
           {...{ openSection, setOpenSection }}>

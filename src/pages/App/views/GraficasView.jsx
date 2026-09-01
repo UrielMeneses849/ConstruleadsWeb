@@ -29,13 +29,13 @@ const METRIC_OPTIONS = [
 ];
 
 const CHART_COLORS = [
-  '#94A3B8',
-  '#94A3B8',
-  '#94A3B8',
-  '#94A3B8',
-  '#94A3B8',
-  '#94A3B8',
-  '#94A3B8',
+  '#475569',
+  '#475569',
+  '#475569',
+  '#475569',
+  '#475569',
+  '#475569',
+  '#475569',
 ];
 
 const REGION_COLORS = ['#4B5563', '#6B7280', '#9CA3AF', '#D1D5DB', '#E5E7EB'];
@@ -1228,7 +1228,7 @@ function CompanyTreemap({ items, metric, selectedKey, onSelect, onOpenCompany, l
   ];
   // Todos los mosaicos se mantienen en tonos suficientemente profundos para
   // que el texto blanco conserve contraste tanto en tema claro como oscuro.
-  const tileColors = ['#103C88', '#16489C', '#1B54AC', '#245FAE', '#3268AF'];
+  const tileColors = ['#334155', '#3F4D60', '#475569', '#58677A', '#64748B'];
 
   if (!visibleItems.length) {
     return <Flex h="100%" align="center" justify="center"><Text fontSize="12px" color="var(--cl-text-muted)">Sin datos para mostrar.</Text></Flex>;
@@ -1256,8 +1256,8 @@ function CompanyTreemap({ items, metric, selectedKey, onSelect, onOpenCompany, l
             aria-pressed={selected}
             boxShadow={selected ? '0 0 0 2px rgba(255,101,63,.20)' : 'none'}
             transition="transform 160ms ease, background 160ms ease, box-shadow 160ms ease"
-            _hover={{ transform: 'translateY(-1px)', boxShadow: '0 5px 14px rgba(16,40,93,.30)' }}
-            _focusVisible={{ outline: '2px solid #10285D', outlineOffset: '2px' }}
+            _hover={{ transform: 'translateY(-1px)', boxShadow: '0 5px 14px rgba(51,65,85,.30)' }}
+            _focusVisible={{ outline: '2px solid #334155', outlineOffset: '2px' }}
             aria-label={`${onOpenCompany ? 'Abrir perfil de' : 'Filtrar por'} ${item.label}`}
             title={onOpenCompany ? `Ver perfil de ${item.label}` : `Filtrar por ${item.label}`}
             onClick={() => {
@@ -1300,9 +1300,11 @@ function CompanyTreemap({ items, metric, selectedKey, onSelect, onOpenCompany, l
 function GenreDonut({ items, metric, selectedKey, onSelect }) {
   const visibleItems = items.slice(0, 5);
   const total = visibleItems.reduce((sum, item) => sum + item.value, 0) || 1;
-  const colors = ['#123DAB', '#2A60C7', '#5787DB', '#88ADEB', '#B8CEF5'];
-  const chartCenter = { x: 90, y: 90 };
-  const valueWidth = metric === 'superficie' ? '92px' : metric === 'inversion' ? '82px' : '44px';
+  const colors = ['#334155', '#475569', '#64748B', '#94A3B8', '#CBD5E1'];
+  const chartCenter = { x: 120, y: 120 };
+  const outerRadius = 106;
+  const innerRadius = 63;
+  const totalValue = getDisplayValueWithUnit(total, metric);
   const polarPoint = (angle, radius) => {
     const radians = ((angle - 90) * Math.PI) / 180;
     return {
@@ -1311,12 +1313,12 @@ function GenreDonut({ items, metric, selectedKey, onSelect }) {
     };
   };
   const getDonutPath = (startAngle, endAngle) => {
-    const startOuter = polarPoint(startAngle, 78);
-    const endOuter = polarPoint(endAngle, 78);
-    const startInner = polarPoint(startAngle, 47);
-    const endInner = polarPoint(endAngle, 47);
+    const startOuter = polarPoint(startAngle, outerRadius);
+    const endOuter = polarPoint(endAngle, outerRadius);
+    const startInner = polarPoint(startAngle, innerRadius);
+    const endInner = polarPoint(endAngle, innerRadius);
     const largeArc = endAngle - startAngle > 180 ? 1 : 0;
-    return `M ${startOuter.x} ${startOuter.y} A 78 78 0 ${largeArc} 1 ${endOuter.x} ${endOuter.y} L ${endInner.x} ${endInner.y} A 47 47 0 ${largeArc} 0 ${startInner.x} ${startInner.y} Z`;
+    return `M ${startOuter.x} ${startOuter.y} A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${endOuter.x} ${endOuter.y} L ${endInner.x} ${endInner.y} A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${startInner.x} ${startInner.y} Z`;
   };
   const slices = visibleItems.map((item, index) => {
     const start = visibleItems
@@ -1333,9 +1335,10 @@ function GenreDonut({ items, metric, selectedKey, onSelect }) {
   });
 
   return (
-    <Flex h="100%" minH="0" align="center" gap={2.5} px={1}>
-      <Box flex="0 0 178px" w="178px" h="178px" position="relative">
-        <Box as="svg" viewBox="0 0 180 180" w="100%" h="100%" display="block" aria-label="Distribución por género">
+    <Flex h="100%" minH="0" direction="column" align="stretch" gap={2}>
+      <Flex flex="1" minH="0" align="flex-start" justify="center">
+        <Box w="clamp(196px, 18vw, 332px)" maxW="100%" h="100%" maxH="332px" mt={-2} flexShrink={0} position="relative">
+          <Box as="svg" viewBox="0 0 240 240" w="100%" h="100%" display="block" aria-label="Distribución por género">
           {slices.map((slice) => (
             <path
               key={slice.key}
@@ -1345,46 +1348,62 @@ function GenreDonut({ items, metric, selectedKey, onSelect }) {
               strokeWidth="2"
               cursor="pointer"
               transform={slice.selected ? 'scale(1.035)' : undefined}
-              transformOrigin="90px 90px"
+              transformOrigin="120px 120px"
               onClick={() => onSelect(slice.key)}
             />
           ))}
-          <circle cx={chartCenter.x} cy={chartCenter.y} r="47" fill="var(--cl-surface)" />
-          <text x={chartCenter.x} y={chartCenter.y - 2} textAnchor="middle" fill="var(--cl-text-strong)" fontSize={metric === 'proyectos' ? '17' : '10.5'} fontWeight="800">
-            {getDisplayValueWithUnit(total, metric)}
-          </text>
-          <text x={chartCenter.x} y={chartCenter.y + 15} textAnchor="middle" fill="var(--cl-text-muted)" fontSize="10" fontWeight="600">total</text>
+            <circle cx={chartCenter.x} cy={chartCenter.y} r={innerRadius} fill="var(--cl-surface)" />
+            <text
+              x={chartCenter.x}
+              y={chartCenter.y - 4}
+              textAnchor="middle"
+              fill="var(--cl-text-strong)"
+              fontSize={metric === 'proyectos' ? '26' : '15'}
+              fontWeight="800"
+            >
+              {totalValue}
+            </text>
+            <text x={chartCenter.x} y={chartCenter.y + 19} textAnchor="middle" fill="var(--cl-text-muted)" fontSize="13" fontWeight="600">total</text>
+          </Box>
         </Box>
-      </Box>
-      <VStack flex="1" minW="0" h="100%" align="stretch" justify="center" gap={1.5}>
+      </Flex>
+      <Grid
+        flexShrink={0}
+        templateColumns="repeat(2, minmax(0, 1fr))"
+        gap={1}
+        alignItems="stretch"
+      >
         {slices.map((item) => {
           const percentage = getDisplayPercentage(item.value, total);
           return (
-            <Flex
+            <Grid
               key={item.key}
               as="button"
               type="button"
-              align="center"
-              w="100%"
+              templateColumns="10px minmax(0, 1fr) auto"
+              columnGap={2}
+              alignItems="center"
               minW="0"
-              h="26px"
-              gap={1}
-              px={1}
+              h="40px"
+              px={2}
               borderRadius="6px"
               bg={item.selected ? 'rgba(255,101,63,.08)' : 'transparent'}
               cursor="pointer"
               aria-pressed={item.selected}
               _hover={{ bg: item.selected ? 'rgba(255,101,63,.10)' : GRAPH_BLUE_SOFT }}
               onClick={() => onSelect(item.key)}
+              title={`${item.label}: ${getDisplayValueWithUnit(item.value, metric)} (${percentage}%)`}
             >
-              <Box w="7px" h="7px" flexShrink={0} borderRadius="full" bg={item.color} />
-              <Text flex="1" minW="0" textAlign="left" fontSize="10px" fontWeight={item.selected ? '700' : '600'} color="var(--cl-text-strong)" noOfLines={1}>{item.label}</Text>
-              <Text flex={`0 0 ${valueWidth}`} textAlign="right" fontSize="9.5px" fontWeight="800" color="var(--cl-text-strong)" noOfLines={1}>{getDisplayValueWithUnit(item.value, metric)}</Text>
-              <Text flex="0 0 28px" textAlign="right" fontSize="9.5px" fontWeight="700" color={item.selected ? GRAPH_ORANGE : GRAPH_BLUE} noOfLines={1}>{percentage}%</Text>
-            </Flex>
+              <Box w="8px" h="8px" borderRadius="full" bg={item.color} />
+              <VStack minW="0" align="start" justify="center" gap={0}>
+                <Text minW="0" w="100%" textAlign="left" fontSize="11px" lineHeight="1.15" fontWeight={item.selected ? '700' : '600'} color="var(--cl-text-strong)" noOfLines={1}>{item.label}</Text>
+                <Text minW="0" w="100%" textAlign="left" fontSize="10.5px" lineHeight="1.1" fontWeight="800" color="var(--cl-text-muted)" noOfLines={1}>{getDisplayValueWithUnit(item.value, metric)}</Text>
+              </VStack>
+              <Text justifySelf="end" fontSize="12.5px" lineHeight="1" fontWeight="800" color={item.selected ? GRAPH_ORANGE : GRAPH_BLUE}>{percentage}%</Text>
+            </Grid>
           );
         })}
-      </VStack>
+      </Grid>
     </Flex>
   );
 }
@@ -1421,9 +1440,9 @@ function TimelineCurve({ items, metric, selectedKey, onSelect }) {
       <Box as="svg" viewBox={`0 0 ${width} ${height}`} w="100%" h="100%" display="block" preserveAspectRatio="xMidYMid meet" aria-label="Línea del tiempo de inicios estimados de obra">
         {[0, 1, 2].map((index) => {
           const y = topPad + (index * (baselineY - topPad)) / 2;
-          return <line key={index} x1={leftPad} x2={width - rightPad} y1={y} y2={y} stroke="rgba(24,71,184,.10)" strokeWidth="1" />;
+          return <line key={index} x1={leftPad} x2={width - rightPad} y1={y} y2={y} stroke="rgba(71,85,105,.14)" strokeWidth="1" />;
         })}
-        <path d={areaPath} fill="rgba(24,71,184,.08)" pointerEvents="none" />
+        <path d={areaPath} fill="rgba(71,85,105,.10)" pointerEvents="none" />
         <path d={curvePath} fill="none" stroke={GRAPH_BLUE} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" pointerEvents="none" />
         {visibleItems.map((item, index) => {
           const point = points[index];
@@ -1652,10 +1671,10 @@ export default function GraficasView({ obras = [], filtros = {}, onSelectionCoun
             decoration={<MexicoRepublicIllustration />}
           >
             <Flex gap={1.5} mb={2} overflowX="auto" pb={0.5}>
-              <Button h="25px" minW="unset" px={2} borderRadius="6px" fontSize="10px" fontWeight="700" bg={!chartSelections.region ? GRAPH_ORANGE : GRAPH_BLUE_SOFT} color={!chartSelections.region ? 'white' : 'var(--cl-text-strong)'} _hover={{ bg: !chartSelections.region ? '#E65331' : 'rgba(24,71,184,.16)' }} onClick={() => chartSelections.region && selectChartValue('region', chartSelections.region)}>Todo México</Button>
+              <Button h="25px" minW="unset" px={2} borderRadius="6px" fontSize="10px" fontWeight="700" bg={!chartSelections.region ? GRAPH_ORANGE : GRAPH_BLUE_SOFT} color={!chartSelections.region ? 'white' : 'var(--cl-text-strong)'} _hover={{ bg: !chartSelections.region ? '#E65331' : 'rgba(71,85,105,.16)' }} onClick={() => chartSelections.region && selectChartValue('region', chartSelections.region)}>Todo México</Button>
               {regionData.slice(0, 5).map((region) => {
                 const selected = normalizeText(chartSelections.region) === normalizeText(region.key);
-                return <Button key={region.key} h="25px" minW="unset" px={2} borderRadius="6px" fontSize="10px" fontWeight="700" bg={selected ? GRAPH_ORANGE : GRAPH_BLUE_SOFT} color={selected ? 'white' : 'var(--cl-text-strong)'} _hover={{ bg: selected ? '#E65331' : 'rgba(24,71,184,.16)' }} onClick={() => selectChartValue('region', region.key)}>{region.label}</Button>;
+                return <Button key={region.key} h="25px" minW="unset" px={2} borderRadius="6px" fontSize="10px" fontWeight="700" bg={selected ? GRAPH_ORANGE : GRAPH_BLUE_SOFT} color={selected ? 'white' : 'var(--cl-text-strong)'} _hover={{ bg: selected ? '#E65331' : 'rgba(71,85,105,.16)' }} onClick={() => selectChartValue('region', region.key)}>{region.label}</Button>;
               })}
             </Flex>
             <Box h="calc(100% - 32px)">
