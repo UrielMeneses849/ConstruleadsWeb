@@ -55,7 +55,7 @@ const TOP_LEVEL_MODULE_ORDER = {
   companias: 1,
   licitaciones: 2,
 };
-const COMPANY_PROFILE_DATA_VERSION = 3;
+const COMPANY_PROFILE_DATA_VERSION = 4;
 
 function readPersistedFilters() {
   try {
@@ -460,12 +460,10 @@ export default function Construleads() {
   }, [isLicitacionesModule, user.idUsuario]);
 
   useEffect(() => {
-    // El portafolio de obras es prioritario. El WS de perfiles se ejecuta al
-    // terminar esa descarga (o de inmediato cuando obras viene de caché), de
-    // modo que dos servicios pesados no compitan por la misma sesión al abrir.
+    // Compañías usa su propio WS, que ya contiene su portafolio y relaciones.
+    // No debe depender de la descarga de obras (ni de sus fuentes activas).
     if (isLicitacionesModule || isProfileModule) return undefined;
     if (!mountedViews.companias) return undefined;
-    if (!obras.length) return undefined;
 
     const sessionKey = `${COMPANY_PROFILE_DATA_VERSION}:${user.idUsuario || ''}:${user.idSession || ''}`;
     if (companiesSessionKey === sessionKey) return undefined;
@@ -511,7 +509,7 @@ export default function Construleads() {
       isActive = false;
       abortController.abort();
     };
-  }, [companiesSessionKey, isLicitacionesModule, isProfileModule, mountedViews.companias, obras.length, user.idSession, user.idUsuario]);
+  }, [companiesSessionKey, isLicitacionesModule, isProfileModule, mountedViews.companias, user.idSession, user.idUsuario]);
 
   const changeView = useCallback((nextView, { animateProjectView = false } = {}) => {
     if (animateProjectView && nextView !== activeView) {
@@ -899,8 +897,6 @@ export default function Construleads() {
                 <ModuleErrorBoundary resetKey={location.pathname}>
                   <Suspense fallback={<ViewLoader label="compañías" />}>
                     <CompaniasView
-                      sourceObras={obras.length ? obras : mapPreviewObras}
-                      isLoading={loadingObras}
                       companyRelationships={companyRelationships}
                       isLoadingCompanies={loadingCompanies}
                       companiesError={companiesError}

@@ -1,13 +1,3 @@
-const COMPANY_NAME_FIELDS = [
-  'compania',
-  'companiaNombre',
-  'empresa',
-  'empresaNombre',
-  'desarrollador',
-];
-
-const RFC_FIELDS = ['rfcCompania', 'rfc', 'RFC', 'rfcEmpresa'];
-const COMPANY_KEY_FIELDS = ['claveCompania', 'claveEmpresa', 'empresaClave'];
 const relationshipIndexesCache = new WeakMap();
 
 function cleanText(value) {
@@ -24,60 +14,6 @@ export function normalizeCompanyText(value) {
 
 function normalizeProjectKey(value) {
   return cleanText(value).replace(/\s+/g, '').toUpperCase();
-}
-
-function firstValue(record, fields) {
-  return fields.map((field) => cleanText(record?.[field])).find(Boolean) || '';
-}
-
-function getDatasetContact(obra) {
-  const name = cleanText(obra?.contactoNombre);
-  const role = cleanText(obra?.contactoCargo);
-  const email = cleanText(obra?.contactoEmail);
-  const phone = cleanText(obra?.contactoTelefono);
-  const phone2 = cleanText(obra?.contactoTelefono2);
-  if (!name && !email && !phone && !phone2) return null;
-  return {
-    name: name || 'Contacto registrado',
-    role,
-    email,
-    phone,
-    phone2,
-    extension: '',
-    key: email || `${normalizeCompanyText(name)}:${phone || phone2}`,
-  };
-}
-
-function getLinkedInContact(obra) {
-  const name = cleanText(obra?.linkedinNombre);
-  const role = cleanText(obra?.linkedinCargo);
-  const url = cleanText(obra?.linkedinUrl);
-  if (!name && !url) return null;
-  return {
-    name: name || 'Perfil profesional',
-    role,
-    url,
-    key: url || `${normalizeCompanyText(name)}:${normalizeCompanyText(role)}`,
-  };
-}
-
-export function getCompanyIdentity(obra) {
-  const name = firstValue(obra, COMPANY_NAME_FIELDS);
-  const rfc = firstValue(obra, RFC_FIELDS);
-  const clave = firstValue(obra, COMPANY_KEY_FIELDS);
-
-  if (!name && !rfc && !clave) return null;
-
-  return {
-    name: name || rfc || clave,
-    rfc,
-    clave,
-    key: clave
-      ? `clave:${normalizeCompanyText(clave)}`
-      : rfc
-        ? `rfc:${normalizeCompanyText(rfc)}`
-        : `nombre:${normalizeCompanyText(name)}`,
-  };
 }
 
 function getRelationshipIdentity(company = {}) {
@@ -98,28 +34,6 @@ function getRelationshipIdentity(company = {}) {
         ? `rfc:${normalizeCompanyText(rfc)}`
         : `nombre:${normalizeCompanyText(name)}`,
   };
-}
-
-function getObraKey(obra, index) {
-  return normalizeProjectKey(
-    obra?.clave || obra?.Clave_Proyecto || obra?.proy_clave || obra?.id || `${index}`
-  );
-}
-
-function buildRelationshipIndex(relationships = []) {
-  const index = new Map();
-  relationships.forEach((relationship) => {
-    const projectKey = normalizeProjectKey(relationship?.projectKey);
-    const identity = getRelationshipIdentity(relationship?.company);
-    if (!projectKey || !identity) return;
-
-    const current = index.get(projectKey) || [];
-    if (!current.some((entry) => entry.identity.key === identity.key)) {
-      current.push({ identity, company: relationship.company || {} });
-      index.set(projectKey, current);
-    }
-  });
-  return index;
 }
 
 function companyLookupKeys(company = {}) {
@@ -161,7 +75,6 @@ function buildCompanyDetailsIndex(relationships = []) {
 function getRelationshipIndexes(relationships = []) {
   if (!Array.isArray(relationships)) {
     return {
-      relationshipsByProject: new Map(),
       companyDetailsIndex: new Map(),
     };
   }
@@ -170,10 +83,9 @@ function getRelationshipIndexes(relationships = []) {
   if (cached) return cached;
 
   // Las relaciones del WS no cambian cuando el usuario ajusta filtros. Al
-  // conservar estos dos índices por respuesta evitamos reconstruir todo el
-  // catálogo de compañías y contactos en cada render del panel.
+  // conservar el índice por respuesta evitamos reconstruir contactos en cada
+  // render del panel.
   const indexes = {
-    relationshipsByProject: buildRelationshipIndex(relationships),
     companyDetailsIndex: buildCompanyDetailsIndex(relationships),
   };
   relationshipIndexesCache.set(relationships, indexes);
@@ -239,34 +151,38 @@ export function getCompanyGenreColor(genero) {
   return '#D95B27';
 }
 
-export function buildCompanyRows(obras = [], relationships = []) {
+export function getCompanyProjects(relationships = []) {
+  const projects = new Map();
+
+  relationships.forEach((relationship, index) => {
+    const identity = getRelationshipIdentity(relationship?.company);
+    const project = relationship?.project;
+    const projectKey = normalizeProjectKey(
+      relationship?.projectKey || project?.clave || project?.id || `${index}`
+    );
+    if (!identity || !project || !projectKey || projects.has(projectKey)) return;
+    projects.set(projectKey, project);
+  });
+
+  return [...projects.values()];
+}
+
+export function buildCompanyRows(relationships = []) {
   const companies = new Map();
-  const { relationshipsByProject, companyDetailsIndex } = getRelationshipIndexes(relationships);
+  const { companyDetailsIndex } = getRelationshipIndexes(relationships);
 
-  obras.forEach((obra, index) => {
-    const projectKey = getObraKey(obra, index);
-    const relatedCompanies = relationshipsByProject.get(projectKey);
-    const sources = relatedCompanies?.length
-      ? relatedCompanies
-      : (() => {
-          const identity = getCompanyIdentity(obra);
-          return identity ? [{
-            identity,
-            company: {
-              role: cleanText(obra?.rolCompania),
-              website: cleanText(obra?.paginaWeb),
-              datasetContacts: [getDatasetContact(obra)].filter(Boolean),
-              linkedinContacts: [getLinkedInContact(obra)].filter(Boolean),
-            },
-          }] : [];
-        })();
+  relationships.forEach((relationship, index) => {
+    const identity = getRelationshipIdentity(relationship?.company);
+    const project = relationship?.project;
+    const projectKey = normalizeProjectKey(
+      relationship?.projectKey || project?.clave || project?.id || `${index}`
+    );
+    if (!identity || !project || !projectKey) return;
 
-    sources.forEach(({ identity, company: details }) => {
-      if (!companies.has(identity.key)) companies.set(identity.key, createCompany(identity));
-      const company = companies.get(identity.key);
-      appendProject(company, obra, projectKey);
-      appendCompanyDetails(company, details);
-    });
+    if (!companies.has(identity.key)) companies.set(identity.key, createCompany(identity));
+    const company = companies.get(identity.key);
+    appendProject(company, project, projectKey);
+    appendCompanyDetails(company, relationship.company || {});
   });
 
   return [...companies.values()]

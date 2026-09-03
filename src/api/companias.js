@@ -178,6 +178,91 @@ function buildLinkedInContacts(companyNode) {
     .filter(Boolean);
 }
 
+function parseWsNumber(value = '') {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+
+  // Las inversiones del WS pueden llegar en notación científica; por ejemplo
+  // `6.269580000000000e+007`. Conservar el exponente evita volverlo cero.
+  const normalized = cleanText(value)
+    .replace(/,/g, '')
+    .replace(/[^0-9.eE+-]/g, '');
+  const numberValue = Number(normalized);
+  return Number.isFinite(numberValue) ? numberValue : 0;
+}
+
+function parseWsDate(value = '') {
+  const normalized = cleanText(value);
+  if (!normalized) return null;
+
+  const isoMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const localMatch = normalized.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (localMatch) {
+    const [, day, month, year] = localMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function buildCompanyProject(projectNode, projectKey) {
+  const value = (tagNames) => directTextFrom(projectNode, tagNames);
+  const clave = value(['proy_clave', 'clave_proyecto', 'proyecto_clave', 'clave_obra']) || projectKey;
+  const fechaPublicacion = value([
+    'proy_fechapublicacion', 'fecha_publicacion', 'fecha_publicacion_proyecto', 'proy_fechacierre',
+  ]);
+  const fechaInicio = value(['proy_fechainicio', 'fecha_inicio', 'proy_fecha_inicio']);
+  const fechaTermino = value([
+    'proy_fechatermino', 'fecha_terminacion', 'fecha_termino', 'proy_fecha_fin', 'fecha_fin',
+  ]);
+  const fechaPublicacionDate = parseWsDate(fechaPublicacion);
+  const fechaInicioDate = parseWsDate(fechaInicio);
+  const fechaTerminoDate = parseWsDate(fechaTermino);
+
+  // ws_cl_companias ya entrega el proyecto que relaciona con cada compañía.
+  // Lo normalizamos al mismo contrato que consume la interfaz sin consultar
+  // ws_cl_obras ni mezclar registros de Explorer en este módulo.
+  return {
+    id: projectKey,
+    clave,
+    origen: 'construleads',
+    proyecto: value(['proy_descripcioncorta', 'proy_nombre', 'proyecto', 'nombre_proyecto', 'proy_descripcion']),
+    region: value(['regi_descripcion', 'region', 'proy_region']),
+    estado: value(['esta_descripcion', 'proy_esta_descripcion', 'estado_proyecto', 'estado']),
+    genero: value(['gene_descripcion', 'genero', 'proy_genero']),
+    subgenero: value(['suge_descripcion', 'subgenero', 'proy_subgenero']),
+    tipoObra: value(['tiob_descripcion', 'tipo_obra', 'tipoobra', 'proy_tipo_obra']),
+    tipoDesarrollo: value(['desa_descripcion', 'tipo_desarrollo', 'tipodesarrollo', 'proy_tipo_desarrollo']),
+    tipoProyecto: value(['proy_tipoproyectodescripcion', 'tipo_proyecto', 'tipoproyecto']),
+    etapa: value(['etap_descripcion', 'proy_etapa', 'etapa']),
+    sector: value(['proy_sectordescripcion', 'sector', 'proy_sector']),
+    inversion: parseWsNumber(value(['proy_inversion', 'inversion', 'monto_inversion', 'inversion_total'])),
+    superficie: parseWsNumber(value([
+      'proy_superficie_construida', 'proy_superficie', 'sup_construida', 'superficie',
+    ])),
+    fechaPublicacion,
+    fechaInicio,
+    fechaTermino,
+    fechaTerminacion: fechaTermino,
+    fechaFin: fechaTermino,
+    fechaPublicacionDate,
+    fechaInicioDate,
+    fechaTerminoDate,
+    fechaTerminacionDate: fechaTerminoDate,
+    fechaFinDate: fechaTerminoDate,
+    fechaPublicacionTime: fechaPublicacionDate?.getTime() || null,
+    fechaInicioTime: fechaInicioDate?.getTime() || null,
+    fechaTerminoTime: fechaTerminoDate?.getTime() || null,
+    fechaTerminacionTime: fechaTerminoDate?.getTime() || null,
+    fechaFinTime: fechaTerminoDate?.getTime() || null,
+  };
+}
+
 export function normalizeCompanyProjectKey(value) {
   return cleanText(value).replace(/\s+/g, '').toUpperCase();
 }
@@ -218,6 +303,8 @@ export function parseCompaniasXml(xmlText) {
     ]));
     if (!projectKey) return;
 
+    const project = buildCompanyProject(projectNode, projectKey);
+
     const companiesNode = firstDirectChildFrom(projectNode, ['CIAS', 'COMPANIAS', 'COMPAÑIAS']);
     const nestedCompanyNodes = companiesNode
       ? directChildrenFrom(companiesNode, ['CIA', 'COMPANIA', 'COMPAÑIA'])
@@ -239,6 +326,7 @@ export function parseCompaniasXml(xmlText) {
 
       relationships.push({
         projectKey,
+        project,
         company: {
           clave,
           name: name || rfc || clave,

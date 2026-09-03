@@ -3,7 +3,7 @@ const STORE_NAME = 'obras';
 const COMPANIES_STORE_NAME = 'companias';
 const DATABASE_VERSION = 2;
 const OBRAS_CACHE_VERSION = 2;
-const COMPANY_RELATIONSHIPS_CACHE_VERSION = 3;
+const COMPANY_RELATIONSHIPS_CACHE_VERSION = 4;
 
 function openDatabase() {
   return new Promise((resolve, reject) => {

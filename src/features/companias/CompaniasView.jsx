@@ -8,7 +8,7 @@ import {
   FiChevronRight, FiLinkedin, FiMail, FiMapPin, FiPhone, FiSearch, FiTrendingUp, FiX,
 } from 'react-icons/fi';
 import {
-  buildCompanyRows, companiesToCsv, formatCompactInvestment, formatNumber, getCompanyGenreColor,
+  buildCompanyRows, companiesToCsv, formatCompactInvestment, formatNumber, getCompanyGenreColor, getCompanyProjects,
 } from './companyData';
 import { getCompanyActivityAlerts, toggleCompanyActivityAlert } from '../../utils/radarNotifications';
 import { filterObrasByFilters } from '../../utils/filterObras';
@@ -239,7 +239,7 @@ function CompanyFilters({ obras, filtros, onApplyFilters }) {
   </Box>;
 }
 
-function CompanyList({ companies, selected, onSelect, loading, sourceObras, filtros, onApplyFilters, savedKeys, savedOnly, onToggleSavedOnly }) {
+function CompanyList({ companies, selected, onSelect, loading, companyProjects, filtros, onApplyFilters, savedKeys, savedOnly, onToggleSavedOnly }) {
   const [query, setQuery] = useState('');
   const listRef = useRef(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -275,7 +275,7 @@ function CompanyList({ companies, selected, onSelect, loading, sourceObras, filt
   const visibleEnd = Math.min(visible.length, visibleStart + Math.ceil(listHeight / COMPANY_LIST_ROW_HEIGHT) + (COMPANY_LIST_OVERSCAN * 2));
   const virtualCompanies = visible.slice(visibleStart, visibleEnd);
   return <Box className="company-directory">
-    <Flex className="company-directory-title" align="center" justify="space-between"><Text>{savedOnly ? 'Guardadas' : 'Compañías'} <Text as="span">({formatNumber(directoryCompanies.length)})</Text></Text><Flex align="center" gap={1.5}><button type="button" className={`company-saved-filter${savedOnly ? ' active' : ''}`} onClick={onToggleSavedOnly} aria-pressed={savedOnly}><FiBookmark size={13} /><span>Guardadas</span>{savedKeys.size > 0 && <b>{formatNumber(savedKeys.size)}</b>}</button><CompanyFilters obras={sourceObras} filtros={filtros} onApplyFilters={onApplyFilters} /></Flex></Flex>
+    <Flex className="company-directory-title" align="center" justify="space-between"><Text>{savedOnly ? 'Guardadas' : 'Compañías'} <Text as="span">({formatNumber(directoryCompanies.length)})</Text></Text><Flex align="center" gap={1.5}><button type="button" className={`company-saved-filter${savedOnly ? ' active' : ''}`} onClick={onToggleSavedOnly} aria-pressed={savedOnly}><FiBookmark size={13} /><span>Guardadas</span>{savedKeys.size > 0 && <b>{formatNumber(savedKeys.size)}</b>}</button><CompanyFilters obras={companyProjects} filtros={filtros} onApplyFilters={onApplyFilters} /></Flex></Flex>
     <Flex className="company-search" align="center" gap={2}><FiSearch size={14} /><input value={query} onChange={handleQueryChange} placeholder="Buscar compañía…" aria-label="Buscar compañía" /></Flex>
     <Flex className="company-directory-summary" align="center" gap={2}><Box><Text>{formatNumber(portfolio.projects)}</Text><Text>obras activas</Text></Box><Box><Text>{formatNumber(portfolio.reachable)}</Text><Text>con contacto</Text></Box></Flex>
     <Box ref={listRef} className="company-list" onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}>
@@ -463,7 +463,7 @@ function Dashboard({ company, saved, alertEnabled, isLoadingCompanies, onSave, o
   </Box>;
 }
 
-export default function CompaniasView({ sourceObras = [], companyRelationships = [], isLoading = false, isLoadingCompanies = false, isDarkMode = false, onViewFicha, companyDetailRequest = null }) {
+export default function CompaniasView({ companyRelationships = [], isLoadingCompanies = false, isDarkMode = false, onViewFicha, companyDetailRequest = null }) {
   const [selectedId, setSelectedId] = useState();
   const [openDirectory, setOpenDirectory] = useState(null);
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
@@ -478,16 +478,27 @@ export default function CompaniasView({ sourceObras = [], companyRelationships =
     generos: [],
     sectores: [],
   });
-  // El WS de compañías únicamente enriquece. Nunca debe dejar en blanco el
-  // módulo: las obras ya cargadas son suficientes para construir el primer
-  // portafolio mientras llegan contactos, RFC y perfiles.
-  const companyObras = useMemo(
-    () => filterObrasByFilters(sourceObras, companyFilters),
-    [companyFilters, sourceObras]
+  // El portafolio de Compañías proviene exclusivamente de ws_cl_companias.
+  // Así no se cuelan obras de Explorer ni dependemos de ws_cl_obras.
+  const companyProjects = useMemo(
+    () => getCompanyProjects(companyRelationships),
+    [companyRelationships]
+  );
+  const filteredCompanyProjects = useMemo(
+    () => filterObrasByFilters(companyProjects, companyFilters),
+    [companyFilters, companyProjects]
+  );
+  const filteredProjectKeys = useMemo(
+    () => new Set(filteredCompanyProjects.map((project) => project.id)),
+    [filteredCompanyProjects]
+  );
+  const filteredRelationships = useMemo(
+    () => companyRelationships.filter((relationship) => filteredProjectKeys.has(relationship?.project?.id)),
+    [companyRelationships, filteredProjectKeys]
   );
   const companies = useMemo(
-    () => buildCompanyRows(companyObras, companyRelationships),
-    [companyObras, companyRelationships]
+    () => buildCompanyRows(filteredRelationships),
+    [filteredRelationships]
   );
   const handledCompanyRequest = useRef('');
   useEffect(() => {
@@ -933,7 +944,7 @@ export default function CompaniasView({ sourceObras = [], companyRelationships =
       .companias-view.company-dark .company-alert-dialog-explainer p:last-child { color: #C4CEDA; }
       @media (max-width: 1180px) { .companias-view .company-pie { flex-basis: 154px; height: 154px; } .companias-view .company-legend { flex-basis: 126px; } }
     `}</style>
-    <Box className="company-workspace"><CompanyList companies={companies} selected={activeId} onSelect={(id) => { setSelectedId(id); setOpenDirectory(null); setAlertDialogOpen(false); }} loading={isLoading && !sourceObras.length} sourceObras={sourceObras} filtros={companyFilters} onApplyFilters={setCompanyFilters} savedKeys={saved} savedOnly={savedOnly} onToggleSavedOnly={() => setSavedOnly((current) => !current)} /><Dashboard company={company} saved={company ? saved.has(company.key) : false} alertEnabled={company ? alertKeys.has(company.key) : false} isLoadingCompanies={isLoadingCompanies} onSave={save} onOpenAlert={() => setAlertDialogOpen(true)} onDownload={download} onViewFicha={onViewFicha} onShowProjects={() => setOpenDirectory('projects')} onShowContacts={() => setOpenDirectory('contacts')} /></Box>
+    <Box className="company-workspace"><CompanyList companies={companies} selected={activeId} onSelect={(id) => { setSelectedId(id); setOpenDirectory(null); setAlertDialogOpen(false); }} loading={isLoadingCompanies} companyProjects={companyProjects} filtros={companyFilters} onApplyFilters={setCompanyFilters} savedKeys={saved} savedOnly={savedOnly} onToggleSavedOnly={() => setSavedOnly((current) => !current)} /><Dashboard company={company} saved={company ? saved.has(company.key) : false} alertEnabled={company ? alertKeys.has(company.key) : false} isLoadingCompanies={isLoadingCompanies} onSave={save} onOpenAlert={() => setAlertDialogOpen(true)} onDownload={download} onViewFicha={onViewFicha} onShowProjects={() => setOpenDirectory('projects')} onShowContacts={() => setOpenDirectory('contacts')} /></Box>
     <CompanyDirectoryDialog mode={openDirectory} company={company} onClose={() => setOpenDirectory(null)} onViewFicha={onViewFicha} />
     {alertDialogOpen && <CompanyAlertDialog company={company} enabled={company ? alertKeys.has(company.key) : false} onClose={() => setAlertDialogOpen(false)} onConfirm={() => { toggleAlert(); setAlertDialogOpen(false); }} />}
   </Box>;
