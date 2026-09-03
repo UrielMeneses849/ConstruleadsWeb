@@ -21,6 +21,7 @@ import {
   getMonthLabel,
   getSelectedDateField,
 } from '../../../utils/filterObras';
+import { OBRA_SOURCES } from '../../../utils/obrasSources';
 
 const METRIC_OPTIONS = [
   { value: 'proyectos', label: 'Número de obras' },
@@ -129,7 +130,7 @@ function MetricToggle({ value, onChange }) {
             boxShadow={isActive ? '0 1px 2px rgba(0,0,0,.08)' : 'none'}
             transition="background 160ms ease, color 160ms ease, box-shadow 160ms ease"
             _hover={{
-              bg: isActive ? 'var(--cl-surface)' : 'rgba(255, 102, 0, 0.08)',
+              bg: isActive ? 'var(--cl-surface)' : 'rgba(217, 91, 39, 0.08)',
               color: 'var(--cl-text-strong)',
             }}
             onClick={() => onChange(option.value)}
@@ -193,7 +194,7 @@ function ChartShell({ title, subtitle, rightSlot, children, footer }) {
       h="100%"
       style={{ contentVisibility: 'auto', containIntrinsicSize: '500px' }}
     >
-      <Box h="3px" bg="#FF653F" />
+      <Box h="3px" bg="#D95B27" />
       <Box p={5} h="calc(100% - 3px)" display="flex" flexDirection="column">
         <SectionHeader title={title} subtitle={subtitle} rightSlot={rightSlot} />
         <Box flex="1" minH="0">{children}</Box>
@@ -258,9 +259,9 @@ function BarListChart({
               px={3}
               py={2.5}
               borderRadius="12px"
-              bg={isSelected ? 'rgba(255,102,0,.06)' : 'transparent'}
+              bg={isSelected ? 'rgba(217, 91, 39,.06)' : 'transparent'}
               border="1px solid"
-              borderColor={isSelected ? 'rgba(255,102,0,.16)' : 'transparent'}
+              borderColor={isSelected ? 'rgba(217, 91, 39,.16)' : 'transparent'}
               transition="all 160ms ease"
               cursor="pointer"
               _hover={{ bg: 'var(--cl-hover)' }}
@@ -361,7 +362,7 @@ function PieChart({ title, subtitle, items, metric, totalValue, selectedKey, onS
           <VStack flex="1" minW="220px" align="stretch" spacing={1.5}>
             {visibleItems.map((item, index) => {
               const isSelected = normalizeText(selectedKey) === normalizeText(item.key);
-              return <Flex key={item.key} as="button" type="button" align="center" gap={2.5} px={3} py={2} borderRadius="10px" cursor="pointer" bg={isSelected ? 'rgba(255,102,0,.08)' : 'transparent'} _hover={{ bg: 'var(--cl-hover)' }} onClick={() => onSelect(item.key)}><Box w="20px" h="5px" borderRadius="full" bg={CHART_COLORS[index % CHART_COLORS.length]} /><Text flex="1" noOfLines={1} textAlign="left" fontSize="12px" fontWeight="600" color="var(--cl-text-strong)">{item.label}</Text><Text fontSize="12px" fontWeight="700" color="var(--cl-text-strong)">{getDisplayValue(item.value, metric)}</Text></Flex>;
+              return <Flex key={item.key} as="button" type="button" align="center" gap={2.5} px={3} py={2} borderRadius="10px" cursor="pointer" bg={isSelected ? 'rgba(217, 91, 39,.08)' : 'transparent'} _hover={{ bg: 'var(--cl-hover)' }} onClick={() => onSelect(item.key)}><Box w="20px" h="5px" borderRadius="full" bg={CHART_COLORS[index % CHART_COLORS.length]} /><Text flex="1" noOfLines={1} textAlign="left" fontSize="12px" fontWeight="600" color="var(--cl-text-strong)">{item.label}</Text><Text fontSize="12px" fontWeight="700" color="var(--cl-text-strong)">{getDisplayValue(item.value, metric)}</Text></Flex>;
             })}
           </VStack>
         </Flex>
@@ -379,7 +380,7 @@ function CompanyMarkerChart({ title, subtitle, items, metric, totalValue, select
           {visibleItems.map((item) => {
             const isSelected = normalizeText(selectedKey) === normalizeText(item.key);
             const markerBottom = Math.max(8, (item.value / maxValue) * 88);
-            return <Flex key={item.key} as="button" type="button" flex="1" minW="0" direction="column" align="center" cursor="pointer" opacity={selectedKey && !isSelected ? 0.38 : 1} transition="opacity 160ms ease" onClick={() => onSelect(item.key)}><Text h="28px" fontSize="11px" fontWeight="700" color="var(--cl-text-strong)">{getDisplayValue(item.value, metric)}</Text><Box flex="1" w="100%" maxW="70px" minH="190px" position="relative" borderRadius="10px" bg={isSelected ? 'rgba(255,101,63,.06)' : 'transparent'} _hover={{ bg: 'var(--cl-hover)' }}><Box position="absolute" top="8px" bottom="8px" left="50%" w="4px" borderRadius="full" bg="rgba(148,163,184,.22)" transform="translateX(-50%)" /><Box position="absolute" left="50%" bottom={`${markerBottom}%`} w={isSelected ? '18px' : '14px'} h={isSelected ? '18px' : '14px'} borderRadius="full" bg="#FF653F" border="3px solid var(--cl-surface)" boxShadow={isSelected ? '0 0 0 4px rgba(255,101,63,.20)' : '0 2px 6px rgba(0,0,0,.18)'} transform="translate(-50%, 50%)" /><Box position="absolute" left="50%" bottom="8px" w="4px" h={`calc(${markerBottom}% - 8px)`} borderRadius="full" bg="#FF653F" transform="translateX(-50%)" opacity={0.72} /></Box><Text h="46px" mt={2} px={1} noOfLines={3} textAlign="center" fontSize="9px" fontWeight="600" lineHeight="1.15" color="var(--cl-text-muted)">{item.label}</Text></Flex>;
+            return <Flex key={item.key} as="button" type="button" flex="1" minW="0" direction="column" align="center" cursor="pointer" opacity={selectedKey && !isSelected ? 0.38 : 1} transition="opacity 160ms ease" onClick={() => onSelect(item.key)}><Text h="28px" fontSize="11px" fontWeight="700" color="var(--cl-text-strong)">{getDisplayValue(item.value, metric)}</Text><Box flex="1" w="100%" maxW="70px" minH="190px" position="relative" borderRadius="10px" bg={isSelected ? 'rgba(217, 91, 39,.06)' : 'transparent'} _hover={{ bg: 'var(--cl-hover)' }}><Box position="absolute" top="8px" bottom="8px" left="50%" w="4px" borderRadius="full" bg="rgba(148,163,184,.22)" transform="translateX(-50%)" /><Box position="absolute" left="50%" bottom={`${markerBottom}%`} w={isSelected ? '18px' : '14px'} h={isSelected ? '18px' : '14px'} borderRadius="full" bg="#D95B27" border="3px solid var(--cl-surface)" boxShadow={isSelected ? '0 0 0 4px rgba(217, 91, 39,.20)' : '0 2px 6px rgba(0,0,0,.18)'} transform="translate(-50%, 50%)" /><Box position="absolute" left="50%" bottom="8px" w="4px" h={`calc(${markerBottom}% - 8px)`} borderRadius="full" bg="#D95B27" transform="translateX(-50%)" opacity={0.72} /></Box><Text h="46px" mt={2} px={1} noOfLines={3} textAlign="center" fontSize="9px" fontWeight="600" lineHeight="1.15" color="var(--cl-text-muted)">{item.label}</Text></Flex>;
           })}
       </Flex> : <Box border="1px dashed var(--cl-border)" borderRadius="12px" px={4} py={6} color="var(--cl-text-muted)" fontSize="13px">Sin datos para mostrar.</Box>}
       {bottomAction ? <Flex justify="center" mt={3}>{bottomAction}</Flex> : null}
@@ -415,7 +416,7 @@ function ColumnChart({
             {visibleItems.map((item, index) => {
               const isSelected = normalizeText(selectedKey) === normalizeText(item.key);
               const height = `${Math.max(10, (item.value / maxValue) * 100)}%`;
-              return <Flex key={item.key} as="button" type="button" flex="1" minW="0" h="100%" p={0} border="none" bg="transparent" direction="column" justify="flex-end" align="stretch" cursor="pointer" opacity={selectedKey && !isSelected ? 0.45 : 1} onClick={() => onSelect(item.key)}><Text mb={2} textAlign="center" fontSize="11px" fontWeight="700" color="var(--cl-text-strong)">{getDisplayValue(item.value, metric)}</Text><Box h={height} minH="30px" mx="auto" w="clamp(34px, 82%, 78px)" bg={CHART_COLORS[index % CHART_COLORS.length]} borderRadius="8px 8px 2px 2px" border={isSelected ? '3px solid #FFB27F' : '3px solid transparent'} transition="height 180ms ease, opacity 160ms ease" _hover={{ filter: 'brightness(1.08)' }} /></Flex>;
+              return <Flex key={item.key} as="button" type="button" flex="1" minW="0" h="100%" p={0} border="none" bg="transparent" direction="column" justify="flex-end" align="stretch" cursor="pointer" opacity={selectedKey && !isSelected ? 0.45 : 1} onClick={() => onSelect(item.key)}><Text mb={2} textAlign="center" fontSize="11px" fontWeight="700" color="var(--cl-text-strong)">{getDisplayValue(item.value, metric)}</Text><Box h={height} minH="30px" mx="auto" w="clamp(34px, 82%, 78px)" bg={CHART_COLORS[index % CHART_COLORS.length]} borderRadius="8px 8px 2px 2px" border={isSelected ? '3px solid #EDAE8D' : '3px solid transparent'} transition="height 180ms ease, opacity 160ms ease" _hover={{ filter: 'brightness(1.08)' }} /></Flex>;
             })}
           </Flex>
           <Flex flex="0 0 48px" gap={2} pt={2}>
@@ -461,8 +462,8 @@ function RegionTreemap({
         position="relative"
         cursor="pointer"
         border="2px solid"
-        borderColor={isSelected ? '#FF653F' : 'var(--cl-surface)'}
-        boxShadow={isSelected ? '0 8px 20px rgba(255,102,0,.18)' : 'none'}
+        borderColor={isSelected ? '#D95B27' : 'var(--cl-surface)'}
+        boxShadow={isSelected ? '0 8px 20px rgba(217, 91, 39,.18)' : 'none'}
         transition="transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease"
         _hover={{ transform: 'translateY(-1px)' }}
         onClick={() => onSelect(item.key)}
@@ -606,8 +607,8 @@ function LollipopChart({
           <Box as="svg" viewBox={`0 0 ${width} ${height}`} w="100%" minW="760px" display="block">
             <defs>
               <linearGradient id="when-area-gradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#FF8A1F" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#FF653F" stopOpacity="0.025" />
+                <stop offset="0%" stopColor="#D95B27" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="#D95B27" stopOpacity="0.025" />
               </linearGradient>
             </defs>
             {[0, 1, 2, 3, 4].map((row) => {
@@ -690,7 +691,7 @@ function LollipopChart({
             <path
               d={curvePath}
               fill="none"
-              stroke="#FF8A1F"
+              stroke="#D95B27"
               strokeWidth="4"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -1003,7 +1004,7 @@ const GRAPH_BLUE = 'var(--cl-graph-accent)';
 const GRAPH_BLUE_STRONG = 'var(--cl-graph-accent-strong)';
 const GRAPH_BLUE_SOFT = 'var(--cl-graph-soft)';
 const GRAPH_BLUE_TRACK = 'var(--cl-graph-track)';
-const GRAPH_ORANGE = '#FF653F';
+const GRAPH_ORANGE = '#D95B27';
 const START_DATE_FIELD = 'Fecha de inicio probable';
 
 function GraphMetricSelector({ value, onChange }) {
@@ -1013,11 +1014,11 @@ function GraphMetricSelector({ value, onChange }) {
       gap={1}
       p="3px"
       bg="var(--cl-surface)"
-      border="1px solid #FFD6C8"
+      border="1px solid #F6D2C7"
       borderRadius="11px"
       flexShrink={0}
     >
-      <Text px={2} fontSize="10px" fontWeight="600" color="#A7472C">Métrica:</Text>
+      <Text px={2} fontSize="10px" fontWeight="600" color="#A43F1B">Métrica:</Text>
       {METRIC_OPTIONS.map((option) => {
         const active = option.value === value;
         return (
@@ -1029,9 +1030,9 @@ function GraphMetricSelector({ value, onChange }) {
             borderRadius="7px"
             fontSize="11px"
             fontWeight="600"
-            bg={active ? GRAPH_ORANGE : '#FFF5F0'}
-            color={active ? 'white' : '#C94E2D'}
-            _hover={{ bg: active ? '#E65331' : '#FFE9DF' }}
+            bg={active ? GRAPH_ORANGE : '#FDF4F1'}
+            color={active ? 'white' : '#A43F1B'}
+            _hover={{ bg: active ? '#B9471E' : '#FBE7DF' }}
             onClick={() => onChange(option.value)}
           >
             {option.label}
@@ -1054,7 +1055,7 @@ function MexicoRepublicIllustration() {
           strokeLinejoin="round"
         />
         <path d="M93 48 97 78M124 41l-2 39M152 47l-8 40M181 57l-10 32" stroke="var(--cl-graph-accent)" opacity=".36" strokeWidth="1.6" strokeLinecap="round" />
-        <circle cx="116" cy="61" r="4.3" fill="#FF653F" />
+        <circle cx="116" cy="61" r="4.3" fill="#D95B27" />
         <circle cx="152" cy="65" r="3.4" fill="var(--cl-graph-accent-strong)" />
         <circle cx="187" cy="72" r="3.4" fill="var(--cl-graph-accent-strong)" />
       </Box>
@@ -1122,10 +1123,10 @@ function MiniBarList({
             px={1}
             py={1}
             borderRadius="6px"
-            bg={selected ? 'rgba(255,101,63,.08)' : 'transparent'}
+            bg={selected ? 'rgba(217, 91, 39,.08)' : 'transparent'}
             cursor="pointer"
             aria-pressed={selected}
-            _hover={{ bg: selected ? 'rgba(255,101,63,.10)' : GRAPH_BLUE_SOFT }}
+            _hover={{ bg: selected ? 'rgba(217, 91, 39,.10)' : GRAPH_BLUE_SOFT }}
             onClick={() => onSelect(item.key)}
           >
             <Text flex={`0 0 ${labelWidth}`} minW="0" textAlign="left" fontSize="11px" fontWeight={selected ? '700' : '600'} color="var(--cl-text-strong)" noOfLines={1}>{item.label}</Text>
@@ -1170,10 +1171,10 @@ function StateDotPlot({ items, metric, selectedKey, onSelect, limit = 7 }) {
             gap={1.5}
             px={1}
             borderRadius="6px"
-            bg={selected ? 'rgba(255,101,63,.08)' : 'transparent'}
+            bg={selected ? 'rgba(217, 91, 39,.08)' : 'transparent'}
             cursor="pointer"
             aria-pressed={selected}
-            _hover={{ bg: selected ? 'rgba(255,101,63,.10)' : GRAPH_BLUE_SOFT }}
+            _hover={{ bg: selected ? 'rgba(217, 91, 39,.10)' : GRAPH_BLUE_SOFT }}
             onClick={() => onSelect(item.key)}
           >
             <Flex flex="0 0 34%" minW="0" align="center" gap={1.5}>
@@ -1203,7 +1204,7 @@ function StateDotPlot({ items, metric, selectedKey, onSelect, limit = 7 }) {
                 borderRadius="full"
                 bg={selected ? GRAPH_ORANGE : GRAPH_BLUE_STRONG}
                 border="2px solid var(--cl-surface)"
-                boxShadow={selected ? '0 0 0 3px rgba(255,101,63,.18)' : '0 2px 6px rgba(16,40,93,.28)'}
+                boxShadow={selected ? '0 0 0 3px rgba(217, 91, 39,.18)' : '0 2px 6px rgba(16,40,93,.28)'}
                 transition="left 180ms ease, width 160ms ease, height 160ms ease, background 160ms ease"
               />
             </Box>
@@ -1254,7 +1255,7 @@ function CompanyTreemap({ items, metric, selectedKey, onSelect, onOpenCompany, l
             cursor="pointer"
             textAlign="left"
             aria-pressed={selected}
-            boxShadow={selected ? '0 0 0 2px rgba(255,101,63,.20)' : 'none'}
+            boxShadow={selected ? '0 0 0 2px rgba(217, 91, 39,.20)' : 'none'}
             transition="transform 160ms ease, background 160ms ease, box-shadow 160ms ease"
             _hover={{ transform: 'translateY(-1px)', boxShadow: '0 5px 14px rgba(51,65,85,.30)' }}
             _focusVisible={{ outline: '2px solid #334155', outlineOffset: '2px' }}
@@ -1387,10 +1388,10 @@ function GenreDonut({ items, metric, selectedKey, onSelect }) {
               h="40px"
               px={2}
               borderRadius="6px"
-              bg={item.selected ? 'rgba(255,101,63,.08)' : 'transparent'}
+              bg={item.selected ? 'rgba(217, 91, 39,.08)' : 'transparent'}
               cursor="pointer"
               aria-pressed={item.selected}
-              _hover={{ bg: item.selected ? 'rgba(255,101,63,.10)' : GRAPH_BLUE_SOFT }}
+              _hover={{ bg: item.selected ? 'rgba(217, 91, 39,.10)' : GRAPH_BLUE_SOFT }}
               onClick={() => onSelect(item.key)}
               title={`${item.label}: ${getDisplayValueWithUnit(item.value, metric)} (${percentage}%)`}
             >
@@ -1476,7 +1477,17 @@ function TimelineCurve({ items, metric, selectedKey, onSelect }) {
 }
 
 export default function GraficasView({ obras = [], filtros = {}, onSelectionCountChange, onOpenCompany }) {
-  const filteredObras = useMemo(() => filterObrasByFilters(obras, filtros), [obras, filtros]);
+  // Explorer sigue disponible en mapa y resultados, pero sus campos todavía
+  // no forman parte del contrato analítico. Las gráficas conservan la fuente
+  // histórica aunque el usuario cambie el switch lateral.
+  const graphFilters = useMemo(() => ({
+    ...filtros,
+    fuentes: [OBRA_SOURCES.CONSTRULEADS],
+  }), [filtros]);
+  const filteredObras = useMemo(
+    () => filterObrasByFilters(obras, graphFilters),
+    [obras, graphFilters]
+  );
   const [metric, setMetric] = useState('proyectos');
   const [chartSelections, setChartSelections] = useState({
     genero: '', subgenero: '', region: '', estado: '', month: '', compania: '',
@@ -1628,9 +1639,9 @@ export default function GraficasView({ obras = [], filtros = {}, onSelectionCoun
                     borderRadius="7px"
                     fontSize="11px"
                     fontWeight="600"
-                    bg="rgba(255,101,63,.10)"
-                    color="#C94E2D"
-                    _hover={{ bg: 'rgba(255,101,63,.16)' }}
+                    bg="rgba(217, 91, 39,.10)"
+                    color="#A43F1B"
+                    _hover={{ bg: 'rgba(217, 91, 39,.16)' }}
                     onClick={() => selectChartValue(filter.key, chartSelections[filter.key])}
                   >
                     {filter.label}: {filter.value} ×
@@ -1671,10 +1682,10 @@ export default function GraficasView({ obras = [], filtros = {}, onSelectionCoun
             decoration={<MexicoRepublicIllustration />}
           >
             <Flex gap={1.5} mb={2} overflowX="auto" pb={0.5}>
-              <Button h="25px" minW="unset" px={2} borderRadius="6px" fontSize="10px" fontWeight="700" bg={!chartSelections.region ? GRAPH_ORANGE : GRAPH_BLUE_SOFT} color={!chartSelections.region ? 'white' : 'var(--cl-text-strong)'} _hover={{ bg: !chartSelections.region ? '#E65331' : 'rgba(71,85,105,.16)' }} onClick={() => chartSelections.region && selectChartValue('region', chartSelections.region)}>Todo México</Button>
+              <Button h="25px" minW="unset" px={2} borderRadius="6px" fontSize="10px" fontWeight="700" bg={!chartSelections.region ? GRAPH_ORANGE : GRAPH_BLUE_SOFT} color={!chartSelections.region ? 'white' : 'var(--cl-text-strong)'} _hover={{ bg: !chartSelections.region ? '#B9471E' : 'rgba(71,85,105,.16)' }} onClick={() => chartSelections.region && selectChartValue('region', chartSelections.region)}>Todo México</Button>
               {regionData.slice(0, 5).map((region) => {
                 const selected = normalizeText(chartSelections.region) === normalizeText(region.key);
-                return <Button key={region.key} h="25px" minW="unset" px={2} borderRadius="6px" fontSize="10px" fontWeight="700" bg={selected ? GRAPH_ORANGE : GRAPH_BLUE_SOFT} color={selected ? 'white' : 'var(--cl-text-strong)'} _hover={{ bg: selected ? '#E65331' : 'rgba(71,85,105,.16)' }} onClick={() => selectChartValue('region', region.key)}>{region.label}</Button>;
+                return <Button key={region.key} h="25px" minW="unset" px={2} borderRadius="6px" fontSize="10px" fontWeight="700" bg={selected ? GRAPH_ORANGE : GRAPH_BLUE_SOFT} color={selected ? 'white' : 'var(--cl-text-strong)'} _hover={{ bg: selected ? '#B9471E' : 'rgba(71,85,105,.16)' }} onClick={() => selectChartValue('region', region.key)}>{region.label}</Button>;
               })}
             </Flex>
             <Box h="calc(100% - 32px)">

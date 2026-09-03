@@ -9,6 +9,7 @@ import {
   SimpleGrid,
 } from '@chakra-ui/react';
 import { filterObrasByFilters } from '../../utils/filterObras';
+import { getObraSource, OBRA_SOURCE_META, OBRA_SOURCES } from '../../utils/obrasSources';
 
 // Accordion helper
 function FilterAccordion({
@@ -255,6 +256,22 @@ const ESTADOS_POR_REGION_CATALOG = {
   Noreste: ['Nuevo León', 'Coahuila', 'Tamaulipas', 'San Luis Potosí', 'Zacatecas']
 };
 
+function getInitialSourceSelection(savedFilters = {}) {
+  const savedSources = savedFilters.fuentes ?? savedFilters.sources;
+  if (!Array.isArray(savedSources) || savedSources.length === 0) {
+    return {
+      [OBRA_SOURCES.CONSTRULEADS]: true,
+      [OBRA_SOURCES.EXPLORER]: false,
+    };
+  }
+
+  const enabledSources = new Set(savedSources.map(getObraSource));
+  return {
+    [OBRA_SOURCES.CONSTRULEADS]: enabledSources.has(OBRA_SOURCES.CONSTRULEADS),
+    [OBRA_SOURCES.EXPLORER]: enabledSources.has(OBRA_SOURCES.EXPLORER),
+  };
+}
+
 export default function SidebarFiltros({ obras = [], onApplyFilters }) {
   // Accordions state
   const [openedAccordions, setOpenedAccordions] = useState(
@@ -350,12 +367,15 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     savedFilters.selectedTiposProyecto || []
   );
   const [searchInputs, setSearchInputs] = useState({});
-  // Maqueta local: prepara la interacción de fuentes sin alterar todavía los
-  // resultados, hasta que Explorer tenga datos conectados al mismo contrato.
-  const [sourcePreview, setSourcePreview] = useState({
-    construleads: true,
-    explorer: false,
-  });
+  const [sourcePreview, setSourcePreview] = useState(() =>
+    getInitialSourceSelection(savedFilters)
+  );
+  const fuentesActivas = useMemo(
+    () => Object.entries(sourcePreview)
+      .filter(([, isEnabled]) => isEnabled)
+      .map(([source]) => source),
+    [sourcePreview]
+  );
 
   const [surfaceMin, setSurfaceMin] = useState(
     getSavedRangeValue(savedFilters.surfaceMin ?? savedFilters.superficieMin, null)
@@ -741,6 +761,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
       desarrollos: selectedDesarrollos,
       tipoObra: selectedTipoObra,
       tiposProyecto: selectedTiposProyecto,
+      fuentes: fuentesActivas,
       periodoIndex,
       dateRangeStart,
       dateRangeEnd,
@@ -764,6 +785,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
       selectedDesarrollos,
       selectedTipoObra,
       selectedTiposProyecto,
+      fuentesActivas,
       periodoIndex,
       dateRangeStart,
       dateRangeEnd,
@@ -879,6 +901,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
           selectedDesarrollos,
           selectedTipoObra,
           selectedTiposProyecto,
+          fuentes: fuentesActivas,
           fechaSeleccionada,
           periodoIndex,
           dateRangeStart,
@@ -914,6 +937,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     selectedDesarrollos,
     selectedTipoObra,
     selectedTiposProyecto,
+    fuentesActivas,
     fechaSeleccionada,
     periodoIndex,
     dateRangeStart,
@@ -1016,6 +1040,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     tiposObra: selectionForPayload(selectedTipoObra, allTiposObraCount),
     tiposObraFiltro: selectionForPayload(selectedTipoObra, allTiposObraCount),
     tiposProyecto: selectionForPayload(selectedTiposProyecto, dynamicOptions.tiposProyecto.length),
+    fuentes: fuentesActivas,
     investmentMin: hasInvestmentRangeFilter ? resolvedInvestmentMin : null,
     investmentMax: hasInvestmentRangeFilter ? resolvedInvestmentMax : null,
     periodoIndex,
@@ -1055,6 +1080,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     selectedDesarrollos,
     selectedTipoObra,
     selectedTiposProyecto,
+    fuentesActivas,
     resolvedInvestmentMin,
     resolvedInvestmentMax,
     periodoIndex,
@@ -1081,6 +1107,10 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
     setSelectedDesarrollos([]);
     setSelectedTipoObra([]);
     setSelectedTiposProyecto([]);
+    setSourcePreview({
+      [OBRA_SOURCES.CONSTRULEADS]: true,
+      [OBRA_SOURCES.EXPLORER]: false,
+    });
     setExpandedTipoProyecto(null);
     setInvestmentMin(investmentBounds.min);
     setInvestmentMax(investmentBounds.max);
@@ -1743,9 +1773,9 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                     fontWeight={isSelected ? '700' : '600'}
                     color={isSelected ? 'white' : disabled ? 'var(--cl-text-muted, #6B7280)' : 'var(--cl-text, #374151)'}
                     opacity={disabled ? 0.35 : 1}
-                    bg={isSelected ? '#FF653F' : 'transparent'}
+                    bg={isSelected ? '#D95B27' : 'transparent'}
                     cursor={disabled ? 'default' : 'pointer'}
-                    _hover={disabled ? {} : { bg: isSelected ? '#FF653F' : 'var(--cl-surface-muted, #FAFAFA)' }}
+                    _hover={disabled ? {} : { bg: isSelected ? '#D95B27' : 'var(--cl-surface-muted, #FAFAFA)' }}
                     onClick={() => {
                       if (disabled) return;
 
@@ -2515,37 +2545,41 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
   function renderSourcesAccordion() {
     const sources = [
       {
-        key: 'construleads',
-        label: 'Construleads',
+        key: OBRA_SOURCES.CONSTRULEADS,
+        label: OBRA_SOURCE_META[OBRA_SOURCES.CONSTRULEADS].label,
         detail: 'Base BIMSA',
-        color: '#FF653F',
+        color: OBRA_SOURCE_META[OBRA_SOURCES.CONSTRULEADS].color,
       },
       {
-        key: 'explorer',
-        label: 'Explorer',
-        detail: 'Nueva fuente',
-        color: '#1847B8',
+        key: OBRA_SOURCES.EXPLORER,
+        label: OBRA_SOURCE_META[OBRA_SOURCES.EXPLORER].label,
+        detail: 'Nueva fuente de datos',
+        color: OBRA_SOURCE_META[OBRA_SOURCES.EXPLORER].color,
       },
     ];
 
     return (
-      <FilterAccordion
-        title="Fuente"
-        expanded={!!openedAccordions.Fuente}
-        onToggle={() => toggleAccordion('Fuente')}
+      <Box
+        border="1px solid var(--cl-border)"
+        borderRadius="10px"
+        bg="var(--cl-surface)"
+        px={2}
+        py={1.5}
+        mb={2}
+        flexShrink={0}
       >
-        <Flex align="center" justify="space-between" mb={2}>
-          <Text fontSize="10px" color={TEXT_SECONDARY}>
-            Vista previa de fuentes
+        <Flex align="center" justify="space-between" px={1} mb={1}>
+          <Text fontSize="11px" fontWeight="700" color={TEXT_STRONG}>
+            Fuente
           </Text>
           <Text
             px={1.5}
-            py={0.5}
+            py="1px"
             borderRadius="full"
             bg="var(--cl-surface-muted)"
             border="1px solid var(--cl-border)"
             color={TEXT_SECONDARY}
-            fontSize="8px"
+            fontSize="7px"
             fontWeight="700"
             letterSpacing=".04em"
           >
@@ -2553,7 +2587,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
           </Text>
         </Flex>
 
-        <VStack align="stretch" spacing={1}>
+        <VStack align="stretch" spacing={0.5}>
           {sources.map((source) => {
             const isEnabled = sourcePreview[source.key];
             return (
@@ -2565,36 +2599,35 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                 align="center"
                 justify="space-between"
                 gap={2}
-                px={2}
-                py={1.5}
-                borderRadius="9px"
+                px={1.5}
+                py={1}
+                minH="30px"
+                borderRadius="7px"
                 bg={isEnabled ? 'var(--cl-surface-muted)' : 'transparent'}
                 cursor="pointer"
                 textAlign="left"
                 transition="background 160ms ease"
                 _hover={{ bg: 'var(--cl-surface-muted)' }}
-                onClick={() => setSourcePreview((current) => ({
-                  ...current,
-                  [source.key]: !current[source.key],
-                }))}
+                onClick={() => setSourcePreview((current) => {
+                  const next = {
+                    ...current,
+                    [source.key]: !current[source.key],
+                  };
+                  return Object.values(next).some(Boolean) ? next : current;
+                })}
                 role="switch"
                 aria-checked={isEnabled}
-                aria-label={`${source.label} ${isEnabled ? 'visible' : 'oculta'}; maqueta`}
+                aria-label={`${source.label} ${isEnabled ? 'visible' : 'oculta'}`}
               >
-                <Flex align="center" gap={2} minW={0}>
-                  <Box w="7px" h="7px" borderRadius="full" bg={source.color} flexShrink={0} />
-                  <Box minW={0}>
-                    <Text fontSize="11px" fontWeight="600" color={TEXT_STRONG} lineHeight="1.15">
-                      {source.label}
-                    </Text>
-                    <Text mt={0.5} fontSize="9px" color={TEXT_SECONDARY} lineHeight="1.1">
-                      {source.detail}
-                    </Text>
-                  </Box>
+                <Flex align="center" gap={1.5} minW={0} title={source.detail}>
+                  <Box w="6px" h="6px" borderRadius="full" bg={source.color} flexShrink={0} />
+                  <Text fontSize="10px" fontWeight="600" color={TEXT_STRONG} lineHeight="1.1">
+                    {source.label}
+                  </Text>
                 </Flex>
                 <Flex
-                  w="28px"
-                  h="16px"
+                  w="24px"
+                  h="14px"
                   p="2px"
                   borderRadius="full"
                   bg={isEnabled ? source.color : 'var(--cl-border)'}
@@ -2603,12 +2636,12 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                   transition="background 180ms ease"
                 >
                   <Box
-                    w="12px"
-                    h="12px"
+                    w="10px"
+                    h="10px"
                     borderRadius="full"
                     bg="white"
                     boxShadow="0 1px 3px rgba(0,0,0,.2)"
-                    transform={isEnabled ? 'translateX(12px)' : 'translateX(0)'}
+                    transform={isEnabled ? 'translateX(10px)' : 'translateX(0)'}
                     transition="transform 180ms ease"
                   />
                 </Flex>
@@ -2616,7 +2649,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
             );
           })}
         </VStack>
-      </FilterAccordion>
+      </Box>
     );
   }
 

@@ -17,7 +17,7 @@ import {
 
 import { formatCompactInvestment, formatNumber } from './companyData';
 
-const genreColors = ['#F0642E', '#E38A2E', '#7350AC', '#279B91', '#4F7BC8'];
+const genreColors = ['#D95B27', '#D95B27', '#7350AC', '#279B91', '#4F7BC8'];
 
 function getDistribution(items, field) {
   const total = items.length || 1;

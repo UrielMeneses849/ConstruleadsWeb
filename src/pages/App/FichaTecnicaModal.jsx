@@ -79,7 +79,7 @@ export default function FichaTecnicaModal({
         <Flex align="center" justify="space-between" gap={4} px={4} py={3}
           borderBottom="1px solid var(--ft-border)">
           <Box minW="0">
-            <Text fontSize="10px" color="#FF653F" fontWeight="700" letterSpacing=".1em">
+            <Text fontSize="10px" color="#D95B27" fontWeight="700" letterSpacing=".1em">
               FICHA TÉCNICA
             </Text>
             <Text fontSize="14px" fontWeight="700" noOfLines={1}>
@@ -94,7 +94,7 @@ export default function FichaTecnicaModal({
         <Flex flex="1" minH="0" align="center" justify="center" bg="var(--ft-surface-subtle)" position="relative">
           {isLoading && (
             <Flex direction="column" align="center" gap={3}>
-              <Spinner color="#FF653F" />
+              <Spinner color="#D95B27" />
               <Text fontSize="13px" color="var(--ft-text-muted)">Cargando ficha técnica…</Text>
             </Flex>
           )}
@@ -132,7 +132,7 @@ export default function FichaTecnicaModal({
               _hover={{ bg: 'var(--ft-surface-muted)' }}>
               Cerrar
             </Button>
-            <Button bg="#FF653F" color="white" _hover={{ bg: '#D94E2D' }}
+            <Button bg="#D95B27" color="white" _hover={{ bg: '#B9471E' }}
               onClick={onDownload} disabled={isLoading || Boolean(error) || isDownloading}>
               {isDownloading ? (
                 <Flex align="center" gap={2}><Spinner size="xs" /> Descargando…</Flex>

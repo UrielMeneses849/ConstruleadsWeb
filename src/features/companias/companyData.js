@@ -236,7 +236,7 @@ export function getCompanyGenreColor(genero) {
   if (normalized.includes('industrial')) return '#29A496';
   if (normalized.includes('infraestructura')) return '#6D4AAF';
   if (normalized.includes('vivienda') || normalized.includes('habitacional')) return '#CC2E6E';
-  return '#F19832';
+  return '#D95B27';
 }
 
 export function buildCompanyRows(obras = [], relationships = []) {

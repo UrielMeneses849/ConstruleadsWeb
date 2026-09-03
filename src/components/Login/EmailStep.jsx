@@ -42,10 +42,10 @@ const EmailStep = ({ email, setEmail, onNext }) => {
 </Box>
 
       <Button
-        bg="#FF6A00"
+        bg="#D95B27"
         color="white"
         size="lg"
-        _hover={{ bg: '#E85F00' }}
+        _hover={{ bg: '#B9471E' }}
         onClick={onNext}
       >
         Enviar código

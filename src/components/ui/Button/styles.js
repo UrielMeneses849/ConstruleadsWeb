@@ -9,7 +9,7 @@ export const buttonBaseStyles = {
   cursor: "pointer",
 
   _focusVisible: {
-    boxShadow: "0 0 0 4px rgba(255,107,0,0.15)",
+    boxShadow: "0 0 0 4px rgba(217, 91, 39, 0.15)",
   },
 
   _disabled: {

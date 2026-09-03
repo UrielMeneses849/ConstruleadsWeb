@@ -33,6 +33,7 @@ import {
 import { parseObrasXml } from '../../utils/parseObrasXml';
 import { parseObrasOffMainThread } from '../../utils/parseObrasOffMainThread';
 import { filterObrasByFilters } from '../../utils/filterObras';
+import { getObraSource, OBRA_SOURCES } from '../../utils/obrasSources';
 import {
   readCachedCompanyRelationships,
   readCachedObras,
@@ -74,6 +75,9 @@ function readPersistedFilters() {
       desarrollos: saved.selectedDesarrollos || saved.desarrollos || [],
       tipoObra: saved.selectedTipoObra || saved.tipoObra || [],
       tiposProyecto: saved.selectedTiposProyecto || saved.tiposProyecto || [],
+      fuentes: Array.isArray(saved.fuentes ?? saved.sources) && (saved.fuentes ?? saved.sources).length
+        ? (saved.fuentes ?? saved.sources).map(getObraSource)
+        : [OBRA_SOURCES.CONSTRULEADS],
       periodoIndex: saved.periodoIndex ?? -1,
       fechaInicio: saved.dateRangeStart || saved.fechaInicio || '',
       fechaFin: saved.dateRangeEnd || saved.fechaFin || '',
@@ -161,7 +165,7 @@ function ViewLoader({ label }) {
         border="1px solid var(--cl-border)"
         boxShadow="var(--cl-shadow)"
       >
-        <Spinner size="sm" thickness="3px" color="#FF653F" />
+        <Spinner size="sm" thickness="3px" color="#D95B27" />
         <Text fontSize="12px" fontWeight="600" color="var(--cl-text-muted)">
           Preparando {label}…
         </Text>
@@ -361,8 +365,8 @@ export default function Construleads() {
         graphAccentStrong: '#64748B',
         graphSoft: 'rgba(71,85,105,.22)',
         graphTrack: 'rgba(71,85,105,.28)',
-        navBg: '#E85A37',
-        navBorder: '#E85A37',
+        navBg: '#B9471E',
+        navBorder: '#B9471E',
       }
     : {
         pageBg: '#FAFAFA',
@@ -380,8 +384,8 @@ export default function Construleads() {
         graphAccentStrong: '#334155',
         graphSoft: 'rgba(71,85,105,.10)',
         graphTrack: 'rgba(71,85,105,.14)',
-        navBg: '#FF653F',
-        navBorder: '#FF653F',
+        navBg: '#D95B27',
+        navBorder: '#D95B27',
       };
 
   useEffect(() => {
@@ -800,14 +804,14 @@ export default function Construleads() {
                   px={3}
                   align="center"
                   gap={2}
-                  color={activeView === key ? '#FF653F' : 'var(--cl-text)'}
+                  color={activeView === key ? '#D95B27' : 'var(--cl-text)'}
                   fontSize="12px"
                   fontWeight={activeView === key ? '700' : '600'}
-                  borderBottom={activeView === key ? '2px solid #FF653F' : '2px solid transparent'}
+                  borderBottom={activeView === key ? '2px solid #D95B27' : '2px solid transparent'}
                   whiteSpace="nowrap"
                   onPointerEnter={() => { if (preload) void preload(); }}
                   onClick={() => openProjectView(key)}
-                  _hover={{ color: '#FF653F', bg: 'var(--cl-hover)' }}
+                  _hover={{ color: '#D95B27', bg: 'var(--cl-hover)' }}
                 >
                   <Box as={icon} boxSize="15px" />
                   {label}
@@ -863,7 +867,9 @@ export default function Construleads() {
                 display={activeView === 'resultados' ? 'block' : 'none'} h="100%" minH="0">
                 <Suspense fallback={<ViewLoader label="resultados" />}>
                   <Resultados
+                    key={`results-sources-${(filtros.fuentes || []).slice().sort().join('-')}`}
                     obras={filteredObras}
+                    activeSources={filtros.fuentes}
                     onSelectionChange={handleResultsSelectionChange}
                     selectionResetToken={selectionResetToken}
                     onGoToMap={() => openProjectView('mapa')}
@@ -893,10 +899,7 @@ export default function Construleads() {
                 <ModuleErrorBoundary resetKey={location.pathname}>
                   <Suspense fallback={<ViewLoader label="compañías" />}>
                     <CompaniasView
-                      filteredObras={obras.length ? filteredObras : filteredMapPreviewObras}
                       sourceObras={obras.length ? obras : mapPreviewObras}
-                      filtros={filtros}
-                      onApplyFilters={setFiltros}
                       isLoading={loadingObras}
                       companyRelationships={companyRelationships}
                       isLoadingCompanies={loadingCompanies}

@@ -76,7 +76,7 @@ export const card = {
   p: "32px",
   boxShadow: "0px 4px 14px rgba(0,0,0,0.12)",
   borderBottom: "3px solid",
-  borderColor: "#FF6400"
+  borderColor: "#D95B27"
 };
 
 export const cardTitle = {

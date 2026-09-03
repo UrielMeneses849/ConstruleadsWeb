@@ -79,7 +79,7 @@ export default function WelcomeExperience({ userId, userName }) {
       `}</style>
 
       <Flex className="cl-welcome-content" direction="column" align="center" textAlign="center" px={6}>
-        <Box className="cl-welcome-line" w="48px" h="2px" bg="#FF653F" borderRadius="full" mb={6} />
+        <Box className="cl-welcome-line" w="48px" h="2px" bg="#D95B27" borderRadius="full" mb={6} />
         <Text fontSize={{ base: '25px', md: '34px' }} fontWeight="600" letterSpacing="-.025em">
           Bienvenido a Bimsa Suite
         </Text>

@@ -21,8 +21,8 @@ import { getSelectedDateField } from '../../utils/filterObras';
 
 const SUMMARY_METRIC_META = {
   projects: { Icon: FiBriefcase, color: '#2854C5', background: 'rgba(40, 84, 197, .11)' },
-  investment: { Icon: FiDollarSign, color: '#E35A2E', background: 'rgba(255, 101, 63, .11)' },
-  states: { Icon: FiMapPin, color: '#A7472C', background: 'rgba(255, 101, 63, .11)' },
+  investment: { Icon: FiDollarSign, color: '#D95B27', background: 'rgba(217, 91, 39, .11)' },
+  states: { Icon: FiMapPin, color: '#A43F1B', background: 'rgba(217, 91, 39, .11)' },
   surface: { Icon: FiMaximize2, color: '#6747C8', background: 'rgba(103, 71, 200, .11)' },
   companies: { Icon: FiUsers, color: '#16835B', background: 'rgba(22, 131, 91, .11)' },
   date: { Icon: FiCalendar, color: '#536174', background: 'rgba(83, 97, 116, .11)' },
@@ -60,11 +60,11 @@ export function SummaryMetricCard({
       minH="70px"
       px={3.5}
       py={1.5}
-      border={highlighted ? '1px solid rgba(255,101,63,.62)' : '1px solid var(--cl-border)'}
+      border={highlighted ? '1px solid rgba(217, 91, 39,.62)' : '1px solid var(--cl-border)'}
       borderRadius="11px"
       boxShadow="none"
       color="var(--cl-text)"
-      bg={highlighted ? 'rgba(255,101,63,.10)' : 'var(--cl-surface)'}
+      bg={highlighted ? 'rgba(217, 91, 39,.10)' : 'var(--cl-surface)'}
       position="relative"
       overflow="hidden"
       display="flex"
@@ -77,7 +77,7 @@ export function SummaryMetricCard({
         top={0}
         bottom={0}
         w="3px"
-        bg={highlighted ? '#FF653F' : 'transparent'}
+        bg={highlighted ? '#D95B27' : 'transparent'}
       />
       <Flex
         w="28px"
@@ -86,8 +86,8 @@ export function SummaryMetricCard({
         align="center"
         justify="center"
         borderRadius="8px"
-        color={highlighted ? '#D94E2D' : color}
-        bg={highlighted ? 'rgba(255,101,63,.14)' : background}
+        color={highlighted ? '#B9471E' : color}
+        bg={highlighted ? 'rgba(217, 91, 39,.14)' : background}
       >
         <Box as={Icon} boxSize="16px" />
       </Flex>

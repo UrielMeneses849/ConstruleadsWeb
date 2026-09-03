@@ -248,7 +248,7 @@ export default function CompaniasMap({
           align="center" gap={2} px={3} py={2} bg="white" border="1px solid #E4E7EC"
           borderRadius="999px" boxShadow="0 4px 14px rgba(15, 23, 42, .12)" whiteSpace="nowrap"
         >
-          <Spinner size="xs" color="#FF653F" />
+          <Spinner size="xs" color="#D95B27" />
           <Text fontSize="11px" color="#596273" fontWeight="600">{message}</Text>
         </Flex>
       )}

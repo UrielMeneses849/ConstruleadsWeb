@@ -149,7 +149,7 @@ export default function Oportunidades() {
               />
 
               <Text
-                color='#FF6400'
+                color='#D95B27'
                 fontSize='48px'
                 fontWeight='700'
                 lineHeight='1'

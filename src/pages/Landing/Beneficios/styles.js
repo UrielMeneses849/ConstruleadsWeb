@@ -25,7 +25,7 @@ export const title = {
 };
 
 export const highlight = {
-  color: '#FF6600',
+  color: '#D95B27',
 };
 
 export const subtitle = {
@@ -51,7 +51,7 @@ export const benefitCard = {
   bg: 'white',
   p: 5,
   borderRadius: '18px',
-  borderLeft: '4px solid #FF6600',
+  borderLeft: '4px solid #D95B27',
   boxShadow: '0 8px 30px rgba(0,0,0,.08)',
   align: 'start',
   spacing: 5,

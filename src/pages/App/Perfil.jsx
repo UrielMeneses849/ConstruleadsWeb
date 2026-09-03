@@ -19,7 +19,7 @@ import {
 } from '../../api/perfil';
 import { RADAR_PREFERENCE_DEFAULTS, persistRadarPreferences } from '../../utils/radarNotifications';
 
-const ACCENT = '#FF653F';
+const ACCENT = '#D95B27';
 const NAVY = 'var(--pf-text)';
 const PROFILE_GROUPS = {
   zonas: ['Centro', 'Noreste', 'Noroeste', 'Occidente', 'Sureste'],
@@ -241,7 +241,7 @@ function CriteriaModal({ title, icon: Icon, initialCriteria, onClose, onSave }) 
       </Box>
       <Flex px={{ base: 5, md: 6 }} pb={{ base: 5, md: 6 }} gap={3} justify="flex-end">
         <Button variant="outline" borderColor="var(--pf-border-strong)" onClick={onClose}>Cancelar</Button>
-        <Button bg={ACCENT} color="white" _hover={{ bg: '#E95734' }} onClick={() => onSave(criteria)}><FiCheck /> Guardar preferencias</Button>
+        <Button bg={ACCENT} color="white" _hover={{ bg: '#B9471E' }} onClick={() => onSave(criteria)}><FiCheck /> Guardar preferencias</Button>
       </Flex>
     </Modal>
   );
@@ -338,7 +338,7 @@ function UserModal({ initial, onClose, onSave }) {
     <Box>
       <Text fontSize="12px" fontWeight="700" mb={2}>{label}</Text>
       <Input value={form[key]} type={type} placeholder={placeholder} onChange={(event) => setForm({ ...form, [key]: event.target.value })}
-        h="48px" bg="var(--pf-surface)" borderColor="var(--pf-border-strong)" borderRadius="11px" _focus={{ borderColor: ACCENT, boxShadow: '0 0 0 1px #FF653F' }} />
+        h="48px" bg="var(--pf-surface)" borderColor="var(--pf-border-strong)" borderRadius="11px" _focus={{ borderColor: ACCENT, boxShadow: '0 0 0 1px #D95B27' }} />
     </Box>
   );
   const canContinue = form.name.trim() && form.email.trim() && form.company.trim();
@@ -387,7 +387,7 @@ function UserModal({ initial, onClose, onSave }) {
           _hover={{ bg: 'var(--pf-surface-muted)' }}>
           {step === 1 ? 'Cancelar' : 'Volver'}
         </Button>
-        <Button bg={ACCENT} color="white" _hover={{ bg: '#E95734' }} disabled={!canContinue}
+        <Button bg={ACCENT} color="white" _hover={{ bg: '#B9471E' }} disabled={!canContinue}
           onClick={() => step === 1 ? setStep(2) : onSave(form)}>
           {step === 1 ? 'Continuar' : 'Guardar usuario'} <Box ml={2}><FiChevronRight /></Box>
         </Button>
@@ -437,8 +437,8 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
         '--pf-text-strong': '#F5F5F5',
         '--pf-text-muted': '#A3A3A3',
         '--pf-hover': '#262626',
-        '--pf-accent-soft': 'rgba(255,101,63,.14)',
-        '--pf-accent-border': 'rgba(255,141,110,.45)',
+        '--pf-accent-soft': 'rgba(217, 91, 39,.14)',
+        '--pf-accent-border': 'rgba(235, 162, 130,.45)',
         '--pf-avatar': '#4B4B49',
         '--pf-avatar-border': '#656561',
         '--pf-success-soft': 'rgba(22,163,74,.16)',
@@ -462,8 +462,8 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
         '--pf-text-strong': '#202020',
         '--pf-text-muted': '#777777',
         '--pf-hover': '#F7F7F5',
-        '--pf-accent-soft': '#FFF0EA',
-        '--pf-accent-border': '#FFD0BF',
+        '--pf-accent-soft': '#FCEDE8',
+        '--pf-accent-border': '#F5CCBE',
         '--pf-avatar': '#666662',
         '--pf-avatar-border': '#555551',
         '--pf-success-soft': '#EAF8EF',
@@ -711,7 +711,7 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
                     borderRadius="12px" bg={active === tab.id ? 'var(--pf-accent-soft)' : 'transparent'}
                     color={active === tab.id ? ACCENT : NAVY}
                     border={`1px solid ${active === tab.id ? 'var(--pf-accent-border)' : 'transparent'}`}
-                    boxShadow={active === tab.id ? '0 8px 20px rgba(255,101,63,.08)' : 'none'}
+                    boxShadow={active === tab.id ? '0 8px 20px rgba(217, 91, 39,.08)' : 'none'}
                     _hover={{ bg: active === tab.id ? 'var(--pf-accent-soft)' : 'var(--pf-hover)', transform: 'translateX(2px)' }}
                     transition="all .2s ease" textAlign="left">
                     <Icon size={17} /><Text fontSize="12px" fontWeight="600">{tab.label}</Text>
@@ -739,7 +739,7 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
                     <Heading fontSize={{ base: '24px', md: '30px' }} mt={1}>Usuarios y accesos</Heading>
                     <Text color="var(--pf-text-muted)" fontSize="13px" mt={1}>Consulta las cuentas asociadas a tu administración.</Text>
                   </Box>
-                  <Button bg={ACCENT} color="white" _hover={{ bg: '#E95734' }} onClick={() => setEditing(null)}><FiPlus /> Nuevo usuario</Button>
+                  <Button bg={ACCENT} color="white" _hover={{ bg: '#B9471E' }} onClick={() => setEditing(null)}><FiPlus /> Nuevo usuario</Button>
                 </Flex>
                 <Flex mt={7} bg="var(--pf-surface-muted)" border="1px solid var(--pf-border)" borderRadius="12px" align="center" px={4} maxW="440px">
                   <FiSearch color="var(--pf-text-muted)" /><Input value={query} onChange={(event) => setQuery(event.target.value)}
@@ -812,10 +812,10 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
                 <Heading fontSize={{ base: '28px', md: '34px' }} mt={1} letterSpacing="-.04em">Mi perfil</Heading>
                 <Text color="var(--pf-text-muted)" fontSize="13px" mt={1}>Información asociada a tu cuenta Construleads.</Text>
                 <Flex mt={7} p={{ base: 5, md: 7 }} bg="var(--pf-profile-gradient)"
-                  color={NAVY} border="1px solid var(--pf-border)" borderLeft="4px solid #FF653F" borderRadius="20px"
+                  color={NAVY} border="1px solid var(--pf-border)" borderLeft="4px solid #D95B27" borderRadius="20px"
                   align="center" gap={5} position="relative" overflow="hidden" boxShadow="var(--pf-shadow)">
                   <Box position="absolute" right="-70px" top="-100px" w="240px" h="240px" borderRadius="full"
-                    border="38px solid rgba(255,101,63,.07)" />
+                    border="38px solid rgba(217, 91, 39,.07)" />
                   <Flex w={{ base: '64px', md: '78px' }} h={{ base: '64px', md: '78px' }}
                     bg="var(--pf-avatar)" border="1px solid var(--pf-avatar-border)" color="white" borderRadius="19px"
                     align="center" justify="center" fontSize="22px" fontWeight="700" flexShrink="0">
@@ -950,7 +950,7 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
 
                 <Flex mt={4} align="center" justify="space-between" gap={3}>
                   <Text fontSize="11px" color={preferencesSaved ? 'var(--pf-success-text)' : 'var(--pf-text-muted)'}>{preferencesSaved ? 'Preferencias guardadas.' : 'Guarda para actualizar la campana.'}</Text>
-                  <Button bg={ACCENT} color="white" _hover={{ bg: '#E95734' }} onClick={savePreferences}><FiCheck /> Guardar configuración</Button>
+                  <Button bg={ACCENT} color="white" _hover={{ bg: '#B9471E' }} onClick={savePreferences}><FiCheck /> Guardar configuración</Button>
                 </Flex>
               </>
             )}
@@ -987,7 +987,7 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
                   <Box position="absolute" right="-28px" bottom="-45px" opacity=".12"><FiCpu size={180} /></Box>
                   <Flex position="relative" justify="space-between" align={{ base: 'start', md: 'center' }} gap={4} direction={{ base: 'column', md: 'row' }}>
                     <Box>
-                      <Flex gap={2} align="center" color="#FFC0AC"><FiZap /><Text fontSize="11px" fontWeight="700" letterSpacing=".1em">VISTA PREVIA DEL RADAR</Text></Flex>
+                      <Flex gap={2} align="center" color="#F3C8B7"><FiZap /><Text fontSize="11px" fontWeight="700" letterSpacing=".1em">VISTA PREVIA DEL RADAR</Text></Flex>
                       <Text mt={3} fontSize="15px" lineHeight="1.55">{brief || 'Genera una vista previa local para comprobar qué señales y criterios usaría el Radar semanal.'}</Text>
                     </Box>
                     <Button bg="white" color="#273959" _hover={{ bg: '#F5F7FB' }} onClick={generateRadarPreview} flexShrink="0"><FiRefreshCw /> Generar vista previa</Button>

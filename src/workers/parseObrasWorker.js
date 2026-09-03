@@ -1,3 +1,5 @@
+import { getObraSource } from '../utils/obrasSources';
+
 // La información ya está normalizada por el ETL. El worker sólo limpia los
 // espacios exteriores; no debe quitar acentos ni reescribir etiquetas.
 const cleanText = (value = '') => String(value).trim();
@@ -31,7 +33,10 @@ function getValue(fragment, ...tags) {
 }
 
 function parseNumber(value = 0) {
-  const normalized = String(value).replace(/,/g, '').replace(/[^0-9.-]/g, '');
+  const normalized = String(value)
+    .replace(/,/g, '')
+    // Las inversiones del WS pueden venir en notación científica.
+    .replace(/[^0-9.eE+-]/g, '');
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
 }
@@ -75,6 +80,7 @@ function parseObras(xml = '') {
     return {
       id: clave || `${lat}-${lng}-${index}`,
       clave,
+      origen: getObraSource(getValue(fragment, 'Origen')),
       proyecto: cleanText(getValue(fragment, 'Proyecto')),
       region,
       estado,

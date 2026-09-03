@@ -1,3 +1,5 @@
+import { getObraSource } from './obrasSources';
+
 export function parseObrasXml(xmlText) {
   const parser = new DOMParser();
   const xml = parser.parseFromString(xmlText, 'text/xml');
@@ -24,7 +26,9 @@ export function parseObrasXml(xmlText) {
     const normalized = String(value)
       .trim()
       .replace(/,/g, '')
-      .replace(/[^0-9.-]/g, '');
+      // El WS entrega inversiones como `6.269580000000000e+007`.
+      // Conservamos el exponente para que Number pueda convertirlo a pesos.
+      .replace(/[^0-9.eE+-]/g, '');
 
     if (!normalized) return 0;
 
@@ -85,6 +89,7 @@ export function parseObrasXml(xmlText) {
 
     const getValue = (...tags) => getText(values, tags);
     const clave = getValue('Clave_Proyecto');
+    const origenRaw = getValue('Origen');
     const proyectoRaw = getValue('Proyecto');
     const regionRaw = getValue('Region');
     const estadoRaw = getValue('Estado_Proyecto');
@@ -155,6 +160,7 @@ export function parseObrasXml(xmlText) {
     obras[index] = {
       id: clave || `${lat}-${lng}-${index}`,
       clave,
+      origen: getObraSource(origenRaw),
       proyecto: cleanText(proyectoRaw),
       region: cleanText(regionRaw),
       estado: cleanEstado(estadoRaw),

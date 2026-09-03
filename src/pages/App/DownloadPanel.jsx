@@ -302,7 +302,7 @@ export default function DownloadPanel({
                   {isGenerating ? selectedOption.label : notification?.message}
                 </Text>
                 {isGenerating && (
-                  <Text fontSize="12px" fontWeight="800" color="#FF653F">
+                  <Text fontSize="12px" fontWeight="800" color="#D95B27">
                     {Math.round(downloadProgress)}%
                   </Text>
                 )}
@@ -346,7 +346,7 @@ export default function DownloadPanel({
                 h="100%"
                 w={`${downloadProgress}%`}
                 borderRadius="full"
-                bg="#FF653F"
+                bg="#D95B27"
                 transition="width 220ms ease"
               />
             </Box>
@@ -433,14 +433,14 @@ export default function DownloadPanel({
       <Button
         h="36px"
         minW={hasSelection ? '140px' : '128px'}
-        bg="#FF653F"
+        bg="#D95B27"
         color="white"
         borderRadius="8px"
         fontSize="13px"
         fontWeight="600"
         leftIcon={!isGenerating ? <FiDownload size={14} /> : undefined}
         disabled={isGenerating}
-        _hover={{ bg: '#D94E2D' }}
+        _hover={{ bg: '#B9471E' }}
         onClick={handleDownload}
       >
         {isGenerating ? (

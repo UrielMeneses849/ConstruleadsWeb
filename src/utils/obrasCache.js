@@ -2,6 +2,7 @@ const DATABASE_NAME = 'construleads-performance-cache';
 const STORE_NAME = 'obras';
 const COMPANIES_STORE_NAME = 'companias';
 const DATABASE_VERSION = 2;
+const OBRAS_CACHE_VERSION = 2;
 const COMPANY_RELATIONSHIPS_CACHE_VERSION = 3;
 
 function openDatabase() {
@@ -37,7 +38,7 @@ export async function readCachedObras(userId) {
 
     // La última respuesta válida siempre sirve para el primer pintado. La red
     // la actualiza después, sin dejar al usuario mirando un mapa vacío.
-    if (!cached) return null;
+    if (!cached || cached.version !== OBRAS_CACHE_VERSION) return null;
     return Array.isArray(cached.obras) ? cached.obras : null;
   } catch {
     return null;
@@ -52,7 +53,7 @@ export async function writeCachedObras(userId, obras) {
     await new Promise((resolve, reject) => {
       const transaction = database.transaction(STORE_NAME, 'readwrite');
       transaction.objectStore(STORE_NAME).put(
-        { savedAt: Date.now(), obras },
+        { version: OBRAS_CACHE_VERSION, savedAt: Date.now(), obras },
         String(userId)
       );
       transaction.oncomplete = () => resolve();

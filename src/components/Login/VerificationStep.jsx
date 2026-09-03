@@ -62,7 +62,7 @@ const VerificationStep = ({
       </Box>
 
       <Text
-        color="#FF6A00"
+        color="#D95B27"
         cursor="pointer"
         fontWeight="600"
         onClick={onBack}
@@ -71,10 +71,10 @@ const VerificationStep = ({
       </Text>
 
       <Button
-        bg="#FF6A00"
+        bg="#D95B27"
         color="white"
         size="lg"
-        _hover={{ bg: '#E85F00' }}
+        _hover={{ bg: '#B9471E' }}
         onClick={onVerify}
       >
         Verificar y acceder

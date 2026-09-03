@@ -101,7 +101,7 @@ export default function LicitacionesTable({
 
   const renderAmountFilter = () => {
     const missingOption = <Flex as="label" gap={2} align="center" mt={3} px={2.5} py={2} cursor="pointer"
-      border="1px solid" borderColor={tableFilters.montoMissing ? '#FFB39F' : 'var(--cl-border)'} borderRadius="8px"
+      border="1px solid" borderColor={tableFilters.montoMissing ? '#F0BFAE' : 'var(--cl-border)'} borderRadius="8px"
       bg={tableFilters.montoMissing ? 'var(--cl-orange-soft)' : 'var(--cl-surface-muted)'}>
       <input type="checkbox" checked={Boolean(tableFilters.montoMissing)} onChange={() => setTableFilters((current) => {
         const nextMissing = !current.montoMissing;
@@ -205,10 +205,10 @@ export default function LicitacionesTable({
         {visibleValues.map((value) => {
           const isUnassigned = value === LICITACION_UNASSIGNED_LABEL && ['estado', 'proveedor_adjudicado'].includes(key);
           return <Flex as="label" key={`${key}-${String(value)}`} gap={2} align="flex-start" py={isUnassigned ? 2 : 1.5} px={isUnassigned ? 2 : 0} cursor="pointer"
-            border={isUnassigned ? '1px solid' : '1px solid transparent'} borderColor={isUnassigned && selected.includes(value) ? '#FFB39F' : 'transparent'}
+            border={isUnassigned ? '1px solid' : '1px solid transparent'} borderColor={isUnassigned && selected.includes(value) ? '#F0BFAE' : 'transparent'}
             bg={isUnassigned && selected.includes(value) ? 'var(--cl-orange-soft)' : 'transparent'} borderRadius="8px">
           <input type="checkbox" checked={selected.includes(value)} onChange={() => toggleValue(value)} />
-          {isUnassigned && <FiAlertCircle size={14} color="#D94E2D" style={{ marginTop: '1px', flexShrink: 0 }} />}
+          {isUnassigned && <FiAlertCircle size={14} color="#B9471E" style={{ marginTop: '1px', flexShrink: 0 }} />}
           <Box><Text fontSize="11px" fontWeight={isUnassigned ? '700' : '400'} lineHeight="1.35" color="var(--cl-text)" lineClamp={2}>{displayValue(value)}</Text>
             {isUnassigned && <Text fontSize="9px" color="var(--cl-text-muted)">{key === 'estado' ? 'Estado no reportado' : 'Proveedor no reportado'}</Text>}</Box>
         </Flex>;
@@ -245,7 +245,7 @@ export default function LicitacionesTable({
               <Text flex="1" minW={0} fontSize="10px" fontWeight="700" lineHeight="1.3">{label}</Text>
               <Button className="licitaciones-header-action" data-licitacion-filter-trigger size="xs" variant="ghost" minW="20px" w="20px" h="20px" p={0} onClick={(event) => { event.stopPropagation(); setFilterMenu((current) => current === key ? null : key); }} aria-label={`Filtrar ${label}`} title={`Filtrar ${label}`}><FiSliders size={11} color="currentColor" /></Button>
               <Button className="licitaciones-header-action" size="xs" variant="ghost" minW="20px" w="20px" h="20px" p={0} onClick={() => toggleSort(key)} aria-label={`Ordenar ${label}`} title={`Ordenar ${label}`}>
-                <Flex direction="column"><FiChevronUp size={9} color={sortConfig.field === key && sortConfig.direction === 'asc' ? '#FF653F' : 'currentColor'} /><FiChevronDown size={9} color={sortConfig.field === key && sortConfig.direction === 'desc' ? '#FF653F' : 'currentColor'} /></Flex>
+                <Flex direction="column"><FiChevronUp size={9} color={sortConfig.field === key && sortConfig.direction === 'asc' ? '#D95B27' : 'currentColor'} /><FiChevronDown size={9} color={sortConfig.field === key && sortConfig.direction === 'desc' ? '#D95B27' : 'currentColor'} /></Flex>
               </Button>
             </Flex>
             {filterMenu === key && <Box ref={filterMenuRef} position="absolute" top="39px" left="6px" zIndex={30} w={key === 'monto' ? '320px' : '280px'} p={3} bg="var(--cl-surface)" border="1px solid var(--cl-border)" borderRadius="10px" boxShadow="var(--cl-shadow)" onClick={(event) => event.stopPropagation()}>
@@ -257,7 +257,7 @@ export default function LicitacionesTable({
                     Object.entries(current).filter(([filterKey]) => !['monto', 'montoMin', 'montoMax', 'montoMissing'].includes(filterKey)),
                   ));
                 } else setFilter(key, []);
-              }}>Limpiar</Button><Button size="xs" bg="#FF653F" color="white" onClick={() => setFilterMenu(null)}>Listo</Button></Flex>
+              }}>Limpiar</Button><Button size="xs" bg="#D95B27" color="white" onClick={() => setFilterMenu(null)}>Listo</Button></Flex>
             </Box>}
           </Box>)}
           <Box as="th" w="76px" minW="76px" p={2} textAlign="center" borderBottom="1px solid var(--cl-border)">Ver detalle</Box>
@@ -289,7 +289,7 @@ export default function LicitacionesTable({
             <Box as="td" p={0} textAlign="center" borderBottom="1px solid var(--cl-border)" bg={rowBg}>
               <Flex minH="52px" align="center" justify="center">
                 <Button size="xs" variant="outline" w="32px" h="32px" minW="32px" p={0} borderColor="var(--cl-border)" color="var(--cl-text-strong)" borderRadius="8px" bg={rowBg}
-                  _hover={{ bg: 'var(--cl-surface-muted)', borderColor: '#FF653F', color: '#FF653F' }} onClick={() => onOpenDetail(item)} aria-label="Ver licitación" title="Ver licitación"><FiEye size={15} /></Button>
+                  _hover={{ bg: 'var(--cl-surface-muted)', borderColor: '#D95B27', color: '#D95B27' }} onClick={() => onOpenDetail(item)} aria-label="Ver licitación" title="Ver licitación"><FiEye size={15} /></Button>
               </Flex>
             </Box>
           </Box>;

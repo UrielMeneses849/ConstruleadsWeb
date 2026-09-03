@@ -74,8 +74,8 @@ function SummaryRow({ label, children, emphasis = false }) {
 
 function Tag({ children }) {
   return (
-    <Box as="span" display="inline-flex" px={3} py={1} border="1px solid #FF653F"
-      borderRadius="999px" color="#E94F2B" fontSize="12px" fontWeight="600">
+    <Box as="span" display="inline-flex" px={3} py={1} border="1px solid #D95B27"
+      borderRadius="999px" color="#B9471E" fontSize="12px" fontWeight="600">
       {children}
     </Box>
   );
@@ -135,7 +135,7 @@ export default function FichaTecnicaContent({ obra, isDarkMode = false }) {
           <Text fontSize={{ base: '18px', md: '21px' }} fontWeight="500">Ficha Técnica del Proyecto</Text>
           <Text fontSize="13px" color="var(--ft-text-muted)">Fecha de publicación: {valueOrUnknown(obra.proy_fechacierre)}</Text>
           <Flex justify="flex-end" gap={2} mt={3} wrap="wrap">
-            <Box bg="#FF570A" color="white" px={3} py={2} borderRadius="8px" fontSize="12px" fontWeight="600">
+            <Box bg="#D95B27" color="white" px={3} py={2} borderRadius="8px" fontSize="12px" fontWeight="600">
               {cleanDisplayValue(obra.proy_tipoproyectodescripcion)}
             </Box>
             <Box bg="var(--ft-chip)" px={3} py={2} borderRadius="8px" fontSize="12px" fontWeight="600">
@@ -145,7 +145,7 @@ export default function FichaTecnicaContent({ obra, isDarkMode = false }) {
         </Box>
       </Flex>
 
-      <Box border="1px solid var(--ft-border)" borderLeft="5px solid #FF570A" borderRadius="24px" p={{ base: 4, md: 6 }}>
+      <Box border="1px solid var(--ft-border)" borderLeft="5px solid #D95B27" borderRadius="24px" p={{ base: 4, md: 6 }}>
         <Flex justify="space-between" align="center" gap={3} mb={4}>
           <Text fontSize="22px" fontWeight="400">Información General</Text>
           <Tag>Etapa: {cleanDisplayValue(obra.proy_etapa)}</Tag>

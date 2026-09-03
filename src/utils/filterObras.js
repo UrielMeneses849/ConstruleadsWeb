@@ -1,3 +1,5 @@
+import { getObraSource } from './obrasSources';
+
 const TIPO_OBRA_POR_SUBGENERO = {
   Lujo: [
     'Condominios de Lujo',
@@ -215,6 +217,12 @@ function matchesSurfaceRange(superficie, range) {
 
 export function filterObrasByFilters(obras = [], filtros = {}) {
   let resultado = [...obras];
+
+  const fuentes = getArrayFilter(filtros, 'fuentes', 'sources');
+  if (fuentes.length) {
+    const fuentesActivas = new Set(fuentes.map(getObraSource));
+    resultado = resultado.filter((obra) => fuentesActivas.has(getObraSource(obra)));
+  }
 
   const selectedDateField = getSelectedDateField(filtros);
   const periodIndex = Number(filtros.periodoIndex ?? -1);

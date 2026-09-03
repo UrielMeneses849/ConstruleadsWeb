@@ -317,7 +317,7 @@ export default function LicitacionesView({ user }) {
   }, [favorites.size, filtered]);
   const dateLabel = ({ fecha_de_publicacion: 'Publicación', fecha_de_apertura: 'Apertura', fecha_de_fallo: 'Fallo' })[filters.dateField];
 
-  if (loading) return <Flex h="100%" align="center" justify="center" direction="column" gap={3}><Spinner color="#FF653F" thickness="3px" /><Text color="var(--cl-text-muted)">Cargando licitaciones...</Text></Flex>;
+  if (loading) return <Flex h="100%" align="center" justify="center" direction="column" gap={3}><Spinner color="#D95B27" thickness="3px" /><Text color="var(--cl-text-muted)">Cargando licitaciones...</Text></Flex>;
   if (error) return <Flex h="100%" align="center" justify="center" direction="column" gap={3}><Text fontWeight="700" color="var(--cl-text-strong)">{error}</Text><Button onClick={retry}><FiRefreshCw /> Reintentar</Button></Flex>;
 
   return <Flex h="100%" minH="0" gap={3}>

@@ -14,7 +14,7 @@ export default function LicitacionesSummary({ metrics, dateLabel }) {
     ['Registros', new Intl.NumberFormat('es-MX').format(metrics.records), FiBriefcase, '#2854C5', 'rgba(40, 84, 197, .11)'],
     ['Monto contratado', new Intl.NumberFormat('es-MX', {
       style: 'currency', currency: 'MXN', maximumFractionDigits: 0,
-    }).format(metrics.amount), FiDollarSign, '#E35A2E', 'rgba(255, 101, 63, .11)'],
+    }).format(metrics.amount), FiDollarSign, '#D95B27', 'rgba(217, 91, 39, .11)'],
     ['Instituciones', new Intl.NumberFormat('es-MX').format(metrics.institutions), FiUsers, '#16835B', 'rgba(22, 131, 91, .11)'],
     ['Contrato verificado', `${metrics.verifiedPercent}%`, FiCheckCircle, '#2854C5', 'rgba(40, 84, 197, .11)'],
     ['Criterio de fecha', dateLabel, FiCalendar, '#536174', 'rgba(83, 97, 116, .11)'],

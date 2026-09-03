@@ -271,7 +271,7 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject, 
           onClick={(event) => event.stopPropagation()}
         >
           <Flex align="center" gap={3} px={5} py={4} borderBottom="1px solid var(--cl-border)">
-            <Flex w="38px" h="38px" align="center" justify="center" borderRadius="11px" bg="var(--cl-orange-soft)" color="#D94E2D" flexShrink={0}>
+            <Flex w="38px" h="38px" align="center" justify="center" borderRadius="11px" bg="var(--cl-orange-soft)" color="#B9471E" flexShrink={0}>
               <FiMapPin size={19} />
             </Flex>
             <Box minW={0} flex="1">
@@ -323,18 +323,18 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject, 
                 py={3.5}
                 bg="var(--cl-orange-soft)"
                 bgGradient="linear(to-r, var(--cl-orange-soft), var(--cl-surface))"
-                border="1px solid rgba(255, 101, 63, .38)"
+                border="1px solid rgba(217, 91, 39, .38)"
                 borderRadius="14px"
-                boxShadow="0 7px 18px rgba(255, 101, 63, .12)"
+                boxShadow="0 7px 18px rgba(217, 91, 39, .12)"
               >
                 <Flex gap={3} minW={0} align="center">
-                  <Flex w="38px" h="38px" align="center" justify="center" borderRadius="full" bg="#FF653F" color="white" flexShrink={0} boxShadow="0 5px 12px rgba(255, 101, 63, .34)">
+                  <Flex w="38px" h="38px" align="center" justify="center" borderRadius="full" bg="#D95B27" color="white" flexShrink={0} boxShadow="0 5px 12px rgba(217, 91, 39, .34)">
                     <FiNavigation size={18} />
                   </Flex>
                   <Box minW={0}>
                     <Flex align="center" gap={2}>
                       <Text fontSize="13px" fontWeight="800" color="var(--cl-text-strong)">Ruta sugerida</Text>
-                      <Text px={2} py={0.5} borderRadius="full" bg="rgba(255, 101, 63, .16)" color="#D94E2D" fontSize="9px" fontWeight="800">POR CERCANÍA</Text>
+                      <Text px={2} py={0.5} borderRadius="full" bg="rgba(217, 91, 39, .16)" color="#B9471E" fontSize="9px" fontWeight="800">POR CERCANÍA</Text>
                     </Flex>
                     <Text mt={0.5} fontSize="12px" fontWeight="600" color="var(--cl-text-strong)" lineClamp={1}>
                       Inicio: {getProjectAddress(routeStart)}
@@ -345,7 +345,7 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject, 
                   </Box>
                 </Flex>
                 <Box px={3} py={1.5} borderRadius="10px" bg="var(--cl-surface)" border="1px solid var(--cl-border)" textAlign={{ base: 'left', md: 'right' }}>
-                  <Text fontSize="18px" lineHeight="1" fontWeight="800" color="#FF653F">{route.length}</Text>
+                  <Text fontSize="18px" lineHeight="1" fontWeight="800" color="#D95B27">{route.length}</Text>
                   <Text mt={1} fontSize="9px" fontWeight="700" color="var(--cl-text-muted)" whiteSpace="nowrap">de {geoLocatedCount} destinos</Text>
                 </Box>
               </Flex>
@@ -356,7 +356,7 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject, 
                 <Text fontSize="13px" fontWeight="600" color="var(--cl-text-strong)">Proyectos seleccionados</Text>
               <Text mt={0.5} fontSize="11px" color="var(--cl-text-muted)">Consulta rápida antes de exportar o abrir el recorrido.</Text>
               </Box>
-              <Text fontSize="11px" fontWeight="600" color="#FF653F" whiteSpace="nowrap">{obras.length} registros</Text>
+              <Text fontSize="11px" fontWeight="600" color="#D95B27" whiteSpace="nowrap">{obras.length} registros</Text>
             </Flex>
 
             <Box border="1px solid var(--cl-border)" borderRadius="12px" overflow="hidden">
@@ -386,7 +386,7 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject, 
                   py={2.5}
                   borderBottom={index < Math.min(obras.length, 12) - 1 ? '1px solid var(--cl-border)' : '0'}
                 >
-                  <Flex w="28px" h="28px" borderRadius="full" align="center" justify="center" bg="var(--cl-surface-muted)" color="#FF653F" fontSize="10px" fontWeight="700" flexShrink={0}>
+                  <Flex w="28px" h="28px" borderRadius="full" align="center" justify="center" bg="var(--cl-surface-muted)" color="#D95B27" fontSize="10px" fontWeight="700" flexShrink={0}>
                     {String(obra?.estado || 'MX').slice(0, 2).toUpperCase()}
                   </Flex>
                   <Box minW={0} flex="1">
@@ -409,7 +409,7 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject, 
                       p={0}
                       borderRadius="8px"
                       color="var(--cl-text-muted)"
-                      _hover={{ bg: 'var(--cl-hover)', color: '#FF653F' }}
+                      _hover={{ bg: 'var(--cl-hover)', color: '#D95B27' }}
                       onClick={() => onViewProject?.(obra)}
                     >
                       <FiEye size={15} />
@@ -424,7 +424,7 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject, 
                       p={0}
                       borderRadius="8px"
                       color="var(--cl-text-muted)"
-                      _hover={{ bg: 'rgba(255, 101, 63, .12)', color: '#D94E2D' }}
+                      _hover={{ bg: 'rgba(217, 91, 39, .12)', color: '#B9471E' }}
                       onClick={() => onRemoveProject?.(obra)}
                     >
                       <FiTrash2 size={15} />
@@ -463,9 +463,9 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject, 
                 h="34px"
                 minW="146px"
                 px={3}
-                bg="#FF653F"
+                bg="#D95B27"
                 color="white"
-                _hover={{ bg: '#D94E2D' }}
+                _hover={{ bg: '#B9471E' }}
                 fontSize="12px"
                 fontWeight="600"
                 leftIcon={<FiDownload size={15} />}

@@ -5,7 +5,7 @@ import { formatLicitacionAmount, formatLicitacionDate, LICITACION_EMPTY_VALUE } 
 function DetailGroup({ title, items }) {
   const visible = items.filter((item) => item.value && item.value !== LICITACION_EMPTY_VALUE);
   if (!visible.length) return null;
-  return <Box><Text fontSize="10px" color="#FF653F" fontWeight="800" letterSpacing=".12em" mb={3}>{title}</Text>
+  return <Box><Text fontSize="10px" color="#D95B27" fontWeight="800" letterSpacing=".12em" mb={3}>{title}</Text>
     <Stack gap={3}>{visible.map((item) => <Box key={item.label}><Text fontSize="9px" color="var(--cl-text-muted)" fontWeight="700">{item.label.toUpperCase()}</Text>
       <Text fontSize="12px" color="var(--cl-text-strong)" mt={0.5}>{item.value}</Text></Box>)}</Stack></Box>;
 }
@@ -20,7 +20,7 @@ export default function LicitacionDrawer({ item, followed, onToggleFollow, onClo
     <Box position="fixed" right={0} top={0} bottom={0} w={{ base: '100%', md: '520px' }} bg="var(--cl-surface)"
       color="var(--cl-text)" zIndex={81} boxShadow="-18px 0 50px rgba(0,0,0,.18)" overflowY="auto">
       <Flex p={6} borderBottom="1px solid var(--cl-border)" justify="space-between" gap={4} align="start" position="sticky" top={0} bg="var(--cl-surface)" zIndex={2}>
-        <Box><Text color="#FF653F" fontSize="10px" fontWeight="800">DETALLE DE LICITACIÓN</Text>
+        <Box><Text color="#D95B27" fontSize="10px" fontWeight="800">DETALLE DE LICITACIÓN</Text>
           <Heading fontSize="20px" mt={1}>{item.expediente}</Heading><Text fontSize="11px" color="var(--cl-text-muted)" mt={1}>{item.institucion_convocante}</Text></Box>
         <Button size="sm" variant="ghost" onClick={onClose} aria-label="Cerrar"><FiX /></Button>
       </Flex>
@@ -35,9 +35,9 @@ export default function LicitacionDrawer({ item, followed, onToggleFollow, onClo
           { label: 'Fuente del registro', value: item.fuente_del_registro },
         ]} />
         <DetailGroup title="Descripción" items={[{ label: 'Descripción', value: item.descripcion }, { label: 'Fuente', value: item.fuente_de_la_descripcion }]} />
-        <Box><Text fontSize="10px" color="#FF653F" fontWeight="800" letterSpacing=".12em" mb={4}>LÍNEA DE TIEMPO</Text>
+        <Box><Text fontSize="10px" color="#D95B27" fontWeight="800" letterSpacing=".12em" mb={4}>LÍNEA DE TIEMPO</Text>
           <Stack gap={0}>{timeline.map(([label, value], index) => <Flex key={label} gap={3} minH="48px">
-            <Flex direction="column" align="center"><Box w="9px" h="9px" borderRadius="full" bg={value ? '#FF653F' : '#C9C9C9'} mt={1} />
+            <Flex direction="column" align="center"><Box w="9px" h="9px" borderRadius="full" bg={value ? '#D95B27' : '#C9C9C9'} mt={1} />
               {index < timeline.length - 1 && <Box w="1px" flex="1" bg="var(--cl-border)" />}</Flex>
             <Box><Text fontSize="11px" fontWeight="700">{label}</Text><Text fontSize="10px" color="var(--cl-text-muted)">{formatLicitacionDate(value, 'Sin fecha')}</Text></Box>
           </Flex>)}</Stack></Box>

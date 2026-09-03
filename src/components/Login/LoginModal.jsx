@@ -173,16 +173,16 @@ transition={
           <Button
             w="100%"
             h="48px"
-            bg="#FF6600"
+            bg="#D95B27"
             color="white"
             borderRadius="20px"
             fontSize="15px"
             rightIcon={<FiChevronRight />}
             transition="all 0.4s ease"
             _hover={{
-              bg: '#E85D00',
+              bg: '#B9471E',
               transform: 'translateY(-1px)',
-              boxShadow: '0 8px 20px rgba(255,102,0,.15)',
+              boxShadow: '0 8px 20px rgba(217, 91, 39,.15)',
             }}
             _active={{ transform: 'scale(.98)' }}
             onClick={async () => {
@@ -257,8 +257,8 @@ transition={
                 border="1px solid #D9D9D9"
                 transition="border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease"
                 _focus={{
-                  borderColor: '#FF6600',
-                  boxShadow: '0 0 0 1px #FF6600',
+                  borderColor: '#D95B27',
+                  boxShadow: '0 0 0 1px #D95B27',
                   transform: 'scale(1.04)',
                 }}
               />
@@ -287,16 +287,16 @@ transition={
           <Button
             w="100%"
             h="48px"
-            bg="#FF6600"
+            bg="#D95B27"
             color="white"
             borderRadius="20px"
             fontSize="15px"
             isDisabled={codigo.length < 6}
             transition="all 0.4s ease"
             _hover={{
-              bg: '#E85D00',
+              bg: '#B9471E',
               transform: 'translateY(-1px)',
-              boxShadow: '0 8px 20px rgba(255,102,0,.15)',
+              boxShadow: '0 8px 20px rgba(217, 91, 39,.15)',
             }}
             _active={{ transform: 'scale(.98)' }}
             onClick={async () => {
@@ -361,12 +361,12 @@ transition={
             },
           }}
         >
-          <Flex w="56px" h="56px" borderRadius="full" bg="#FFF4EC" align="center" justify="center">
-            <FiHeadphones size={22} color="#FF6600" />
+          <Flex w="56px" h="56px" borderRadius="full" bg="#FDF2EE" align="center" justify="center">
+            <FiHeadphones size={22} color="#D95B27" />
           </Flex>
           <Box>
             <Text color="#041A46" fontSize="14px">¿No tienes acceso?</Text>
-            <Text color="#FF6600" fontSize="14px" fontWeight="500">
+            <Text color="#D95B27" fontSize="14px" fontWeight="500">
               {telefonoAsesor ? `Llama al ${telefonoAsesor}` : 'Contacta a tu asesor'}
             </Text>
           </Box>

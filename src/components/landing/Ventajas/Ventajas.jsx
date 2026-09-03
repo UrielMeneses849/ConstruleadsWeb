@@ -144,7 +144,7 @@ export default function Ventajas() {
                   w="55px"
                   h="55px"
                   borderRadius="full"
-                  bg="#FF6400"
+                  bg="#D95B27"
                   display="flex"
                   alignItems="center"
                   justifyContent="center"
@@ -166,7 +166,7 @@ export default function Ventajas() {
                 <VStack align="start" spacing={2}>
                   {item.items.map((feature, idx) => (
                     <Flex key={idx} align="center" gap={2}>
-                      <Text color="#FF6400" fontSize="16px" fontWeight="700">◉</Text>
+                      <Text color="#D95B27" fontSize="16px" fontWeight="700">◉</Text>
                       <Text {...listItem}>{feature}</Text>
                     </Flex>
                   ))}

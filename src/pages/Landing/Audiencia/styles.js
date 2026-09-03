@@ -24,7 +24,7 @@ export const styles = {
   },
 
   eyebrow: {
-    color: '#FF6600',
+    color: '#D95B27',
     fontSize: { base: '28px', lg: '36px' },
     fontWeight: 700,
     mb: 4,
@@ -64,7 +64,7 @@ export const styles = {
     p: 5,
     gap: 4,
     align: 'center',
-    borderLeft: '4px solid #FF6600',
+    borderLeft: '4px solid #D95B27',
     boxShadow: '0 8px 24px rgba(0,0,0,.06)',
     w: { base: '100%', md: '380px' },
     transition: 'all .3s ease',
@@ -78,7 +78,7 @@ export const styles = {
     minW: '56px',
     h: '56px',
     borderRadius: 'full',
-    bg: '#FF6600',
+    bg: '#D95B27',
     align: 'center',
     justify: 'center',
   },
@@ -129,11 +129,11 @@ export const styles = {
   },
 
   ctaButton: {
-    bg: '#FF6600',
+    bg: '#D95B27',
     color: 'white',
     px: 8,
     _hover: {
-      bg: '#e65c00',
+      bg: '#B9471E',
       transform: 'translateY(-2px)',
     },
   },

@@ -31,6 +31,7 @@ import {
   FiX,
 } from 'react-icons/fi';
 import MapSelectionModal from './MapSelectionModal';
+import { getObraSource, getObraSourceMeta } from '../../utils/obrasSources';
 
 const DEBUG_MAPA = false;
 const AUTO_FIT_INITIAL_BOUNDS = false;
@@ -40,9 +41,6 @@ const FILTER_FIT_SAFETY_ZOOM = 0.06;
 const MAP_MIN_ZOOM = 4;
 const MAP_MAX_ZOOM = 18;
 const CLUSTER_MOTION_DURATION = 360;
-const FOOTPRINT_MIN_ZOOM = 14;
-const FOOTPRINT_RENDER_LIMIT = 120;
-const METERS_PER_LATITUDE_DEGREE = 111320;
 const UNCLUSTERED_MARKER_LIMITS = Object.freeze({
   overview: 520,
   regional: 850,
@@ -148,71 +146,20 @@ function getSingleTaxonomyValue(value) {
 }
 
 function getObraMarkerKey(obra, index) {
-  return String(
+  const identifier = (
     obra?.id ||
     obra?.clave ||
     obra?.proy_clave ||
     obra?.proyecto ||
     `${obra?.lat || obra?.latitud || obra?.Latitud || 'lat'}-${obra?.lng || obra?.longitud || obra?.Longitud || 'lng'}-${index}`
   );
+  return `${getObraSource(obra)}:${identifier}`;
 }
 
 function getObraCoordinates(obra) {
   const lat = Number(obra?.lat ?? obra?.latitud ?? obra?.Latitud);
   const lng = Number(obra?.lng ?? obra?.longitud ?? obra?.Longitud);
   return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
-}
-
-function getObraFootprintBounds(obra) {
-  const { lat, lng } = getObraCoordinates(obra) || {};
-  const rawSurface = obra?.superficie ?? obra?.Superficie ?? obra?.superficieTotal;
-  const squareMeters = Number(String(rawSurface ?? '').replace(/[^0-9.-]/g, ''));
-
-  if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(squareMeters) || squareMeters <= 0) {
-    return null;
-  }
-
-  // No conocemos la geometría catastral. Esta es una huella visual: un
-  // cuadrado centrado en el punto cuyo lado es √m². Limitamos valores extremos
-  // para evitar que un dato erróneo cubra la ciudad completa.
-  const sideMeters = Math.min(2500, Math.max(8, Math.sqrt(squareMeters)));
-  const halfSide = sideMeters / 2;
-  const latitudeOffset = halfSide / METERS_PER_LATITUDE_DEGREE;
-  const longitudeOffset = halfSide / (
-    METERS_PER_LATITUDE_DEGREE * Math.max(0.15, Math.cos((lat * Math.PI) / 180))
-  );
-
-  return {
-    north: lat + latitudeOffset,
-    south: lat - latitudeOffset,
-    east: lng + longitudeOffset,
-    west: lng - longitudeOffset,
-  };
-}
-
-function getRoundedFootprintPath(bounds, segmentsPerCorner = 3) {
-  const latitudeSpan = bounds.north - bounds.south;
-  const longitudeSpan = bounds.east - bounds.west;
-  const cornerLatitudeRadius = latitudeSpan * 0.16;
-  const cornerLongitudeRadius = longitudeSpan * 0.16;
-  const corners = [
-    { lat: bounds.north - cornerLatitudeRadius, lng: bounds.east - cornerLongitudeRadius, start: 90, end: 0 },
-    { lat: bounds.south + cornerLatitudeRadius, lng: bounds.east - cornerLongitudeRadius, start: 0, end: -90 },
-    { lat: bounds.south + cornerLatitudeRadius, lng: bounds.west + cornerLongitudeRadius, start: -90, end: -180 },
-    { lat: bounds.north - cornerLatitudeRadius, lng: bounds.west + cornerLongitudeRadius, start: 180, end: 90 },
-  ];
-
-  return corners.flatMap((corner) => Array.from(
-    { length: segmentsPerCorner + 1 },
-    (_, index) => {
-      const progress = index / segmentsPerCorner;
-      const angle = (corner.start + (corner.end - corner.start) * progress) * (Math.PI / 180);
-      return {
-        lat: corner.lat + cornerLatitudeRadius * Math.sin(angle),
-        lng: corner.lng + cornerLongitudeRadius * Math.cos(angle),
-      };
-    }
-  ));
 }
 
 const projectDateFormatter = new Intl.DateTimeFormat('es-MX', {
@@ -281,20 +228,20 @@ function Mapa({
   const [mapRefreshEpoch, setMapRefreshEpoch] = useState(0);
   const projectPopupTone = isDarkMode
     ? {
-        accentSoft: 'rgba(255, 101, 63, .16)',
-        periodBg: 'rgba(255, 101, 63, .10)',
-        periodBorder: 'rgba(255, 166, 139, .42)',
-        periodIconBg: 'rgba(255, 101, 63, .22)',
-        accentText: '#FFB39F',
+        accentSoft: 'rgba(217, 91, 39, .16)',
+        periodBg: 'rgba(217, 91, 39, .10)',
+        periodBorder: 'rgba(239, 183, 157, .42)',
+        periodIconBg: 'rgba(217, 91, 39, .22)',
+        accentText: '#F0BFAE',
         labelText: '#C9BBB6',
-        valueText: '#FFF4F0',
+        valueText: '#FDF3F0',
       }
     : {
-        accentSoft: '#FFF1EB',
-        periodBg: '#FFF8F5',
-        periodBorder: '#FFD9CD',
-        periodIconBg: '#FFE2D8',
-        accentText: '#B45035',
+        accentSoft: '#FCEEE9',
+        periodBg: '#FEF7F5',
+        periodBorder: '#F7D8CD',
+        periodIconBg: '#F9E0D6',
+        accentText: '#9D4225',
         labelText: '#7E6A64',
         valueText: '#3B2D28',
       };
@@ -315,9 +262,6 @@ function Mapa({
   const markerUpdateTokenRef = useRef(0);
   const fitRequestTokenRef = useRef(0);
   const mapNeedsRefreshRef = useRef(false);
-  const footprintOverlaysRef = useRef(new Map());
-  const footprintRenderFrameRef = useRef(null);
-  const renderFootprintsRef = useRef(null);
   const clusterRenderFrameRef = useRef(null);
   const mapFocusTokenRef = useRef(0);
   const lastAppliedFitRequestKeyRef = useRef(null);
@@ -406,73 +350,6 @@ function Mapa({
     });
   }, []);
 
-  const renderFootprints = useCallback(() => {
-    const map = mapInstanceRef.current;
-    const Polygon = window.google?.maps?.Polygon;
-    const zoom = Number(map?.getZoom?.()) || MAP_MIN_ZOOM;
-
-    const clearFootprints = () => {
-      footprintOverlaysRef.current.forEach((overlay) => overlay.setMap(null));
-      footprintOverlaysRef.current.clear();
-    };
-
-    if (!map || !Polygon || zoom < FOOTPRINT_MIN_ZOOM) {
-      clearFootprints();
-      return;
-    }
-
-    const mapBounds = map.getBounds?.();
-    const visibleFootprints = filteredObras
-      .map((obra, index) => ({
-        key: getObraMarkerKey(obra, index),
-        bounds: getObraFootprintBounds(obra),
-        coordinates: getObraCoordinates(obra),
-      }))
-      .filter(({ bounds, coordinates }) => {
-        if (!bounds || !coordinates) return false;
-        return !mapBounds || mapBounds.contains(coordinates);
-      })
-      .slice(0, FOOTPRINT_RENDER_LIMIT);
-    const nextKeys = new Set(visibleFootprints.map(({ key }) => key));
-
-    footprintOverlaysRef.current.forEach((overlay, key) => {
-      if (!nextKeys.has(key)) {
-        overlay.setMap(null);
-        footprintOverlaysRef.current.delete(key);
-      }
-    });
-
-    visibleFootprints.forEach(({ key, bounds }) => {
-      const current = footprintOverlaysRef.current.get(key);
-      if (current) {
-        current.setOptions({ paths: getRoundedFootprintPath(bounds), map });
-        return;
-      }
-
-      const overlay = new Polygon({
-        paths: getRoundedFootprintPath(bounds),
-        map,
-        clickable: false,
-        geodesic: false,
-        fillColor: '#FF653F',
-        fillOpacity: 0.08,
-        strokeColor: '#FF653F',
-        strokeOpacity: 0.8,
-        strokeWeight: 1.5,
-        zIndex: 1,
-      });
-      footprintOverlaysRef.current.set(key, overlay);
-    });
-  }, [filteredObras]);
-
-  const scheduleFootprints = useCallback(() => {
-    if (footprintRenderFrameRef.current !== null) return;
-    footprintRenderFrameRef.current = window.requestAnimationFrame(() => {
-      footprintRenderFrameRef.current = null;
-      renderFootprintsRef.current?.();
-    });
-  }, []);
-
   const scheduleClusterRender = useCallback(() => {
     if (clusterRenderFrameRef.current !== null) return;
     clusterRenderFrameRef.current = window.requestAnimationFrame(() => {
@@ -486,11 +363,6 @@ function Mapa({
   useEffect(() => {
     renderUnclusteredMarkersRef.current = renderUnclusteredMarkers;
   }, [renderUnclusteredMarkers]);
-
-  useEffect(() => {
-    renderFootprintsRef.current = renderFootprints;
-    scheduleFootprints();
-  }, [renderFootprints, scheduleFootprints]);
 
   useEffect(() => {
     selectedObraKeysRef.current = new Set(selectedObraKeys);
@@ -537,8 +409,7 @@ function Mapa({
     clusterer.setMap(null);
     unclusteredMarkerElementsRef.current = new Set();
     renderUnclusteredMarkers();
-    scheduleFootprints();
-  }, [isClusteringEnabled, renderUnclusteredMarkers, scheduleClusterRender, scheduleFootprints]);
+  }, [isClusteringEnabled, renderUnclusteredMarkers, scheduleClusterRender]);
 
   useEffect(() => {
     if (!isRouteMode && !isBoxSelecting && !isSelectionModalOpen && !selectionConfirmation) return undefined;
@@ -630,11 +501,10 @@ function Mapa({
         setMapRefreshEpoch((current) => current + 1);
       }
       scheduleClusterRender();
-      scheduleFootprints();
     });
 
     return () => window.cancelAnimationFrame(resizeFrame);
-  }, [isVisible, scheduleClusterRender, scheduleFootprints]);
+  }, [isVisible, scheduleClusterRender]);
 
 
   useEffect(() => {
@@ -726,6 +596,16 @@ function Mapa({
 
       let resultado = [...obras];
       debugLog('TOTAL INICIAL:', resultado.length);
+
+      const fuentes = Array.isArray(filtrosActivos.fuentes)
+        ? filtrosActivos.fuentes
+        : Array.isArray(filtrosActivos.sources)
+          ? filtrosActivos.sources
+          : [];
+      if (fuentes.length) {
+        const fuentesActivas = new Set(fuentes.map(getObraSource));
+        resultado = resultado.filter((obra) => fuentesActivas.has(getObraSource(obra)));
+      }
 
 // Date parse/filter helpers replaced for timestamp-based logic
 const getObraTimeByFilter = (obra, selectedDateField) => {
@@ -1160,7 +1040,6 @@ debugLog(
       return undefined;
     }
     let cancelled = false;
-    const footprintOverlays = footprintOverlaysRef.current;
 
     if (!fitRequestKey) {
       lastAppliedFitRequestKeyRef.current = null;
@@ -1194,8 +1073,6 @@ debugLog(
       });
       unclusteredMarkerElementsRef.current = new Set();
       setUnclusteredSummary(null);
-      footprintOverlays.forEach((rectangle) => rectangle.setMap(null));
-      footprintOverlays.clear();
 
       if (clearCache) {
         markerCacheRef.current.forEach((marker) => {
@@ -1255,8 +1132,11 @@ debugLog(
       }
 
       const markerContent = document.createElement('div');
+      const source = getObraSource(obra);
+      const { color: markerColor } = getObraSourceMeta(source);
       markerContent.setAttribute('aria-label', `Proyecto ${obra?.clave || obra?.proyecto || ''}`.trim());
       markerContent.className = 'cl-project-marker';
+      markerContent.dataset.source = source;
       markerContent.classList.toggle('cl-project-marker--selected', selectedObraKeysRef.current.has(markerKey));
       if (selectedObraKeysRef.current.has(markerKey)) {
         markerContent.dataset.routeOrder = String(
@@ -1264,15 +1144,14 @@ debugLog(
         );
       }
       markerContent.innerHTML = `
-        <svg width="40" height="52" viewBox="0 0 40 52" aria-hidden="true" focusable="false">
-          <line x1="20" y1="34" x2="20" y2="47" stroke="#FF653F" stroke-width="2" stroke-linecap="round" />
-          <circle class="cl-project-marker__ring" cx="20" cy="18" r="17" fill="rgba(255, 101, 63, .08)" stroke="#FF653F" stroke-width="1.25" />
-          <circle class="cl-project-marker__core" cx="20" cy="18" r="12" fill="#FF653F" />
-          <circle cx="20" cy="48" r="2" fill="#FF653F" />
+        <svg width="44" height="50" viewBox="0 0 44 50" aria-hidden="true" focusable="false">
+          <line x1="22" y1="36" x2="22" y2="43" stroke="${markerColor}" stroke-width="2" stroke-linecap="round" />
+          <circle class="cl-project-marker__core" cx="22" cy="20" r="14" fill="${markerColor}" />
+          <circle cx="22" cy="45" r="2" fill="${markerColor}" />
         </svg>`;
       Object.assign(markerContent.style, {
-        width: '40px',
-        height: '52px',
+        width: '44px',
+        height: '50px',
         display: 'block',
         position: 'relative',
         filter: 'drop-shadow(0 2px 4px rgba(83, 35, 21, 0.32))',
@@ -1306,9 +1185,6 @@ debugLog(
         const clickedLng = typeof clickedPosition?.lng === 'function' ? clickedPosition.lng() : clickedPosition?.lng ?? lonNum;
         const activeMap = mapInstanceRef.current;
         const targetLatLng = new window.google.maps.LatLng(clickedLat, clickedLng);
-        const footprintBounds = getObraFootprintBounds(obra);
-        mapFocusTokenRef.current += 1;
-        const focusToken = mapFocusTokenRef.current;
 
         const openProjectCard = () => {
           const project = {
@@ -1371,79 +1247,7 @@ debugLog(
             }
           }));
         };
-
-        // Sólo las obras con superficie conocida reciben un acercamiento. Así
-        // la huella calculada queda visible antes de abrir la ficha; los demás
-        // pines conservan el comportamiento de apertura inmediata.
-        if (!footprintBounds || !activeMap || !window.google?.maps?.LatLngBounds) {
-          openProjectCard();
-          return;
-        }
-
-        // `fitBounds` salta directo al zoom final y, al pedir mosaicos nuevos,
-        // deja el mapa momentáneamente sin detalle. Hacemos el viaje de cámara
-        // en frames espaciados: se siente como un zoom cinematográfico y no
-        // satura al renderer de Google con actualizaciones en cada frame.
-        if (cameraAnimationFrameRef.current !== null) {
-          window.cancelAnimationFrame(cameraAnimationFrameRef.current);
-          cameraAnimationFrameRef.current = null;
-        }
-
-        const currentCenter = activeMap.getCenter?.();
-        const currentZoom = Number(activeMap.getZoom?.());
-        const from = {
-          lat: Number(currentCenter?.lat?.()),
-          lng: Number(currentCenter?.lng?.()),
-          zoom: Number.isFinite(currentZoom) ? currentZoom : MAP_MIN_ZOOM,
-        };
-        const target = {
-          lat: (footprintBounds.north + footprintBounds.south) / 2,
-          lng: (footprintBounds.east + footprintBounds.west) / 2,
-          zoom: MAP_MAX_ZOOM,
-        };
-        const zoomDistance = Math.abs(target.zoom - from.zoom);
-        const centerDistance = Math.hypot(target.lat - from.lat, target.lng - from.lng);
-        const duration = Math.min(1250, Math.max(680, 440 + zoomDistance * 58 + centerDistance * 6));
-        const startedAt = performance.now();
-        let lastCameraUpdateAt = 0;
-        const easeOutQuart = (progress) => 1 - ((1 - progress) ** 4);
-
-        const animateFocus = (now) => {
-          if (mapFocusTokenRef.current !== focusToken || mapInstanceRef.current !== activeMap) {
-            cameraAnimationFrameRef.current = null;
-            return;
-          }
-
-          const progress = Math.min(1, (now - startedAt) / duration);
-          if (progress < 1 && now - lastCameraUpdateAt < 28) {
-            cameraAnimationFrameRef.current = window.requestAnimationFrame(animateFocus);
-            return;
-          }
-
-          lastCameraUpdateAt = now;
-          const eased = easeOutQuart(progress);
-          activeMap.moveCamera({
-            center: {
-              lat: from.lat + (target.lat - from.lat) * eased,
-              lng: from.lng + (target.lng - from.lng) * eased,
-            },
-            zoom: from.zoom + (target.zoom - from.zoom) * eased,
-          });
-
-          if (progress < 1) {
-            cameraAnimationFrameRef.current = window.requestAnimationFrame(animateFocus);
-            return;
-          }
-
-          activeMap.moveCamera({ center: { lat: target.lat, lng: target.lng }, zoom: target.zoom });
-          cameraAnimationFrameRef.current = null;
-          renderFootprintsRef.current?.();
-          window.setTimeout(() => {
-            if (mapFocusTokenRef.current === focusToken) openProjectCard();
-          }, 100);
-        };
-
-        cameraAnimationFrameRef.current = window.requestAnimationFrame(animateFocus);
+        openProjectCard();
       });
 
       return marker;
@@ -1503,16 +1307,72 @@ debugLog(
           setSelectedProject(null);
           setPopupPosition(null);
 
-          const currentZoom = Number(clusterMap.getZoom()) || 5;
+          const position = cluster.position;
+          const targetLat = typeof position?.lat === 'function' ? position.lat() : Number(position?.lat);
+          const targetLng = typeof position?.lng === 'function' ? position.lng() : Number(position?.lng);
+          const currentZoom = Number(clusterMap.getZoom()) || MAP_MIN_ZOOM;
           const targetZoom = Math.min(currentZoom + 2, 18);
-          clusterMap.panTo(cluster.position);
+          const startCenter = clusterMap.getCenter?.();
+          const startLat = Number(startCenter?.lat?.());
+          const startLng = Number(startCenter?.lng?.());
 
-          window.setTimeout(() => {
-            clusterMap.setZoom(Math.min(currentZoom + 1, targetZoom));
-          }, 140);
-          window.setTimeout(() => {
-            clusterMap.setZoom(targetZoom);
-          }, 320);
+          if (!Number.isFinite(targetLat) || !Number.isFinite(targetLng) ||
+            !Number.isFinite(startLat) || !Number.isFinite(startLng)) {
+            clusterMap.moveCamera({ center: position, zoom: targetZoom });
+            return;
+          }
+
+          // Animamos ambos valores en cada frame. A diferencia de `panTo`
+          // seguido de zooms temporizados, cada cámara intermedia ya conoce
+          // el centro destino y no puede conservar la posición desplazada del
+          // primer paneo.
+          mapFocusTokenRef.current += 1;
+          const focusToken = mapFocusTokenRef.current;
+          if (cameraAnimationFrameRef.current !== null) {
+            window.cancelAnimationFrame(cameraAnimationFrameRef.current);
+          }
+
+          const centerDistance = Math.hypot(targetLat - startLat, targetLng - startLng);
+          const zoomDistance = Math.abs(targetZoom - currentZoom);
+          const duration = Math.min(760, Math.max(480, 380 + zoomDistance * 85 + centerDistance * 6));
+          const startedAt = performance.now();
+          let lastCameraUpdateAt = 0;
+          const easeOutQuart = (progress) => 1 - ((1 - progress) ** 4);
+
+          const animateClusterFocus = (now) => {
+            if (mapFocusTokenRef.current !== focusToken || mapInstanceRef.current !== clusterMap) {
+              cameraAnimationFrameRef.current = null;
+              return;
+            }
+
+            const progress = Math.min(1, (now - startedAt) / duration);
+            if (progress < 1 && now - lastCameraUpdateAt < 28) {
+              cameraAnimationFrameRef.current = window.requestAnimationFrame(animateClusterFocus);
+              return;
+            }
+
+            lastCameraUpdateAt = now;
+            const eased = easeOutQuart(progress);
+            clusterMap.moveCamera({
+              center: {
+                lat: startLat + (targetLat - startLat) * eased,
+                lng: startLng + (targetLng - startLng) * eased,
+              },
+              zoom: currentZoom + (targetZoom - currentZoom) * eased,
+            });
+
+            if (progress < 1) {
+              cameraAnimationFrameRef.current = window.requestAnimationFrame(animateClusterFocus);
+              return;
+            }
+
+            // Redondeamos en la coordenada final para evitar cualquier error
+            // acumulado de interpolación en el último frame.
+            clusterMap.moveCamera({ center: { lat: targetLat, lng: targetLng }, zoom: targetZoom });
+            cameraAnimationFrameRef.current = null;
+          };
+
+          cameraAnimationFrameRef.current = window.requestAnimationFrame(animateClusterFocus);
         },
       });
       markerClusterFactoryRef.current = createMarkerClusterer;
@@ -1570,7 +1430,6 @@ debugLog(
         } else {
           scheduleUnclusteredMarkers();
         }
-        scheduleFootprints();
       });
 
       map.addListener('click', () => {
@@ -1677,6 +1536,12 @@ debugLog(
       // del clusterer y terminar mostrando proyectos de toda la República.
       if (markerClusterRef.current) {
         markerElementsRef.current.forEach((marker) => { marker.map = null; });
+        // Los pines sin clúster se reutilizan desde la caché. Al cambiar de
+        // fuente, un pin que estaba en esta colección quedaba con `map = null`
+        // pero seguía marcado como montado; por eso desaparecía al volver a
+        // Construleads o Explorer. Vaciar el inventario fuerza su montaje en
+        // la nueva vista, sin reconstruir sus nodos.
+        unclusteredMarkerElementsRef.current = new Set();
         markerClusterRef.current.clearMarkers(true);
         markerClusterRef.current.addMarkers(markers, true);
         if (isClusteringEnabledRef.current) markerClusterRef.current.render();
@@ -1695,7 +1560,6 @@ debugLog(
         renderUnclusteredMarkersRef.current?.();
       }
       scheduleClusterRender();
-      scheduleFootprints();
 
       const shouldFitToCurrentFilters = Boolean(fitRequestKey) &&
         fitRequestKey !== lastAppliedFitRequestKeyRef.current;
@@ -1839,16 +1703,10 @@ debugLog(
         window.cancelAnimationFrame(unclusteredRenderFrameRef.current);
         unclusteredRenderFrameRef.current = null;
       }
-      if (footprintRenderFrameRef.current !== null) {
-        window.cancelAnimationFrame(footprintRenderFrameRef.current);
-        footprintRenderFrameRef.current = null;
-      }
       if (clusterRenderFrameRef.current !== null) {
         window.cancelAnimationFrame(clusterRenderFrameRef.current);
         clusterRenderFrameRef.current = null;
       }
-      footprintOverlays.forEach((rectangle) => rectangle.setMap(null));
-      footprintOverlays.clear();
       markerUpdateTokenRef.current += 1;
       fitRequestTokenRef.current += 1;
       mapFocusTokenRef.current += 1;
@@ -1861,7 +1719,6 @@ debugLog(
     isDarkMode,
     mapRefreshEpoch,
     scheduleClusterRender,
-    scheduleFootprints,
     scheduleUnclusteredMarkers,
   ]);
 
@@ -2115,12 +1972,17 @@ debugLog(
         }
         .cl-project-marker--selected {
           transform: scale(1.18) !important;
-          filter: drop-shadow(0 4px 9px rgba(217, 78, 45, .52)) !important;
+          filter: drop-shadow(0 4px 9px rgba(185, 71, 30, .52)) !important;
         }
-        .cl-project-marker--selected .cl-project-marker__ring { stroke: #D94E2D; stroke-width: 2; }
-        .cl-project-marker--selected .cl-project-marker__core { fill: #D94E2D; }
+        .cl-project-marker--selected .cl-project-marker__core { fill: #B9471E; }
         .cl-project-marker--selected line,
-        .cl-project-marker--selected svg circle:last-child { stroke: #D94E2D; fill: #D94E2D; }
+        .cl-project-marker--selected svg circle:last-child { stroke: #B9471E; fill: #B9471E; }
+        .cl-project-marker[data-source="explorer"].cl-project-marker--selected {
+          filter: drop-shadow(0 4px 9px rgba(72, 74, 78, .48)) !important;
+        }
+        .cl-project-marker[data-source="explorer"].cl-project-marker--selected .cl-project-marker__core { fill: #484A4E; }
+        .cl-project-marker[data-source="explorer"].cl-project-marker--selected line,
+        .cl-project-marker[data-source="explorer"].cl-project-marker--selected svg circle:last-child { stroke: #484A4E; fill: #484A4E; }
         .cl-project-marker--selected::after {
           content: attr(data-route-order);
           position: absolute;
@@ -2132,7 +1994,7 @@ debugLog(
           height: 18px;
           border: 2px solid #FFFFFF;
           border-radius: 999px;
-          background: #FF653F;
+          background: #D95B27;
           box-shadow: 0 2px 5px rgba(0,0,0,.26);
           color: #FFFFFF;
           font: 700 9px/1 Poppins, sans-serif;
@@ -2221,7 +2083,7 @@ debugLog(
                   h="18px"
                   p="2px"
                   borderRadius="full"
-                  bg={isClusteringEnabled ? '#FF653F' : 'var(--cl-border)'}
+                  bg={isClusteringEnabled ? '#D95B27' : 'var(--cl-border)'}
                   transition="background 180ms ease"
                   align="center"
                 >
@@ -2244,10 +2106,10 @@ debugLog(
               h="42px"
               px={3}
               borderRadius="10px"
-              bg={isRouteMode ? '#FF653F' : 'var(--cl-surface-muted)'}
+              bg={isRouteMode ? '#D95B27' : 'var(--cl-surface-muted)'}
               color={isRouteMode ? 'white' : 'var(--cl-text-strong)'}
-              border={isRouteMode ? '1px solid #FF653F' : '1px solid var(--cl-border)'}
-              _hover={{ bg: isRouteMode ? '#D94E2D' : 'var(--cl-hover)' }}
+              border={isRouteMode ? '1px solid #D95B27' : '1px solid var(--cl-border)'}
+              _hover={{ bg: isRouteMode ? '#B9471E' : 'var(--cl-hover)' }}
               fontSize="12px"
               fontWeight="700"
               leftIcon={<FiNavigation size={15} />}
@@ -2266,9 +2128,9 @@ debugLog(
                 w="42px"
                 p={0}
                 borderRadius="10px"
-                bg={isBoxSelecting ? '#FFF0EA' : 'transparent'}
-                color={isBoxSelecting ? '#D94E2D' : 'var(--cl-text-muted)'}
-                _hover={{ bg: isBoxSelecting ? '#FFE2D8' : 'var(--cl-hover)', color: '#D94E2D' }}
+                bg={isBoxSelecting ? '#FCEDE8' : 'transparent'}
+                color={isBoxSelecting ? '#B9471E' : 'var(--cl-text-muted)'}
+                _hover={{ bg: isBoxSelecting ? '#F9E0D6' : 'var(--cl-hover)', color: '#B9471E' }}
                 onClick={toggleAreaSelection}
               >
                 <FiMaximize size={16} />
@@ -2282,9 +2144,9 @@ debugLog(
                   h="42px"
                   px={3}
                   bg="var(--cl-orange-soft)"
-                  color="#D94E2D"
+                  color="#B9471E"
                   borderRadius="10px"
-                  _hover={{ bg: '#FFE2D8' }}
+                  _hover={{ bg: '#F9E0D6' }}
                   fontSize="11px"
                   fontWeight="700"
                   leftIcon={<FiCheckSquare size={14} />}
@@ -2329,7 +2191,7 @@ debugLog(
               boxShadow="0 8px 22px rgba(0,0,0,.22)"
               pointerEvents="none"
             >
-              <FiCheckSquare size={13} color="#FF9C83" aria-hidden="true" />
+              <FiCheckSquare size={13} color="#E9A088" aria-hidden="true" />
               <Text fontSize="10px" fontWeight="600" whiteSpace="nowrap">
                 Haz clic en los proyectos que quieras incluir
               </Text>
@@ -2380,8 +2242,8 @@ debugLog(
                 top={`${selectionConfirmation.top}px`}
                 w={`${selectionConfirmation.width}px`}
                 h={`${selectionConfirmation.height}px`}
-                bg="rgba(255, 101, 63, .16)"
-                border="2px solid #FF653F"
+                bg="rgba(217, 91, 39, .16)"
+                border="2px solid #D95B27"
                 borderRadius="5px"
                 transformOrigin="center"
                 animation="cl-map-zone-confirm-box 300ms ease-out both"
@@ -2405,7 +2267,7 @@ debugLog(
                 whiteSpace="nowrap"
                 animation="cl-map-zone-confirm-badge 300ms cubic-bezier(.2,.8,.2,1) both"
               >
-                <FiCheckSquare size={15} color="#FF653F" aria-hidden="true" />
+                <FiCheckSquare size={15} color="#D95B27" aria-hidden="true" />
                 {selectionConfirmation.count.toLocaleString('es-MX')} proyectos agregados a la ruta
               </Flex>
             </Box>
@@ -2435,8 +2297,8 @@ debugLog(
                   top={`${selectionBox.top}px`}
                   w={`${selectionBox.width}px`}
                   h={`${selectionBox.height}px`}
-                  bg="rgba(255, 101, 63, .12)"
-                  border="2px dashed #FF653F"
+                  bg="rgba(217, 91, 39, .12)"
+                  border="2px dashed #D95B27"
                   borderRadius="4px"
                   pointerEvents="none"
                 />
@@ -2483,7 +2345,7 @@ debugLog(
                 gap={3}
                 minW="260px"
               >
-                <Spinner size="sm" color="#FF653F" thickness="3px" />
+                <Spinner size="sm" color="#D95B27" thickness="3px" />
                 <Box>
                   <Text fontWeight="700" fontSize="12px" color="var(--cl-text-strong)" lineHeight="1.2">
                     Cargando proyectos
@@ -2572,7 +2434,7 @@ debugLog(
                 ×
               </Button>
               <Flex align="center" gap={2} pr="34px" mb={2.5}>
-                <Flex align="center" justify="center" w="30px" h="30px" flexShrink={0} borderRadius="9px" bg={projectPopupTone.accentSoft} color="#FF653F">
+                <Flex align="center" justify="center" w="30px" h="30px" flexShrink={0} borderRadius="9px" bg={projectPopupTone.accentSoft} color="#D95B27">
                   {React.createElement(getGenreIcon(selectedProject.genero), { size: 16, 'aria-hidden': true })}
                 </Flex>
                 <Box minW={0}>
@@ -2588,7 +2450,7 @@ debugLog(
 
               {selectedProject.clave && (
                 <Flex align="center" gap={1.5} mb={1}>
-                  <Box w="5px" h="5px" borderRadius="full" bg="#FF653F" />
+                  <Box w="5px" h="5px" borderRadius="full" bg="#D95B27" />
                   <Text fontSize="10px" color="var(--cl-text-muted)" lineClamp={1}>{selectedProject.clave}</Text>
                 </Flex>
               )}
@@ -2615,7 +2477,7 @@ debugLog(
 
               <Box bg={projectPopupTone.periodBg} border={`1px solid ${projectPopupTone.periodBorder}`} borderRadius="10px" px={3} py={2.5} mb={3}>
                 <Flex align="center" gap={2} mb={2}>
-                  <Flex align="center" justify="center" w="22px" h="22px" borderRadius="full" bg={projectPopupTone.periodIconBg} color="#FF653F"><FiCalendar size={12} /></Flex>
+                  <Flex align="center" justify="center" w="22px" h="22px" borderRadius="full" bg={projectPopupTone.periodIconBg} color="#D95B27"><FiCalendar size={12} /></Flex>
                   <Text fontSize="9px" textTransform="uppercase" letterSpacing=".05em" fontWeight="700" color={projectPopupTone.accentText}>Periodo estimado</Text>
                 </Flex>
                 <Flex align="center" gap={2}>
@@ -2623,7 +2485,7 @@ debugLog(
                     <Text fontSize="9px" color={projectPopupTone.labelText}>Inicio</Text>
                     <Text mt={0.5} fontSize="11px" fontWeight="700" color={projectPopupTone.valueText} lineClamp={1}>{formatProjectDate(selectedProject.fechaInicio)}</Text>
                   </Box>
-                  <FiArrowRight size={14} color="#FF653F" aria-hidden="true" />
+                  <FiArrowRight size={14} color="#D95B27" aria-hidden="true" />
                   <Box flex="1" minW={0}>
                     <Text fontSize="9px" color={projectPopupTone.labelText}>Fin</Text>
                     <Text mt={0.5} fontSize="11px" fontWeight="700" color={projectPopupTone.valueText} lineClamp={1}>{formatProjectDate(selectedProject.fechaFin)}</Text>
@@ -2633,9 +2495,9 @@ debugLog(
 
               <Button
                 w="100%"
-                bg="#FF653F"
+                bg="#D95B27"
                 color="white"
-                _hover={{ bg: '#D94E2D' }}
+                _hover={{ bg: '#B9471E' }}
                 borderRadius="8px"
                 transition="all 180ms ease"
                 fontWeight="500"

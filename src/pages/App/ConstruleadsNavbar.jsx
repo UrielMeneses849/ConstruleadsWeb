@@ -129,11 +129,11 @@ function NotificationsMenu({ onPreferences }) {
             px="3px"
             borderRadius="full"
             bg="white"
-            color="#E85A37"
+            color="#B9471E"
             fontSize="9px"
             lineHeight="1"
             fontWeight="800"
-            border="1px solid #E85A37"
+            border="1px solid #B9471E"
             align="center"
             justify="center"
           >
@@ -162,7 +162,7 @@ function NotificationsMenu({ onPreferences }) {
               <Text fontSize="13px" fontWeight="800">Notificaciones</Text>
               <Text mt={.5} fontSize="10px" color="var(--cl-text-muted, #777777)">Según tus preferencias activas</Text>
             </Box>
-            <Box px={2} py={.5} borderRadius="full" bg="rgba(255,101,63,.12)" color="#E85A37" fontSize="10px" fontWeight="700">
+            <Box px={2} py={.5} borderRadius="full" bg="rgba(217, 91, 39,.12)" color="#B9471E" fontSize="10px" fontWeight="700">
               {notifications.length} activas
             </Box>
           </Flex>
@@ -170,8 +170,8 @@ function NotificationsMenu({ onPreferences }) {
             {notifications.length ? notifications.map((notification) => {
               const Icon = notificationIcon(notification.kind);
               return (
-                <Flex key={notification.id} gap={3} p={3} borderRadius="11px" align="flex-start" _hover={{ bg: 'rgba(255,101,63,.06)' }}>
-                  <Flex w="30px" h="30px" borderRadius="9px" bg="rgba(255,101,63,.12)" color="#E85A37" align="center" justify="center" flexShrink="0"><Icon size={15} /></Flex>
+                <Flex key={notification.id} gap={3} p={3} borderRadius="11px" align="flex-start" _hover={{ bg: 'rgba(217, 91, 39,.06)' }}>
+                  <Flex w="30px" h="30px" borderRadius="9px" bg="rgba(217, 91, 39,.12)" color="#B9471E" align="center" justify="center" flexShrink="0"><Icon size={15} /></Flex>
                   <Box minW="0">
                     <Text fontSize="12px" fontWeight="700">{notification.title}</Text>
                     <Text mt={.5} fontSize="10px" color="var(--cl-text-muted, #777777)" lineClamp={2}>{notification.detail}</Text>
@@ -183,7 +183,7 @@ function NotificationsMenu({ onPreferences }) {
             )}
           </Stack>
           <Box p={3} borderTop="1px solid var(--cl-border, #E5E3DF)">
-            <Button w="100%" size="sm" variant="outline" borderColor="rgba(255,101,63,.45)" color="#E85A37" _hover={{ bg: 'rgba(255,101,63,.08)' }}
+            <Button w="100%" size="sm" variant="outline" borderColor="rgba(217, 91, 39,.45)" color="#B9471E" _hover={{ bg: 'rgba(217, 91, 39,.08)' }}
               onClick={() => { setIsOpen(false); onPreferences?.(); }}>
               <FiSliders /> Configurar preferencias
             </Button>
@@ -206,7 +206,7 @@ export default function ConstruleadsNavbar({
   onToggleTheme,
   onLogout,
 }) {
-  const navbarColor = isDarkMode ? '#E85A37' : '#FF653F';
+  const navbarColor = isDarkMode ? '#B9471E' : '#D95B27';
 
   return (
     <Flex
@@ -285,7 +285,7 @@ export default function ConstruleadsNavbar({
             justifyContent="center"
             fontWeight="600"
             fontSize="12px"
-            color="#FF653F"
+            color="#D95B27"
             cursor="pointer"
             transition="transform 160ms ease, box-shadow 160ms ease"
             boxShadow={activeModule === 'perfil' ? '0 0 0 3px rgba(255,255,255,.42)' : 'none'}

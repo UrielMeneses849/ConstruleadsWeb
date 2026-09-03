@@ -25,11 +25,11 @@ export default function Login() {
       </Text>
 
       <Button
-        bg="#FF6A00"
+        bg="#D95B27"
         color="white"
         size="lg"
         onClick={() => setIsOpen(true)}
-        _hover={{ bg: '#E85F00' }}
+        _hover={{ bg: '#B9471E' }}
       >
         Abrir Login
       </Button>

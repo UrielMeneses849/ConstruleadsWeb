@@ -114,12 +114,12 @@ export default function LicitacionesDownloadPanel({
           boxShadow="var(--cl-shadow-soft)"
         >
           <Flex align="center" gap={2}>
-            {isGenerating && <Spinner size="sm" color="#FF653F" />}
+            {isGenerating && <Spinner size="sm" color="#D95B27" />}
             <Text fontSize="12px" fontWeight="700" color={notification?.type === 'error' ? '#C53030' : 'var(--cl-text-strong)'}>
               {notification?.message || status}
             </Text>
           </Flex>
-          {isGenerating && <Box mt={2} h="3px" borderRadius="full" bg="var(--cl-surface-muted)"><Box h="100%" w={`${progress}%`} borderRadius="full" bg="#FF653F" transition="width .25s ease" /></Box>}
+          {isGenerating && <Box mt={2} h="3px" borderRadius="full" bg="var(--cl-surface-muted)"><Box h="100%" w={`${progress}%`} borderRadius="full" bg="#D95B27" transition="width .25s ease" /></Box>}
         </Box>
       )}
       <Flex
@@ -138,9 +138,9 @@ export default function LicitacionesDownloadPanel({
       <Button
         h="38px"
         px={4}
-        bg="#FF653F"
+        bg="#D95B27"
         color="white"
-        _hover={{ bg: '#F15A36' }}
+        _hover={{ bg: '#D95B27' }}
         disabled={isGenerating || items.length === 0}
         onClick={download}
         fontSize="12px"

@@ -74,7 +74,7 @@ export default function Footer() {
             </Stack>
 
             <Button
-              bg="#F6C8AC"
+              bg="#E9C2B2"
               color="#091E5A"
               borderRadius="16px"
               size="md"

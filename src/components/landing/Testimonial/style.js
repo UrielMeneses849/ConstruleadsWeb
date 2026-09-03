@@ -55,7 +55,7 @@ export const testimonialCard = {
   bg: "white",
   borderRadius: "24px",
   border: "1px solid",
-  borderColor: "rgba(255, 102, 0, 0.45)",
+  borderColor: "rgba(217, 91, 39, 0.45)",
   px: "32px",
   pt: "24px",
   pb: "32px",
@@ -137,4 +137,3 @@ export const arrowButton = {
     bg: "primary.600",
   },
 };
-

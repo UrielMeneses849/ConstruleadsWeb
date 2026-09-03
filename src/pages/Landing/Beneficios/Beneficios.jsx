@@ -115,7 +115,7 @@ export default function Beneficios() {
             color="#071B52"
           >
             Inteligencia estratégica para detectar{' '}
-            <Text as="span" color="#FF6600">
+            <Text as="span" color="#D95B27">
               oportunidades
             </Text>{' '}
             antes que nadie
@@ -149,7 +149,7 @@ export default function Beneficios() {
                 bg="white"
                 p={4}
                 borderRadius="18px"
-                borderLeft="4px solid #FF6600"
+                borderLeft="4px solid #D95B27"
                 boxShadow="0 8px 30px rgba(0,0,0,.08)"
                 align="start"
                 spacing={5}
@@ -168,7 +168,7 @@ export default function Beneficios() {
                   <Icon
                     as={item.icon}
                     boxSize={5}
-                    color="#FF6600"
+                    color="#D95B27"
                   />
                 </Flex>
 
@@ -238,7 +238,7 @@ export default function Beneficios() {
 
           <HStack spacing={4}>
             <Button variant="outline">Conocer beneficios</Button>
-            <Button bg="#FF6600" color="white">
+            <Button bg="#D95B27" color="white">
               Solicitar Demo
             </Button>
           </HStack>

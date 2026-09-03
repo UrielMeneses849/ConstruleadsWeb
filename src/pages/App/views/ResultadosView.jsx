@@ -14,6 +14,7 @@ import {
   FiChevronRight,
   FiSliders,
 } from 'react-icons/fi';
+import { getObraSource, OBRA_SOURCE_META, OBRA_SOURCES } from '../../../utils/obrasSources';
 
 const RESULTS_PER_PAGE = 100;
 const DATE_FIELDS = ['inicio', 'fin', 'publicacion'];
@@ -134,6 +135,7 @@ function getFacetExclusions(field) {
 
 function ResultadosView({
   obras = [],
+  activeSources = [],
   onSelectionChange,
   selectionResetToken = 0,
   onViewFicha,
@@ -145,6 +147,7 @@ function ResultadosView({
   const [selectedRows, setSelectedRows] = useState([]);
   const [sortConfig, setSortConfig] = useState({ field: null, direction: 'asc' });
   const [page, setPage] = useState(1);
+  const [activeSourceTab, setActiveSourceTab] = useState(OBRA_SOURCES.CONSTRULEADS);
   const filterMenuRef = useRef(null);
   const resultsContainerRef = useRef(null);
   const lastSelectionResetToken = useRef(selectionResetToken);
@@ -167,6 +170,31 @@ function ResultadosView({
     shadow: 'var(--cl-shadow)',
   };
 
+  const activeSourceSet = useMemo(
+    () => new Set((activeSources || []).map(getObraSource)),
+    [activeSources]
+  );
+  const showSourceTabs =
+    activeSourceSet.has(OBRA_SOURCES.CONSTRULEADS) &&
+    activeSourceSet.has(OBRA_SOURCES.EXPLORER);
+  const obrasBySource = useMemo(() => ({
+    [OBRA_SOURCES.CONSTRULEADS]: (obras || []).filter(
+      (obra) => getObraSource(obra) === OBRA_SOURCES.CONSTRULEADS
+    ),
+    [OBRA_SOURCES.EXPLORER]: (obras || []).filter(
+      (obra) => getObraSource(obra) === OBRA_SOURCES.EXPLORER
+    ),
+  }), [obras]);
+  // Explorer comienza como una copia funcional de la tabla de Construleads.
+  // La pestaña delimita ambas vistas para que cada una pueda evolucionar con
+  // sus propias columnas cuando se defina su contrato final.
+  const tableObras = showSourceTabs
+    ? obrasBySource[activeSourceTab]
+    : obras;
+  const [singleActiveSource] = activeSourceSet;
+  const visibleSource = showSourceTabs ? activeSourceTab : singleActiveSource;
+  const showCompanyColumn = visibleSource !== OBRA_SOURCES.EXPLORER;
+
   const toggleSort = (field) => {
     setPage(1);
     setSortConfig((current) => {
@@ -183,17 +211,19 @@ function ResultadosView({
 
   const getSortIconColor = (field, direction) => {
     if (sortConfig.field !== field) return ui.textMuted;
-    return sortConfig.direction === direction ? '#FF653F' : ui.textMuted;
+    return sortConfig.direction === direction ? '#D95B27' : ui.textMuted;
   };
 
   const tableData = useMemo(() => {
-    return (obras || []).map((obra, index) => ({
+    return (tableObras || []).map((obra, index) => ({
       id:
-        obra.Id_Obra ||
-        obra.ID_OBRA ||
-        obra.id_obra ||
-        obra.id ||
-        index,
+        `${getObraSource(obra)}:${
+          obra.Id_Obra ||
+          obra.ID_OBRA ||
+          obra.id_obra ||
+          obra.id ||
+          index
+        }`,
 
       clave:
         obra.clave ||
@@ -419,7 +449,7 @@ function ResultadosView({
 
       source: obra,
     }));
-  }, [obras]);
+  }, [tableObras]);
 
   const getRowKey = (row) => String(row.id || row.clave || row.proyecto);
 
@@ -783,6 +813,19 @@ function ResultadosView({
     });
   };
 
+  const selectSourceTab = (source) => {
+    if (source === activeSourceTab) return;
+
+    setActiveSourceTab(source);
+    setFilterMenu(null);
+    setColumnFilters({});
+    setFilterSearch({});
+    setExpandedGenreFilters([]);
+    setSelectedRows([]);
+    setSortConfig({ field: null, direction: 'asc' });
+    setPage(1);
+  };
+
   const renderHeaderCell = (field, label, { compact = false } = {}) => {
     const controlSize = compact ? '16px' : '18px';
     const controlHeight = compact ? '18px' : '18px';
@@ -953,12 +996,12 @@ function ResultadosView({
                       h="30px"
                       minW="0"
                       borderRadius="8px"
-                      bg={selected ? '#FF653F' : ui.surfaceMuted}
+                      bg={selected ? '#D95B27' : ui.surfaceMuted}
                       color={selected ? 'white' : ui.text}
-                      border={`1px solid ${selected ? '#FF653F' : ui.border}`}
+                      border={`1px solid ${selected ? '#D95B27' : ui.border}`}
                       _hover={{
-                        bg: selected ? '#FF653F' : ui.hover,
-                        borderColor: selected ? '#FF653F' : ui.textMuted,
+                        bg: selected ? '#D95B27' : ui.hover,
+                        borderColor: selected ? '#D95B27' : ui.textMuted,
                       }}
                       onClick={() => toggleFilterValue(field, key)}
                       title={label}
@@ -1019,7 +1062,7 @@ function ResultadosView({
                   }}
                   onClick={(event) => event.stopPropagation()}
                   onChange={() => toggleGenreFilter(genero)}
-                  style={{ accentColor: '#FF653F', width: 14, height: 14 }}
+                  style={{ accentColor: '#D95B27', width: 14, height: 14 }}
                 />
                 <Text flex="1" fontSize="12px" fontWeight="700" color={ui.textStrong} lineClamp={1}>
                   {genero}
@@ -1051,7 +1094,7 @@ function ResultadosView({
                           checked={isChildSelected}
                           onClick={(event) => event.stopPropagation()}
                           onChange={() => toggleSubgenreFilter(genero, subgenero)}
-                          style={{ accentColor: '#FF653F', width: 13, height: 13 }}
+                          style={{ accentColor: '#D95B27', width: 13, height: 13 }}
                         />
                         <Text fontSize="12px" color={ui.text} lineClamp={1}>{subgenero}</Text>
                       </Flex>
@@ -1270,6 +1313,50 @@ function ResultadosView({
         flexDirection="column"
         position="relative"
       >
+        {showSourceTabs && (
+          <Flex
+            flexShrink={0}
+            align="center"
+            gap={2}
+            px={3}
+            py={2}
+            borderBottom={`1px solid ${ui.border}`}
+            bg={ui.surface}
+          >
+            <Text fontSize="11px" fontWeight="700" color={ui.textMuted}>
+              Fuente
+            </Text>
+            <HStack spacing={1}>
+              {[OBRA_SOURCES.CONSTRULEADS, OBRA_SOURCES.EXPLORER].map((source) => {
+                const meta = OBRA_SOURCE_META[source];
+                const isActive = activeSourceTab === source;
+                return (
+                  <Button
+                    key={source}
+                    size="xs"
+                    h="28px"
+                    px={2.5}
+                    borderRadius="7px"
+                    variant="outline"
+                    borderColor={isActive ? meta.color : ui.border}
+                    bg={isActive ? `${meta.color}18` : ui.surface}
+                    color={isActive ? meta.color : ui.text}
+                    _hover={{ borderColor: meta.color, color: meta.color, bg: `${meta.color}12` }}
+                    onClick={() => selectSourceTab(source)}
+                    aria-pressed={isActive}
+                  >
+                    <Flex align="center" gap={1.5}>
+                      <Box w="6px" h="6px" borderRadius="full" bg={meta.color} />
+                      <Text fontSize="11px" fontWeight="700">
+                        {meta.label} ({obrasBySource[source].length})
+                      </Text>
+                    </Flex>
+                  </Button>
+                );
+              })}
+            </HStack>
+          </Flex>
+        )}
         <Box
           flex="1"
           minH="0"
@@ -1470,16 +1557,16 @@ function ResultadosView({
           >
           <colgroup>
             <col style={{ width: '2.5%' }} />
-            <col style={{ width: '7%' }} />
-            <col style={{ width: '19%' }} />
-            <col style={{ width: '9.5%' }} />
-            <col style={{ width: '10%' }} />
+            <col style={{ width: showCompanyColumn ? '7%' : '8%' }} />
+            <col style={{ width: showCompanyColumn ? '19%' : '22%' }} />
+            <col style={{ width: showCompanyColumn ? '9.5%' : '11%' }} />
+            <col style={{ width: showCompanyColumn ? '10%' : '11%' }} />
             {/* Fechas: se comportan como un bloque continuo y compacto. */}
-            <col style={{ width: '8%' }} />
-            <col style={{ width: '8%' }} />
-            <col style={{ width: '10.5%' }} />
+            <col style={{ width: showCompanyColumn ? '8%' : '9%' }} />
+            <col style={{ width: showCompanyColumn ? '8%' : '9%' }} />
+            {showCompanyColumn && <col style={{ width: '10.5%' }} />}
             <col style={{ width: '10%' }} />
-            <col style={{ width: '9.5%' }} />
+            <col style={{ width: showCompanyColumn ? '9.5%' : '11.5%' }} />
             <col style={{ width: '6%' }} />
           </colgroup>
           <thead style={{ background: ui.surfaceMuted }}>
@@ -1519,9 +1606,11 @@ function ResultadosView({
               <th style={{ padding: '12px 8px', textAlign: 'left', borderBottom: `1px solid ${ui.border}`, whiteSpace: 'nowrap' }}>
                 {renderHeaderCell('inicio', 'Inicio')}
               </th>
-              <th style={{ padding: '10px 8px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
-                {renderHeaderCell('compania', 'Compañía')}
-              </th>
+              {showCompanyColumn && (
+                <th style={{ padding: '10px 8px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
+                  {renderHeaderCell('compania', 'Compañía')}
+                </th>
+              )}
               <th style={{ padding: '12px 8px', textAlign: 'left', borderBottom: `1px solid ${ui.border}` }}>
                 {renderHeaderCell('inversion', 'Inversión (MXN)', { compact: true })}
               </th>
@@ -1545,7 +1634,7 @@ function ResultadosView({
             </tr>
           </thead>
 
-          <tbody key={`tbody-${obras.length}`}>
+          <tbody key={`tbody-${activeSourceTab}-${tableObras.length}`}>
             {visibleData.map((row, index) => {
               const rowKey = getRowKey(row);
               const selected = selectedRowsSet.has(rowKey);
@@ -1575,7 +1664,11 @@ function ResultadosView({
                   <td className="resultados-cell" style={{ padding: '9px 8px', borderTop: `1px solid ${ui.border}` }}>{renderCellText(row.tipoobra)}</td>
                   <td className="resultados-cell resultados-cell-date" style={{ padding: '10px 8px', borderTop: `1px solid ${ui.border}` }}>{renderCellText(row.publicacion)}</td>
                   <td className="resultados-cell resultados-cell-date" style={{ padding: '10px 8px', borderTop: `1px solid ${ui.border}` }}>{renderCellText(row.inicio)}</td>
-                  <td className="resultados-cell resultados-cell-company" style={{ padding: '9px 8px', borderTop: `1px solid ${ui.border}` }}>{renderCellText(row.compania)}</td>
+                  {showCompanyColumn && (
+                    <td className="resultados-cell resultados-cell-company" style={{ padding: '9px 8px', borderTop: `1px solid ${ui.border}` }}>
+                      {renderCellText(row.compania)}
+                    </td>
+                  )}
                   <td className="resultados-cell resultados-cell-number resultados-cell-emphasis" style={{ padding: '10px 12px', borderTop: `1px solid ${ui.border}` }}>{renderCellText(row.inversion)}</td>
                   <td className={`resultados-cell resultados-cell-number resultados-cell-emphasis${row.superficie === 'No definido' ? ' resultados-cell-undefined' : ''}`} style={{ padding: '9px 8px', borderTop: `1px solid ${ui.border}` }}>{renderCellText(row.superficie)}</td>
                   <td style={{ padding: 0, borderTop: `1px solid ${ui.border}`, whiteSpace: 'nowrap', fontSize: '13px', textAlign: 'center', background: rowBg }}>
@@ -1593,7 +1686,7 @@ function ResultadosView({
                         color={ui.textStrong}
                         borderRadius="8px"
                         bg={rowBg}
-                        _hover={{ bg: ui.surfaceMuted, borderColor: '#FF653F', color: '#FF653F' }}
+                        _hover={{ bg: ui.surfaceMuted, borderColor: '#D95B27', color: '#D95B27' }}
                         onClick={() => onViewFicha?.(row.source || row)}
                       >
                         <FiEye size={15} />
@@ -1670,9 +1763,9 @@ function ResultadosView({
               </Button>
               <Button
                 size="xs"
-                bg="#FF653F"
+                bg="#D95B27"
                 color="white"
-                _hover={{ bg: '#E85A37' }}
+                _hover={{ bg: '#B9471E' }}
                 onClick={() => setFilterMenu(null)}
               >
                 Listo
@@ -1707,8 +1800,8 @@ function ResultadosView({
                 flexShrink={0}
                 maxW="280px"
                 borderRadius="999px"
-                border="1px solid rgba(255, 101, 63, .42)"
-                bg="rgba(255, 101, 63, .08)"
+                border="1px solid rgba(217, 91, 39, .42)"
+                bg="rgba(217, 91, 39, .08)"
                 color={ui.text}
               >
                 <Text fontSize="11px" color={ui.textMuted} whiteSpace="nowrap">
@@ -1726,9 +1819,9 @@ function ResultadosView({
             px={3}
             flexShrink={0}
             borderRadius="8px"
-            bg="#FF653F"
+            bg="#D95B27"
             color="white"
-            _hover={{ bg: '#E85A37' }}
+            _hover={{ bg: '#B9471E' }}
             onClick={clearAllVisibleFilters}
           >
             Limpiar filtros

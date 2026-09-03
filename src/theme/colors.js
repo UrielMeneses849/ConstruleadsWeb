@@ -1,15 +1,15 @@
 export const colors = {
   primary: {
-    50: { value: "#FFF1E8" },
-    100: { value: "#FFD9BF" },
-    200: { value: "#FFC299" },
-    300: { value: "#FFA366" },
-    400: { value: "#FF8A3D" },
-    500: { value: "#FF6B00" },
-    600: { value: "#E65F00" },
-    700: { value: "#CC5500" },
-    800: { value: "#994000" },
-    900: { value: "#662B00" },
+    50: { value: "#FCF0EA" },
+    100: { value: "#F6D4C5" },
+    200: { value: "#F0B99E" },
+    300: { value: "#E99B78" },
+    400: { value: "#E47A4D" },
+    500: { value: "#D95B27" },
+    600: { value: "#B9471E" },
+    700: { value: "#963A18" },
+    800: { value: "#702B12" },
+    900: { value: "#4B1D0C" },
   },
 
   secondary: {

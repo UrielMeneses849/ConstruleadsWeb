@@ -16,7 +16,7 @@ function getAmountStep(min, max) {
 
 function MissingAmountOption({ checked, onChange }) {
   return <Flex as="label" align="center" gap={2} mt={3} px={2.5} py={2} cursor="pointer"
-    border="1px solid" borderColor={checked ? '#FFB39F' : 'var(--cl-border)'} borderRadius="8px"
+    border="1px solid" borderColor={checked ? '#F0BFAE' : 'var(--cl-border)'} borderRadius="8px"
     bg={checked ? 'var(--cl-orange-soft)' : 'var(--cl-surface-muted)'}>
     <input type="checkbox" checked={checked} onChange={onChange} />
     <Box>
@@ -101,7 +101,7 @@ function AccordionSection({ id, label, count = 0, openSection, setOpenSection, c
       >
         <Flex align="center" gap={2} minW={0}>
           <Text fontSize="12px" fontWeight="700" color="var(--cl-text-strong)" lineClamp={1}>{label}</Text>
-          {!!count && <Text fontSize="9px" color="#FF653F" fontWeight="700">{count}</Text>}
+          {!!count && <Text fontSize="9px" color="#D95B27" fontWeight="700">{count}</Text>}
         </Flex>
         <Box as={FiChevronDown} boxSize="14px" color="var(--cl-text-muted)"
           transform={isOpen ? 'rotate(180deg)' : 'none'} transition="transform 160ms ease" />
@@ -166,7 +166,7 @@ function MultiContent({ field, options, filters, setFilters }) {
         const isUnassignedState = isExclusiveSpecialOption(field, option);
         return <Flex as="label" key={option} gap={2} align="center" px={2} py={isUnassignedState ? 2 : 1.5} borderRadius="8px" cursor="pointer"
           border={isUnassignedState ? '1px solid' : '1px solid transparent'}
-          borderColor={isUnassignedState && selected.includes(option) ? '#FFB39F' : 'transparent'}
+          borderColor={isUnassignedState && selected.includes(option) ? '#F0BFAE' : 'transparent'}
           bg={isUnassignedState && selected.includes(option) ? 'var(--cl-orange-soft)' : 'transparent'}
           _hover={{ bg: isUnassignedState ? 'var(--cl-orange-soft)' : 'var(--cl-hover)' }}>
           <input type="checkbox" checked={selected.includes(option)} onChange={() => toggle(option)} />
@@ -208,7 +208,7 @@ export default function LicitacionesSidebar({ data, filters, setFilters, onClear
       <Flex justify="space-between" align="center" mb={3}>
         <Box><Text fontWeight="700" fontSize="14px" color="var(--cl-text-strong)">Licitaciones</Text>
           <Text fontSize="10px" color="var(--cl-text-muted)">Filtros de búsqueda</Text></Box>
-        <Button size="xs" variant="ghost" color="#FF653F" onClick={onClear}>Limpiar</Button>
+        <Button size="xs" variant="ghost" color="#D95B27" onClick={onClear}>Limpiar</Button>
       </Flex>
       <Stack gap={2}>
         <AccordionSection id="date" label="Tipo de fecha" {...{ openSection, setOpenSection }}>

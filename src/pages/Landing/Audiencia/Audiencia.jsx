@@ -116,7 +116,7 @@ export default function Audiencia() {
 
               <Heading {...styles.title}>
                 Información estratégica para cada actor{' '}
-                <Text as="span" color="#FF6600">
+                <Text as="span" color="#D95B27">
                   de la industria.
                 </Text>
               </Heading>
@@ -190,7 +190,7 @@ export default function Audiencia() {
             <VStack {...styles.checklist}>
               {BENEFICIOS.map((beneficio) => (
                 <HStack key={beneficio} spacing={3}>
-                  <Icon as={FiCheckCircle} color="#FF6600" boxSize={5} />
+                  <Icon as={FiCheckCircle} color="#D95B27" boxSize={5} />
                   <Text {...styles.checklistText}>
                     {beneficio}
                   </Text>
