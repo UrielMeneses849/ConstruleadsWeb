@@ -32,6 +32,7 @@ import {
 } from 'react-icons/fi';
 import MapSelectionModal from './MapSelectionModal';
 import { getObraSource, getObraSourceMeta } from '../../utils/obrasSources';
+import { startPerformanceSpan } from '../../utils/performanceMonitor';
 
 const DEBUG_MAPA = false;
 const AUTO_FIT_INITIAL_BOUNDS = false;
@@ -1673,18 +1674,33 @@ debugLog(
     };
 
     const updateTimer = window.setTimeout(async () => {
+      const refreshSpan = startPerformanceSpan('map.refresh', {
+        records: filteredObras.length,
+        clustering: isClusteringEnabledRef.current,
+      });
+      let refreshStatus = 'success';
       try {
         setIsMapLoading(true);
         setMapLoadingMessage('Cargando mapa y preparando obras...');
         await createMap();
-        if (cancelled) return;
+        if (cancelled) {
+          refreshStatus = 'cancelled';
+          return;
+        }
         if (window.google?.maps?.event && mapInstanceRef.current) {
           window.google.maps.event.trigger(mapInstanceRef.current, 'resize');
         }
         await updateMarkers();
       } catch {
+        refreshStatus = 'error';
         setMapLoadingMessage('No se pudo cargar el mapa. Intenta recargar la página.');
         setIsMapLoading(false);
+      } finally {
+        refreshSpan.end({
+          status: refreshStatus,
+          markers: markerElementsRef.current.length,
+          markerCache: markerCacheRef.current.size,
+        });
       }
     }, 0);
 

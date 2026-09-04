@@ -23,6 +23,7 @@ import FichaTecnicaModal from './FichaTecnicaModal';
 import ConstruleadsNavbar from './ConstruleadsNavbar';
 import Perfil from './Perfil';
 import WelcomeExperience from './WelcomeExperience';
+import PerformanceAuditOverlay from '../../components/PerformanceAuditOverlay';
 import { obtenerObrasProgresivas } from '../../api/obras';
 import { obtenerCompanias } from '../../api/companias';
 import {
@@ -40,6 +41,7 @@ import {
   writeCachedCompanyRelationships,
   writeCachedObras,
 } from '../../utils/obrasCache';
+import { measurePerformance, startPerformanceSpan } from '../../utils/performanceMonitor';
 
 const PREFILTERED_MAP_FILTERS = Object.freeze({ __preFiltered: true });
 const loadResultadosView = () => import('./views/ResultadosView');
@@ -271,11 +273,19 @@ export default function Construleads() {
   const [companiesError, setCompaniesError] = useState('');
   const [companiesSessionKey, setCompaniesSessionKey] = useState('');
   const filteredObras = useMemo(
-    () => filterObrasByFilters(obras, filtros),
+    () => measurePerformance(
+      'filters.obras',
+      { records: obras.length, sources: (filtros.fuentes || []).length },
+      () => filterObrasByFilters(obras, filtros)
+    ),
     [obras, filtros]
   );
   const filteredMapPreviewObras = useMemo(
-    () => filterObrasByFilters(mapPreviewObras, filtros),
+    () => measurePerformance(
+      'filters.map-preview',
+      { records: mapPreviewObras.length },
+      () => filterObrasByFilters(mapPreviewObras, filtros)
+    ),
     [mapPreviewObras, filtros]
   );
   const mapFitRequestKey = useMemo(
@@ -287,6 +297,18 @@ export default function Construleads() {
   const [companyDetailRequest, setCompanyDetailRequest] = useState(null);
   const selectionResetToken = 0;
   const [activeView, setActiveView] = useState('mapa');
+  const graphFilters = useMemo(() => ({
+    ...filtros,
+    fuentes: [OBRA_SOURCES.CONSTRULEADS],
+  }), [filtros]);
+  const graphSummaryObras = useMemo(
+    () => measurePerformance(
+      'filters.graph-summary',
+      { records: obras.length },
+      () => filterObrasByFilters(obras, graphFilters)
+    ),
+    [obras, graphFilters]
+  );
   const [mountedViews, setMountedViews] = useState({
     mapa: true,
     resultados: false,
@@ -401,12 +423,18 @@ export default function Construleads() {
     async function cargarObras() {
       const userId = user.idUsuario;
       let cachedObras = null;
+      let loadedRecords = 0;
+      let loadStatus = 'error';
+      let servedFromCache = false;
+      const loadSpan = startPerformanceSpan('obras.load', { userId: Boolean(userId) });
 
       try {
         setLoadingObras(true);
 
         cachedObras = await readCachedObras(userId);
         if (isActive && cachedObras?.length) {
+          servedFromCache = true;
+          loadedRecords = cachedObras.length;
           setObras(cachedObras);
           setLoadingObras(false);
 
@@ -416,13 +444,18 @@ export default function Construleads() {
         }
 
         let firstPreviewPublished = false;
-        const streamedResponse = await obtenerObrasProgresivas({
-          signal: abortController.signal,
-          onBatch: (fragments) => {
-            if (!isActive || cachedObras?.length || firstPreviewPublished) return;
-            const previewObras = parseObrasXml(
-              `<NewDataSet>${fragments.join('')}</NewDataSet>`
-            );
+        const requestSpan = startPerformanceSpan('obras.request', { cached: Boolean(cachedObras?.length) });
+        let streamedResponse;
+        try {
+          streamedResponse = await obtenerObrasProgresivas({
+            signal: abortController.signal,
+            onBatch: (fragments) => {
+              if (!isActive || cachedObras?.length || firstPreviewPublished) return;
+              const previewSpan = startPerformanceSpan('obras.preview-parse', { fragments: fragments.length });
+              const previewObras = parseObrasXml(
+                `<NewDataSet>${fragments.join('')}</NewDataSet>`
+              );
+              previewSpan.end({ records: previewObras.length });
             // El primer bloque sirve también a Resultados, Gráficas y
             // Compañías: no requiere coordenadas para ser útil. Antes se
             // descartaba hasta encontrar un punto de mapa y esos módulos se
@@ -431,23 +464,43 @@ export default function Construleads() {
             firstPreviewPublished = true;
             setMapPreviewObras(previewObras);
             setLoadingObras(false);
-          },
-        });
+            },
+          });
+          requestSpan.end({
+            streamed: streamedResponse.streamed,
+            fragments: streamedResponse.fragments?.length || 0,
+          });
+        } catch (error) {
+          requestSpan.end({ error: true });
+          throw error;
+        }
         const completeXml = streamedResponse.streamed
           ? `<NewDataSet>${streamedResponse.fragments.join('')}</NewDataSet>`
           : streamedResponse.xml;
-        const obrasParseadas = await parseObrasOffMainThread(
-          completeXml,
-          abortController.signal
-        );
+        const parseSpan = startPerformanceSpan('obras.parse', { bytes: completeXml.length });
+        let obrasParseadas;
+        try {
+          obrasParseadas = await parseObrasOffMainThread(
+            completeXml,
+            abortController.signal
+          );
+          parseSpan.end({ records: obrasParseadas.length });
+        } catch (error) {
+          parseSpan.end({ error: true });
+          throw error;
+        }
 
         if (!isActive) return;
+        loadedRecords = obrasParseadas.length;
+        loadStatus = 'success';
         setObras(obrasParseadas);
         setMapPreviewObras([]);
         void writeCachedObras(userId, obrasParseadas);
       } catch {
+        loadStatus = abortController.signal.aborted ? 'aborted' : 'error';
         if (isActive && !cachedObras?.length) setObras([]);
       } finally {
+        loadSpan.end({ records: loadedRecords, status: loadStatus, cache: servedFromCache });
         if (isActive) setLoadingObras(false);
       }
     }
@@ -473,6 +526,9 @@ export default function Construleads() {
 
     async function cargarCompanias() {
       const userId = user.idUsuario;
+      let relationshipCount = 0;
+      let loadStatus = 'error';
+      const loadSpan = startPerformanceSpan('companies.load', { userId: Boolean(userId) });
       try {
         setLoadingCompanies(true);
         setCompaniesError('');
@@ -489,17 +545,21 @@ export default function Construleads() {
         }
         const relationships = await relationshipsPromise;
         if (isActive) {
+          relationshipCount = relationships.length;
+          loadStatus = 'success';
           setCompanyRelationships(relationships);
           setCompaniesSessionKey(sessionKey);
           void writeCachedCompanyRelationships(userId, relationships);
         }
       } catch (error) {
+        loadStatus = abortController.signal.aborted ? 'aborted' : 'error';
         if (isActive && !abortController.signal.aborted) {
           setCompaniesError(error instanceof Error
             ? error.message
             : 'No fue posible actualizar los datos de compañías.');
         }
       } finally {
+        loadSpan.end({ relationships: relationshipCount, status: loadStatus });
         if (isActive) setLoadingCompanies(false);
       }
     }
@@ -762,6 +822,7 @@ export default function Construleads() {
             <SidebarFiltros
               obras={obras}
               onApplyFilters={setFiltros}
+              isGraphView={activeView === 'graficas'}
             />
           </Box>
         )}
@@ -829,8 +890,8 @@ export default function Construleads() {
             >
               <Box flex="1" minW="0">
                 <PanelResumen
-                  obras={filteredObras}
-                  filtros={filtros}
+                  obras={activeView === 'graficas' ? graphSummaryObras : filteredObras}
+                  filtros={activeView === 'graficas' ? graphFilters : filtros}
                   variant="map"
                 />
               </Box>
@@ -924,6 +985,7 @@ export default function Construleads() {
         userId={user.idUsuario}
         userName={user.nombreUsuario}
       />
+      <PerformanceAuditOverlay />
     </Box>
   );
 }

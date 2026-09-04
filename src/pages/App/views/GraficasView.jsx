@@ -22,6 +22,7 @@ import {
   getSelectedDateField,
 } from '../../../utils/filterObras';
 import { OBRA_SOURCES } from '../../../utils/obrasSources';
+import { measurePerformance } from '../../../utils/performanceMonitor';
 
 const METRIC_OPTIONS = [
   { value: 'proyectos', label: 'Número de obras' },
@@ -62,6 +63,16 @@ function getObraSelectionValue(obra, key) {
 function filterObrasByChartSelection(obras, key, value) {
   if (!normalizeText(value)) return obras;
 
+  if (key === 'month') {
+    const dateRange = parseTimelineRangeKey(value);
+    if (dateRange) {
+      return obras.filter((obra) => {
+        const monthKey = getObraSelectionValue(obra, key);
+        return monthKey >= dateRange.start && monthKey <= dateRange.end;
+      });
+    }
+  }
+
   return obras.filter((obra) => isSameSelectionValue(getObraSelectionValue(obra, key), value));
 }
 
@@ -91,6 +102,8 @@ function getMetricValueWidth(metric) {
 
 function getCompactMonthLabel(monthKey) {
   if (monthKey === 'Sin fecha') return 'Sin fecha';
+  const dateRange = parseTimelineRangeKey(monthKey);
+  if (dateRange) return getTimelineRangeLabel(dateRange.start, dateRange.end);
 
   const [year, month] = String(monthKey).split('-');
   const date = new Date(Number(year), Number(month) - 1, 1);
@@ -99,6 +112,79 @@ function getCompactMonthLabel(monthKey) {
     month: 'short',
     year: '2-digit',
   }).format(date).replace('.', '');
+}
+
+function monthKeyToDate(monthKey) {
+  const match = String(monthKey).match(/^(\d{4})-(\d{2})$/);
+  if (!match) return null;
+
+  return new Date(Number(match[1]), Number(match[2]) - 1, 1);
+}
+
+function monthKeyFromDate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function parseTimelineRangeKey(value) {
+  const match = String(value).match(/^range:(\d{4}-\d{2}):(\d{4}-\d{2})$/);
+  return match ? { start: match[1], end: match[2] } : null;
+}
+
+function getTimelineRangeLabel(startKey, endKey) {
+  const startDate = monthKeyToDate(startKey);
+  const endDate = monthKeyToDate(endKey);
+  if (!startDate || !endDate) return '';
+
+  const formatter = new Intl.DateTimeFormat('es-MX', { month: 'short', year: '2-digit' });
+  const startLabel = formatter.format(startDate).replace('.', '');
+  const endLabel = formatter.format(endDate).replace('.', '');
+  return startKey === endKey ? startLabel : `${startLabel} – ${endLabel}`;
+}
+
+function getTimelineRanges(items, maximumBuckets = 8) {
+  const datedItems = items
+    .filter((item) => item.key !== 'Sin fecha' && monthKeyToDate(item.key))
+    .sort((first, second) => String(first.key).localeCompare(String(second.key)));
+  if (!datedItems.length) return [];
+
+  const startDate = monthKeyToDate(datedItems[0].key);
+  const endDate = monthKeyToDate(datedItems[datedItems.length - 1].key);
+  const totalMonths = (
+    ((endDate.getFullYear() - startDate.getFullYear()) * 12)
+    + endDate.getMonth()
+    - startDate.getMonth()
+    + 1
+  );
+  const monthsPerRange = Math.max(1, Math.ceil(totalMonths / maximumBuckets));
+  const itemsByMonth = new Map(datedItems.map((item) => [item.key, item]));
+
+  // Cada punto representa un rango consecutivo. Así la curva cubre todos los
+  // inicios con fecha, tanto para obras como inversión y superficie.
+  return Array.from({ length: Math.ceil(totalMonths / monthsPerRange) }, (_, index) => {
+    const rangeStart = new Date(startDate.getFullYear(), startDate.getMonth() + (index * monthsPerRange), 1);
+    const rangeEnd = new Date(
+      startDate.getFullYear(),
+      startDate.getMonth() + Math.min(totalMonths - 1, ((index + 1) * monthsPerRange) - 1),
+      1
+    );
+    const startKey = monthKeyFromDate(rangeStart);
+    const endKey = monthKeyFromDate(rangeEnd);
+    const entries = Array.from({
+      length: ((rangeEnd.getFullYear() - rangeStart.getFullYear()) * 12) + rangeEnd.getMonth() - rangeStart.getMonth() + 1,
+    }, (_, monthIndex) => {
+      const date = new Date(rangeStart.getFullYear(), rangeStart.getMonth() + monthIndex, 1);
+      return itemsByMonth.get(monthKeyFromDate(date));
+    }).filter(Boolean);
+
+    return {
+      key: `range:${startKey}:${endKey}`,
+      label: getTimelineRangeLabel(startKey, endKey),
+      count: entries.reduce((total, item) => total + item.count, 0),
+      inversion: entries.reduce((total, item) => total + item.inversion, 0),
+      superficie: entries.reduce((total, item) => total + item.superficie, 0),
+      value: entries.reduce((total, item) => total + item.value, 0),
+    };
+  });
 }
 
 function MetricToggle({ value, onChange }) {
@@ -1381,7 +1467,7 @@ function GenreDonut({ items, metric, selectedKey, onSelect }) {
               key={item.key}
               as="button"
               type="button"
-              templateColumns="10px minmax(0, 1fr) auto"
+              templateColumns="10px minmax(0, 1fr)"
               columnGap={2}
               alignItems="center"
               minW="0"
@@ -1397,10 +1483,12 @@ function GenreDonut({ items, metric, selectedKey, onSelect }) {
             >
               <Box w="8px" h="8px" borderRadius="full" bg={item.color} />
               <VStack minW="0" align="start" justify="center" gap={0}>
-                <Text minW="0" w="100%" textAlign="left" fontSize="11px" lineHeight="1.15" fontWeight={item.selected ? '700' : '600'} color="var(--cl-text-strong)" noOfLines={1}>{item.label}</Text>
+                <Flex align="baseline" gap={1.5} minW="0" w="100%">
+                  <Text flex="0 1 auto" minW="0" textAlign="left" fontSize="11px" lineHeight="1.15" fontWeight={item.selected ? '700' : '600'} color="var(--cl-text-strong)" noOfLines={1}>{item.label}</Text>
+                  <Text flexShrink={0} fontSize="12px" lineHeight="1" fontWeight="800" color={item.selected ? GRAPH_ORANGE : GRAPH_BLUE}>{percentage}%</Text>
+                </Flex>
                 <Text minW="0" w="100%" textAlign="left" fontSize="10.5px" lineHeight="1.1" fontWeight="800" color="var(--cl-text-muted)" noOfLines={1}>{getDisplayValueWithUnit(item.value, metric)}</Text>
               </VStack>
-              <Text justifySelf="end" fontSize="12.5px" lineHeight="1" fontWeight="800" color={item.selected ? GRAPH_ORANGE : GRAPH_BLUE}>{percentage}%</Text>
             </Grid>
           );
         })}
@@ -1410,7 +1498,7 @@ function GenreDonut({ items, metric, selectedKey, onSelect }) {
 }
 
 function TimelineCurve({ items, metric, selectedKey, onSelect }) {
-  const visibleItems = items.filter((item) => item.key !== 'Sin fecha').slice(-8);
+  const visibleItems = items;
   const maxValue = Math.max(1, ...visibleItems.map((item) => item.value));
   const width = 900;
   const height = 220;
@@ -1467,7 +1555,7 @@ function TimelineCurve({ items, metric, selectedKey, onSelect }) {
               <circle cx={point.x} cy={point.y} r={selected ? '11' : '9'} fill="transparent" />
               <circle cx={point.x} cy={point.y} r={selected ? '5.5' : '3.5'} fill={selected ? GRAPH_ORANGE : GRAPH_BLUE} stroke="var(--cl-surface)" strokeWidth={selected ? '2.5' : '1.5'} />
               <text x={point.x} y={Math.max(11, point.y - 7)} textAnchor="middle" fill={selected ? GRAPH_ORANGE : 'var(--cl-text-strong)'} fontSize={metric === 'proyectos' ? '5.2' : '4.25'} fontWeight="700">{getDisplayValueWithUnit(item.value, metric)}</text>
-              <text x={point.x} y={height - 10} textAnchor="middle" fill={selected ? GRAPH_ORANGE : 'var(--cl-text-muted)'} fontSize="4.1" fontWeight={selected ? '700' : '500'}>{getCompactMonthLabel(item.key)}</text>
+              <text x={point.x} y={height - 10} textAnchor="middle" fill={selected ? GRAPH_ORANGE : 'var(--cl-text-muted)'} fontSize={parseTimelineRangeKey(item.key) ? '3.3' : '4.1'} fontWeight={selected ? '700' : '500'}>{getCompactMonthLabel(item.key)}</text>
             </g>
           );
         })}
@@ -1485,7 +1573,11 @@ export default function GraficasView({ obras = [], filtros = {}, onSelectionCoun
     fuentes: [OBRA_SOURCES.CONSTRULEADS],
   }), [filtros]);
   const filteredObras = useMemo(
-    () => filterObrasByFilters(obras, graphFilters),
+    () => measurePerformance(
+      'graphs.apply-filters',
+      { records: obras.length },
+      () => filterObrasByFilters(obras, graphFilters)
+    ),
     [obras, graphFilters]
   );
   const [metric, setMetric] = useState('proyectos');
@@ -1586,6 +1678,11 @@ export default function GraficasView({ obras = [], filtros = {}, onSelectionCoun
     if (second.key === 'Sin fecha') return -1;
     return String(first.key).localeCompare(String(second.key));
   }), [timelineSource, metric]);
+  const timelineData = useMemo(() => getTimelineRanges(monthData), [monthData]);
+  const timelineDatedProjects = useMemo(
+    () => timelineSource.filter((obra) => getMonthKeyFromObra(obra, START_DATE_FIELD) !== 'Sin fecha').length,
+    [timelineSource]
+  );
   const companiaData = useMemo(() => aggregateObrasByMetric(companiesSource, 'compania', metric).filter((item) => item.key !== 'Sin dato'), [companiesSource, metric]);
 
   const activeChartFilters = useMemo(() => [
@@ -1694,8 +1791,8 @@ export default function GraficasView({ obras = [], filtros = {}, onSelectionCoun
           </SnapshotCard>
 
           <Box className="graphs-timeline" minW="0" minH="0">
-            <SnapshotCard title="Inicios estimados de obra" action={<Text fontSize="10px" fontWeight="600" color="var(--cl-text-muted)">Fecha de inicio probable</Text>}>
-              <TimelineCurve items={monthData} metric={metric} selectedKey={chartSelections.month} onSelect={(value) => selectChartValue('month', value)} />
+            <SnapshotCard title="Inicios estimados de obra" action={<Text fontSize="10px" fontWeight="600" color="var(--cl-text-muted)">{timelineDatedProjects === timelineSource.length ? 'Todos con fecha de inicio' : `${getDisplayValue(timelineDatedProjects, 'proyectos')} con fecha de inicio`} · Rangos</Text>}>
+              <TimelineCurve items={timelineData} metric={metric} selectedKey={chartSelections.month} onSelect={(value) => selectChartValue('month', value)} />
             </SnapshotCard>
           </Box>
 

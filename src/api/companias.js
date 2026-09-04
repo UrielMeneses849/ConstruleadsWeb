@@ -1,4 +1,5 @@
 import { CONSTRULEADS_TOKEN, CONSTRULEADS_WS_BASE_URL } from './obras';
+import { startPerformanceSpan } from '../utils/performanceMonitor';
 
 function cleanText(value = '') {
   return String(value).trim();
@@ -378,6 +379,7 @@ function getSessionCredentials() {
 }
 
 export async function obtenerCompanias({ signal, timeoutMs = 90000 } = {}) {
+  const loadSpan = startPerformanceSpan('companies.request-and-parse');
   const requestController = new AbortController();
   const abortFromCaller = () => requestController.abort();
   signal?.addEventListener('abort', abortFromCaller, { once: true });
@@ -396,8 +398,11 @@ export async function obtenerCompanias({ signal, timeoutMs = 90000 } = {}) {
       throw new Error(`No fue posible obtener las compañías (HTTP ${response.status}).`);
     }
 
-    return parseCompaniasXml(await response.text());
+    const relationships = parseCompaniasXml(await response.text());
+    loadSpan.end({ relationships: relationships.length });
+    return relationships;
   } catch (error) {
+    loadSpan.end({ error: true, aborted: requestController.signal.aborted });
     if (requestController.signal.aborted && !signal?.aborted) {
       throw new Error('El servicio de compañías tardó demasiado en responder.', { cause: error });
     }

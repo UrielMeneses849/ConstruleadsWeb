@@ -10,6 +10,7 @@ import {
 } from '@chakra-ui/react';
 import { filterObrasByFilters } from '../../utils/filterObras';
 import { getObraSource, OBRA_SOURCE_META, OBRA_SOURCES } from '../../utils/obrasSources';
+import { measurePerformance } from '../../utils/performanceMonitor';
 
 // Accordion helper
 function FilterAccordion({
@@ -272,7 +273,7 @@ function getInitialSourceSelection(savedFilters = {}) {
   };
 }
 
-export default function SidebarFiltros({ obras = [], onApplyFilters }) {
+export default function SidebarFiltros({ obras = [], onApplyFilters, isGraphView = false }) {
   // Accordions state
   const [openedAccordions, setOpenedAccordions] = useState(
     getDefaultAccordion()
@@ -370,11 +371,22 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
   const [sourcePreview, setSourcePreview] = useState(() =>
     getInitialSourceSelection(savedFilters)
   );
+  // Explorer ya puede consultarse en mapa y resultados, pero todavía no forma
+  // parte del contrato analítico. Al entrar a Gráficas dejamos la selección
+  // visible y publicada exclusivamente en Construleads.
+  const effectiveSourcePreview = useMemo(() => (
+    isGraphView
+      ? {
+          [OBRA_SOURCES.CONSTRULEADS]: true,
+          [OBRA_SOURCES.EXPLORER]: false,
+        }
+      : sourcePreview
+  ), [isGraphView, sourcePreview]);
   const fuentesActivas = useMemo(
-    () => Object.entries(sourcePreview)
+    () => Object.entries(effectiveSourcePreview)
       .filter(([, isEnabled]) => isEnabled)
       .map(([source]) => source),
-    [sourcePreview]
+    [effectiveSourcePreview]
   );
 
   const [surfaceMin, setSurfaceMin] = useState(
@@ -751,7 +763,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
   // Los límites numéricos deben reflejar la información que sigue disponible
   // después de los filtros generales, sin condicionarse entre sí.
   const obrasDisponiblesParaRangos = useMemo(
-    () => filterObrasByFilters(obras, {
+    () => measurePerformance('sidebar.range-filter', { records: obras.length }, () => filterObrasByFilters(obras, {
       regiones: selectedRegiones,
       estados: selectedEstados,
       generos: selectedGeneros,
@@ -773,7 +785,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
       surfaceMax: null,
       investmentMin: null,
       investmentMax: null,
-    }),
+    })),
     [
       obras,
       selectedRegiones,
@@ -794,26 +806,32 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
   );
 
   const dateBounds = useMemo(() => {
-    return getDateBoundsForCriterion(obras, fechaSeleccionada);
+    return measurePerformance(
+      'sidebar.date-bounds',
+      { records: obras.length },
+      () => getDateBoundsForCriterion(obras, fechaSeleccionada)
+    );
   }, [obras, fechaSeleccionada]);
 
   const investmentBounds = useMemo(() => {
-    const values = obrasDisponiblesParaRangos
-      .map((obra) => Number(obra.inversion || 0))
-      .filter((value) => Number.isFinite(value) && value > 0)
-      .sort((a, b) => a - b);
+    return measurePerformance('sidebar.investment-bounds', { records: obrasDisponiblesParaRangos.length }, () => {
+      const values = obrasDisponiblesParaRangos
+        .map((obra) => Number(obra.inversion || 0))
+        .filter((value) => Number.isFinite(value) && value > 0)
+        .sort((a, b) => a - b);
 
-    if (!values.length) {
+      if (!values.length) {
+        return {
+          min: 0,
+          max: 1000000,
+        };
+      }
+
       return {
-        min: 0,
-        max: 1000000,
+        min: Math.max(0, Math.floor(values[0])),
+        max: Math.max(1, Math.ceil(values[values.length - 1])),
       };
-    }
-
-    return {
-      min: Math.max(0, Math.floor(values[0])),
-      max: Math.max(1, Math.ceil(values[values.length - 1])),
-    };
+    });
   }, [obrasDisponiblesParaRangos]);
 
   useEffect(() => {
@@ -824,22 +842,24 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
   }, [dateBounds.min, dateBounds.max]);
 
   const surfaceBounds = useMemo(() => {
-    const values = obrasDisponiblesParaRangos
-      .map((obra) => Number(obra.superficie || 0))
-      .filter((value) => Number.isFinite(value) && value >= 0)
-      .sort((a, b) => a - b);
+    return measurePerformance('sidebar.surface-bounds', { records: obrasDisponiblesParaRangos.length }, () => {
+      const values = obrasDisponiblesParaRangos
+        .map((obra) => Number(obra.superficie || 0))
+        .filter((value) => Number.isFinite(value) && value >= 0)
+        .sort((a, b) => a - b);
 
-    if (!values.length) {
+      if (!values.length) {
+        return {
+          min: 0,
+          max: 1000,
+        };
+      }
+
       return {
-        min: 0,
-        max: 1000,
+        min: Math.max(0, Math.floor(values[0])),
+        max: Math.max(1, Math.ceil(values[values.length - 1])),
       };
-    }
-
-    return {
-      min: Math.max(0, Math.floor(values[0])),
-      max: Math.max(1, Math.ceil(values[values.length - 1])),
-    };
+    });
   }, [obrasDisponiblesParaRangos]);
 
   useEffect(() => {
@@ -2589,7 +2609,9 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
 
         <VStack align="stretch" spacing={0.5}>
           {sources.map((source) => {
-            const isEnabled = sourcePreview[source.key];
+            const isEnabled = effectiveSourcePreview[source.key];
+            const isLockedForGraphs = isGraphView;
+            const isExplorerUnavailable = isGraphView && source.key === OBRA_SOURCES.EXPLORER;
             return (
               <Flex
                 as="button"
@@ -2604,20 +2626,24 @@ export default function SidebarFiltros({ obras = [], onApplyFilters }) {
                 minH="30px"
                 borderRadius="7px"
                 bg={isEnabled ? 'var(--cl-surface-muted)' : 'transparent'}
-                cursor="pointer"
+                cursor={isLockedForGraphs ? 'not-allowed' : 'pointer'}
                 textAlign="left"
                 transition="background 160ms ease"
-                _hover={{ bg: 'var(--cl-surface-muted)' }}
+                opacity={isExplorerUnavailable ? 0.56 : 1}
+                _hover={isLockedForGraphs ? undefined : { bg: 'var(--cl-surface-muted)' }}
                 onClick={() => setSourcePreview((current) => {
+                  if (isLockedForGraphs) return current;
                   const next = {
                     ...current,
                     [source.key]: !current[source.key],
                   };
                   return Object.values(next).some(Boolean) ? next : current;
                 })}
+                disabled={isLockedForGraphs}
                 role="switch"
                 aria-checked={isEnabled}
-                aria-label={`${source.label} ${isEnabled ? 'visible' : 'oculta'}`}
+                aria-disabled={isLockedForGraphs}
+                aria-label={`${source.label} ${isLockedForGraphs ? isExplorerUnavailable ? 'no disponible en gráficas' : 'fijada como fuente analítica' : isEnabled ? 'visible' : 'oculta'}`}
               >
                 <Flex align="center" gap={1.5} minW={0} title={source.detail}>
                   <Box w="6px" h="6px" borderRadius="full" bg={source.color} flexShrink={0} />

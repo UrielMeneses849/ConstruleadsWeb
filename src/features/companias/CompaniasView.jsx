@@ -12,6 +12,7 @@ import {
 } from './companyData';
 import { getCompanyActivityAlerts, toggleCompanyActivityAlert } from '../../utils/radarNotifications';
 import { filterObrasByFilters } from '../../utils/filterObras';
+import { measurePerformance } from '../../utils/performanceMonitor';
 
 function normal(value = '') {
   return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
@@ -481,11 +482,19 @@ export default function CompaniasView({ companyRelationships = [], isLoadingComp
   // El portafolio de Compañías proviene exclusivamente de ws_cl_companias.
   // Así no se cuelan obras de Explorer ni dependemos de ws_cl_obras.
   const companyProjects = useMemo(
-    () => getCompanyProjects(companyRelationships),
+    () => measurePerformance(
+      'companies.projects-index',
+      { relationships: companyRelationships.length },
+      () => getCompanyProjects(companyRelationships)
+    ),
     [companyRelationships]
   );
   const filteredCompanyProjects = useMemo(
-    () => filterObrasByFilters(companyProjects, companyFilters),
+    () => measurePerformance(
+      'companies.apply-filters',
+      { records: companyProjects.length },
+      () => filterObrasByFilters(companyProjects, companyFilters)
+    ),
     [companyFilters, companyProjects]
   );
   const filteredProjectKeys = useMemo(
@@ -497,7 +506,11 @@ export default function CompaniasView({ companyRelationships = [], isLoadingComp
     [companyRelationships, filteredProjectKeys]
   );
   const companies = useMemo(
-    () => buildCompanyRows(filteredRelationships),
+    () => measurePerformance(
+      'companies.build-rows',
+      { relationships: filteredRelationships.length },
+      () => buildCompanyRows(filteredRelationships)
+    ),
     [filteredRelationships]
   );
   const handledCompanyRequest = useRef('');

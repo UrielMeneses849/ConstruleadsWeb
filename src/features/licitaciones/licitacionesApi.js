@@ -1,5 +1,6 @@
 import { CONSTRULEADS_TOKEN, CONSTRULEADS_WS_BASE_URL } from '../../api/obras';
 import { normalizeLicitacion } from './licitacionesUtils';
+import { startPerformanceSpan } from '../../utils/performanceMonitor';
 
 const licitacionesCache = new Map();
 
@@ -121,37 +122,49 @@ export async function obtenerLicitaciones({ userId, sessionId, signal, onBatch }
   if (!userId || !sessionId) throw new Error('La sesión del usuario no está disponible.');
   const key = cacheKey(userId, sessionId);
   const cached = licitacionesCache.get(key);
-  if (cached) return cached;
-  const response = await fetch(`${CONSTRULEADS_WS_BASE_URL}/ws_cl_licitaciones`, {
-    method: 'POST',
-    body: new URLSearchParams({
-      sId_usuario: String(userId),
-      sId_session: String(sessionId),
-      sTk: CONSTRULEADS_TOKEN,
-    }),
-    signal,
-  });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-  const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-  const isChrome = /Chrome\//i.test(userAgent) && !/Edg\//i.test(userAgent) && !/OPR\//i.test(userAgent);
-  if (isChrome && response.body?.getReader) {
-    const progressive = await readLicitacionesProgressively(response, onBatch);
-    if (progressive) {
-      licitacionesCache.set(key, progressive);
-      return progressive;
+  const loadSpan = startPerformanceSpan('licitaciones.load', { cached: Boolean(cached) });
+  try {
+    if (cached) {
+      loadSpan.end({ records: cached.length, source: 'memory-cache' });
+      return cached;
     }
-  }
 
-  const parser = new DOMParser();
-  let xml = parser.parseFromString(await response.text(), 'text/xml');
-  if (xml.querySelector('parsererror')) throw new Error('XML inválido');
-  if (!xml.getElementsByTagName('datos').length) {
-    const embedded = xml.documentElement?.textContent?.trim();
-    if (embedded?.startsWith('<')) xml = parser.parseFromString(embedded, 'text/xml');
+    const response = await fetch(`${CONSTRULEADS_WS_BASE_URL}/ws_cl_licitaciones`, {
+      method: 'POST',
+      body: new URLSearchParams({
+        sId_usuario: String(userId),
+        sId_session: String(sessionId),
+        sTk: CONSTRULEADS_TOKEN,
+      }),
+      signal,
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+    const isChrome = /Chrome\//i.test(userAgent) && !/Edg\//i.test(userAgent) && !/OPR\//i.test(userAgent);
+    if (isChrome && response.body?.getReader) {
+      const progressive = await readLicitacionesProgressively(response, onBatch);
+      if (progressive) {
+        licitacionesCache.set(key, progressive);
+        loadSpan.end({ records: progressive.length, source: 'stream' });
+        return progressive;
+      }
+    }
+
+    const parser = new DOMParser();
+    let xml = parser.parseFromString(await response.text(), 'text/xml');
+    if (xml.querySelector('parsererror')) throw new Error('XML inválido');
+    if (!xml.getElementsByTagName('datos').length) {
+      const embedded = xml.documentElement?.textContent?.trim();
+      if (embedded?.startsWith('<')) xml = parser.parseFromString(embedded, 'text/xml');
+    }
+    if (xml.querySelector('parsererror')) throw new Error('XML inválido');
+    const normalized = Array.from(xml.getElementsByTagName('datos')).map(normalizeLicitacion);
+    licitacionesCache.set(key, normalized);
+    loadSpan.end({ records: normalized.length, source: 'document' });
+    return normalized;
+  } catch (error) {
+    loadSpan.end({ error: true, aborted: signal?.aborted === true });
+    throw error;
   }
-  if (xml.querySelector('parsererror')) throw new Error('XML inválido');
-  const normalized = Array.from(xml.getElementsByTagName('datos')).map(normalizeLicitacion);
-  licitacionesCache.set(key, normalized);
-  return normalized;
 }

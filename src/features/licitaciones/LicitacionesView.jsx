@@ -8,6 +8,7 @@ import LicitacionDrawer from './LicitacionDrawer';
 import LicitacionesSummary from './LicitacionesSummary';
 import LicitacionesDownloadPanel from './LicitacionesDownloadPanel';
 import { readCachedLicitaciones, writeCachedLicitaciones } from '../../utils/licitacionesCache';
+import { measurePerformance } from '../../utils/performanceMonitor';
 import {
   formatLicitacionProvider,
   formatLicitacionState,
@@ -238,7 +239,11 @@ export default function LicitacionesView({ user }) {
   }, [favorites, onlyFollowed]);
 
   const sidebarContext = useMemo(
-    () => data.filter((item) => matchesSidebarFilters(item, filters)),
+    () => measurePerformance(
+      'licitaciones.sidebar-filters',
+      { records: data.length },
+      () => data.filter((item) => matchesSidebarFilters(item, filters))
+    ),
     [data, filters, matchesSidebarFilters],
   );
 
@@ -289,22 +294,28 @@ export default function LicitacionesView({ user }) {
       .filter((item) => matchesTableFilters(item, tableFiltersWithoutState, amountRange));
   }, [amountRange, data, debouncedTableFilters, filters, matchesSidebarAmount, matchesSidebarFilters, sidebarAmountRange]);
   const filtered = useMemo(
-    () => sidebarFiltered.filter((item) => matchesTableFilters(item, debouncedTableFilters, amountRange)),
+    () => measurePerformance(
+      'licitaciones.apply-filters',
+      { records: sidebarFiltered.length },
+      () => sidebarFiltered.filter((item) => matchesTableFilters(item, debouncedTableFilters, amountRange))
+    ),
     [amountRange, debouncedTableFilters, sidebarFiltered],
   );
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const sortedData = useMemo(() => {
-    if (!sortConfig.field) return filtered;
-    const direction = sortConfig.direction === 'asc' ? 1 : -1;
-    return [...filtered].sort((a, b) => {
-      const field = sortConfig.field;
-      if (field === 'monto') return ((a.monto_del_contrato_MXN ?? -Infinity) - (b.monto_del_contrato_MXN ?? -Infinity)) * direction;
-      if (field === 'fecha_de_publicacion' || field === 'fecha_de_fallo') {
-        return ((parseLicitacionDate(a[field])?.getTime() ?? 0) - (parseLicitacionDate(b[field])?.getTime() ?? 0)) * direction;
-      }
-      return String(a[field] || '').localeCompare(String(b[field] || ''), 'es', { sensitivity: 'base' }) * direction;
+    return measurePerformance('licitaciones.sort', { records: filtered.length, field: sortConfig.field || 'none' }, () => {
+      if (!sortConfig.field) return filtered;
+      const direction = sortConfig.direction === 'asc' ? 1 : -1;
+      return [...filtered].sort((a, b) => {
+        const field = sortConfig.field;
+        if (field === 'monto') return ((a.monto_del_contrato_MXN ?? -Infinity) - (b.monto_del_contrato_MXN ?? -Infinity)) * direction;
+        if (field === 'fecha_de_publicacion' || field === 'fecha_de_fallo') {
+          return ((parseLicitacionDate(a[field])?.getTime() ?? 0) - (parseLicitacionDate(b[field])?.getTime() ?? 0)) * direction;
+        }
+        return String(a[field] || '').localeCompare(String(b[field] || ''), 'es', { sensitivity: 'base' }) * direction;
+      });
     });
   }, [filtered, sortConfig]);
   const pageData = sortedData.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);

@@ -15,6 +15,7 @@ import {
   FiSliders,
 } from 'react-icons/fi';
 import { getObraSource, OBRA_SOURCE_META, OBRA_SOURCES } from '../../../utils/obrasSources';
+import { measurePerformance } from '../../../utils/performanceMonitor';
 
 const RESULTS_PER_PAGE = 100;
 const DATE_FIELDS = ['inicio', 'fin', 'publicacion'];
@@ -215,7 +216,7 @@ function ResultadosView({
   };
 
   const tableData = useMemo(() => {
-    return (tableObras || []).map((obra, index) => ({
+    return measurePerformance('results.table-data', { records: tableObras?.length || 0 }, () => (tableObras || []).map((obra, index) => ({
       id:
         `${getObraSource(obra)}:${
           obra.Id_Obra ||
@@ -448,7 +449,7 @@ function ResultadosView({
         '-',
 
       source: obra,
-    }));
+    })));
   }, [tableObras]);
 
   const getRowKey = (row) => String(row.id || row.clave || row.proyecto);
@@ -639,7 +640,8 @@ function ResultadosView({
   );
 
   const facetedRowsByField = useMemo(() => {
-    const fields = [
+    return measurePerformance('results.facets', { records: tableData.length, fields: 12 }, () => {
+      const fields = [
       'clave',
       'proyecto',
       'genero',
@@ -654,12 +656,13 @@ function ResultadosView({
       'compania',
     ];
 
-    return fields.reduce((acc, field) => {
-      acc[field] = tableData.filter((row) => (
-        rowMatchesColumnFilters(row, columnFilters, getFacetExclusions(field))
-      ));
-      return acc;
-    }, {});
+      return fields.reduce((acc, field) => {
+        acc[field] = tableData.filter((row) => (
+          rowMatchesColumnFilters(row, columnFilters, getFacetExclusions(field))
+        ));
+        return acc;
+      }, {});
+    });
   }, [tableData, columnFilters]);
 
   const uniqueValuesByField = useMemo(() => {
