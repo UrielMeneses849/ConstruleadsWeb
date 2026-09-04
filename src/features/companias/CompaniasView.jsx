@@ -132,15 +132,19 @@ const ESTADOS_POR_REGION_CATALOG = {
   Noreste: ['Nuevo León', 'Coahuila', 'Tamaulipas', 'San Luis Potosí', 'Zacatecas'],
 };
 
+const ESTADO_A_REGION = new Map(
+  Object.entries(ESTADOS_POR_REGION_CATALOG).flatMap(([region, states]) => (
+    states.map((state) => [normal(state), region])
+  )),
+);
+
 function statesByRegion(obras = []) {
   const grouped = new Map();
   obras.forEach((obra) => {
     const state = String(obra?.estado || '').trim();
     if (!state) return;
     const regionFromData = String(obra?.region || '').trim();
-    const inferredRegion = Object.entries(ESTADOS_POR_REGION_CATALOG).find(([, states]) => (
-      states.some((item) => normal(item) === normal(state))
-    ))?.[0];
+    const inferredRegion = ESTADO_A_REGION.get(normal(state));
     const region = regionFromData || inferredRegion || 'Sin región';
     const key = normal(region);
     if (!grouped.has(key)) grouped.set(key, { label: region, states: new Map() });

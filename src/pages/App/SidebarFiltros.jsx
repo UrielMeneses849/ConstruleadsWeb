@@ -193,16 +193,43 @@ function getObraDateByFilter(obra, fechaSeleccionada) {
 }
 
 function getDateBoundsForCriterion(obras, criterio) {
-  const dates = (obras || [])
-    .map((obra) => getObraDateByFilter(obra, criterio))
-    .filter(Boolean)
-    .sort((a, b) => a.getTime() - b.getTime());
+  let minDate = null;
+  let maxDate = null;
 
-  if (!dates.length) return { min: '', max: '' };
+  (obras || []).forEach((obra) => {
+    const date = getObraDateByFilter(obra, criterio);
+    if (!date) return;
+
+    if (!minDate || date.getTime() < minDate.getTime()) minDate = date;
+    if (!maxDate || date.getTime() > maxDate.getTime()) maxDate = date;
+  });
+
+  if (!minDate || !maxDate) return { min: '', max: '' };
 
   return {
-    min: toDateInputValue(dates[0]),
-    max: toDateInputValue(dates[dates.length - 1]),
+    min: toDateInputValue(minDate),
+    max: toDateInputValue(maxDate),
+  };
+}
+
+function getNumericBounds(obras, field, { defaultMax, include }) {
+  let min = Infinity;
+  let max = -Infinity;
+
+  (obras || []).forEach((obra) => {
+    const value = Number(obra[field] || 0);
+    if (!Number.isFinite(value) || !include(value)) return;
+    min = Math.min(min, value);
+    max = Math.max(max, value);
+  });
+
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    return { min: 0, max: defaultMax };
+  }
+
+  return {
+    min: Math.max(0, Math.floor(min)),
+    max: Math.max(1, Math.ceil(max)),
   };
 }
 
@@ -815,22 +842,10 @@ export default function SidebarFiltros({ obras = [], onApplyFilters, isGraphView
 
   const investmentBounds = useMemo(() => {
     return measurePerformance('sidebar.investment-bounds', { records: obrasDisponiblesParaRangos.length }, () => {
-      const values = obrasDisponiblesParaRangos
-        .map((obra) => Number(obra.inversion || 0))
-        .filter((value) => Number.isFinite(value) && value > 0)
-        .sort((a, b) => a - b);
-
-      if (!values.length) {
-        return {
-          min: 0,
-          max: 1000000,
-        };
-      }
-
-      return {
-        min: Math.max(0, Math.floor(values[0])),
-        max: Math.max(1, Math.ceil(values[values.length - 1])),
-      };
+      return getNumericBounds(obrasDisponiblesParaRangos, 'inversion', {
+        defaultMax: 1000000,
+        include: (value) => value > 0,
+      });
     });
   }, [obrasDisponiblesParaRangos]);
 
@@ -843,22 +858,10 @@ export default function SidebarFiltros({ obras = [], onApplyFilters, isGraphView
 
   const surfaceBounds = useMemo(() => {
     return measurePerformance('sidebar.surface-bounds', { records: obrasDisponiblesParaRangos.length }, () => {
-      const values = obrasDisponiblesParaRangos
-        .map((obra) => Number(obra.superficie || 0))
-        .filter((value) => Number.isFinite(value) && value >= 0)
-        .sort((a, b) => a - b);
-
-      if (!values.length) {
-        return {
-          min: 0,
-          max: 1000,
-        };
-      }
-
-      return {
-        min: Math.max(0, Math.floor(values[0])),
-        max: Math.max(1, Math.ceil(values[values.length - 1])),
-      };
+      return getNumericBounds(obrasDisponiblesParaRangos, 'superficie', {
+        defaultMax: 1000,
+        include: (value) => value >= 0,
+      });
     });
   }, [obrasDisponiblesParaRangos]);
 

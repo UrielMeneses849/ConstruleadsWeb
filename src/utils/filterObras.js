@@ -159,10 +159,12 @@ function getNumericRangeFilterValue(filtros, primaryKeys = [], fallbackKeys = []
   return fallback;
 }
 
-function matchesTextList(value, list = []) {
-  if (!list.length) return false;
-  const normalizedValue = normalizeText(value);
-  return list.some((item) => normalizeText(item) === normalizedValue);
+function getNormalizedTextSet(list = []) {
+  return new Set(list.map((item) => normalizeText(item)));
+}
+
+function matchesTextSet(value, normalizedValues) {
+  return normalizedValues.has(normalizeText(value));
 }
 
 export function getSelectedDateField(filtros = {}) {
@@ -296,53 +298,65 @@ export function filterObrasByFilters(obras = [], filtros = {}) {
   const tipoObra = getArrayFilter(filtros, 'tipoObra', 'selectedTipoObra');
   const tiposProyecto = getArrayFilter(filtros, 'tiposProyecto', 'selectedTiposProyecto');
 
+  // Normalizar los valores seleccionados una sola vez evita repetir el mismo
+  // trabajo por cada obra. Conserva la comparación tolerante del filtro.
+  const regionesActivas = getNormalizedTextSet(regiones);
+  const estadosActivos = getNormalizedTextSet(estados);
+  const generosActivos = getNormalizedTextSet(generos);
+  const subgenerosActivos = getNormalizedTextSet(subgeneros);
+  const tiposObraActivos = getNormalizedTextSet(tipoObra);
+  const desarrollosActivos = getNormalizedTextSet(desarrollos);
+  const etapasActivas = getNormalizedTextSet(etapas);
+  const tiposProyectoActivos = getNormalizedTextSet(tiposProyecto);
+  const sectoresActivos = getNormalizedTextSet(sectores);
+
   // La región limita siempre el universo. Los estados, cuando existen,
   // refinan ese resultado sin reintroducir regiones desmarcadas.
-  if (regiones.length) {
+  if (regionesActivas.size) {
     resultado = resultado.filter((obra) =>
-      matchesTextList(obra.region, regiones)
+      matchesTextSet(obra.region, regionesActivas)
     );
   }
 
-  if (estados.length) {
+  if (estadosActivos.size) {
     resultado = resultado.filter((obra) =>
-      matchesTextList(obra.estado, estados)
+      matchesTextSet(obra.estado, estadosActivos)
     );
   }
 
-  if (generos.length) {
+  if (generosActivos.size) {
     resultado = resultado.filter((obra) =>
-      matchesTextList(obra.genero, generos)
+      matchesTextSet(obra.genero, generosActivos)
     );
   }
 
-  if (subgeneros.length) {
+  if (subgenerosActivos.size) {
     resultado = resultado.filter((obra) =>
-      matchesTextList(obra.subgenero, subgeneros)
+      matchesTextSet(obra.subgenero, subgenerosActivos)
     );
   }
 
-  if (tipoObra.length) {
+  if (tiposObraActivos.size) {
     resultado = resultado.filter((obra) =>
-      matchesTextList(obra.tipoObra, tipoObra)
+      matchesTextSet(obra.tipoObra, tiposObraActivos)
     );
   }
 
-  if (desarrollos.length) {
+  if (desarrollosActivos.size) {
     resultado = resultado.filter((obra) =>
-      matchesTextList(obra.tipoDesarrollo, desarrollos)
+      matchesTextSet(obra.tipoDesarrollo, desarrollosActivos)
     );
   }
 
-  if (etapas.length) {
+  if (etapasActivas.size) {
     resultado = resultado.filter((obra) =>
-      matchesTextList(obra.etapa, etapas)
+      matchesTextSet(obra.etapa, etapasActivas)
     );
   }
 
-  if (tiposProyecto.length) {
+  if (tiposProyectoActivos.size) {
     resultado = resultado.filter((obra) =>
-      matchesTextList(obra.tipoProyecto, tiposProyecto)
+      matchesTextSet(obra.tipoProyecto, tiposProyectoActivos)
     );
   }
 
@@ -397,9 +411,9 @@ export function filterObrasByFilters(obras = [], filtros = {}) {
     }
   }
 
-  if (sectores.length) {
+  if (sectoresActivos.size) {
     resultado = resultado.filter((obra) =>
-      matchesTextList(obra.sector, sectores)
+      matchesTextSet(obra.sector, sectoresActivos)
     );
   }
 

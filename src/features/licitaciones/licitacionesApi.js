@@ -36,8 +36,8 @@ function parseServiceRow(responseText) {
   return row;
 }
 
-function normalizeLicitacionFragment(fragment) {
-  const xml = new DOMParser().parseFromString(fragment, 'text/xml');
+function normalizeLicitacionFragment(fragment, parser) {
+  const xml = parser.parseFromString(fragment, 'text/xml');
   if (xml.querySelector('parsererror')) return null;
   const node = xml.getElementsByTagName('datos')[0];
   return node ? normalizeLicitacion(node) : null;
@@ -48,6 +48,7 @@ async function readLicitacionesProgressively(response, onBatch) {
   if (!reader) return null;
 
   const decoder = new TextDecoder();
+  const parser = new DOMParser();
   const all = [];
   let pending = [];
   let buffer = '';
@@ -71,7 +72,7 @@ async function readLicitacionesProgressively(response, onBatch) {
         return;
       }
       const fragmentEnd = end + '</datos>'.length;
-      const item = normalizeLicitacionFragment(buffer.slice(start, fragmentEnd));
+      const item = normalizeLicitacionFragment(buffer.slice(start, fragmentEnd), parser);
       if (item) {
         all.push(item);
         pending.push(item);

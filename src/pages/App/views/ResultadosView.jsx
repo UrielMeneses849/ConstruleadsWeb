@@ -19,6 +19,8 @@ import { measurePerformance } from '../../../utils/performanceMonitor';
 
 const RESULTS_PER_PAGE = 100;
 const DATE_FIELDS = ['inicio', 'fin', 'publicacion'];
+const CATEGORY_FIELD = 'categoria';
+const SHARED_STATE_PROJECT_EXCLUSIONS = new Set(['estado', 'proyecto']);
 
 function parseTableDate(value) {
   if (!value || value === '-') return null;
@@ -58,6 +60,14 @@ function parseTableDate(value) {
 const tableMonthFormatter = new Intl.DateTimeFormat('es-MX', {
   month: 'short',
 });
+const currencyMXNFormatter = new Intl.NumberFormat('es-MX', {
+  style: 'currency',
+  currency: 'MXN',
+  maximumFractionDigits: 0,
+});
+const numberMXFormatter = new Intl.NumberFormat('es-MX', {
+  maximumFractionDigits: 0,
+});
 
 function formatTableDateDisplay(value) {
   if (!value || value === '-') return '-';
@@ -88,29 +98,32 @@ function parseNumberValue(value) {
 
 function formatCurrencyMXN(value) {
   if (value === null || value === undefined) return '-';
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    maximumFractionDigits: 0,
-  }).format(value);
+  return currencyMXNFormatter.format(value);
 }
 
 function formatNumberMX(value) {
   if (value === null || value === undefined) return '-';
-  return new Intl.NumberFormat('es-MX', {
-    maximumFractionDigits: 0,
-  }).format(value);
+  return numberMXFormatter.format(value);
 }
 
-function rowMatchesColumnFilters(row, filters, excludedFields = []) {
-  const excluded = new Set(excludedFields);
+function prepareColumnFilterEntries(filters = {}) {
+  return Object.entries(filters)
+    .filter(([, values]) => Array.isArray(values) && values.length > 0)
+    .map(([field, values]) => ({
+      field,
+      values: new Set(values),
+      categories: field === CATEGORY_FIELD
+        ? values.map((token) => String(token).split('::'))
+        : null,
+    }));
+}
 
-  return Object.entries(filters).every(([field, values]) => {
-    if (excluded.has(field) || !values || values.length === 0) return true;
+function rowMatchesColumnFilters(row, filterEntries, excludedFields = null) {
+  return filterEntries.every(({ field, values, categories }) => {
+    if (excludedFields?.has(field)) return true;
 
-    if (field === 'categoria') {
-      return values.some((token) => {
-        const [kind, genero, subgenero] = String(token).split('::');
+    if (field === CATEGORY_FIELD) {
+      return categories.some(([kind, genero, subgenero]) => {
         if (kind === 'genero') return row.genero === genero;
         return kind === 'subgenero' && row.genero === genero && row.subgenero === subgenero;
       });
@@ -118,10 +131,10 @@ function rowMatchesColumnFilters(row, filters, excludedFields = []) {
 
     if (DATE_FIELDS.includes(field)) {
       const monthGroup = getMonthGroupKey(row[`${field}Raw`] || row[field]);
-      return values.includes(monthGroup);
+      return values.has(monthGroup);
     }
 
-    return values.includes(String(row[field] ?? ''));
+    return values.has(String(row[field] ?? ''));
   });
 }
 
@@ -130,8 +143,8 @@ function getFacetExclusions(field) {
   // opciones compatibles con el resto de filtros, no sólo con su propia
   // selección actual.
   return field === 'estado' || field === 'proyecto'
-    ? ['estado', 'proyecto']
-    : [field];
+    ? SHARED_STATE_PROJECT_EXCLUSIONS
+    : new Set([field]);
 }
 
 function ResultadosView({
@@ -216,7 +229,75 @@ function ResultadosView({
   };
 
   const tableData = useMemo(() => {
-    return measurePerformance('results.table-data', { records: tableObras?.length || 0 }, () => (tableObras || []).map((obra, index) => ({
+    return measurePerformance('results.table-data', { records: tableObras?.length || 0 }, () => (tableObras || []).map((obra, index) => {
+      const inversionRaw = parseNumberValue(
+        obra.inversion ||
+        obra.Inversion ||
+        obra.INVERSION ||
+        obra.inversionTotal ||
+        obra.InversionTotal ||
+        null
+      );
+      const inversion = parseNumberValue(
+        obra.inversion ||
+        obra.Inversion ||
+        obra.INVERSION ||
+        obra.inversionTotal ||
+        null
+      );
+      const superficie = parseNumberValue(
+        obra.superficie ??
+        obra.Superficie ??
+        obra.SUPERFICIE ??
+        obra.superficieTotal ??
+        obra.SuperficieTotal ??
+        0
+      );
+      const inicioRaw =
+        obra.fechaInicioDate ||
+        obra.fechaInicioTime ||
+        obra.fechaInicio ||
+        obra.Fecha_Inicio ||
+        obra.FECHA_INICIO ||
+        obra.fecha_inicio ||
+        obra.FechaInicio ||
+        obra.fechainicio ||
+        '-';
+      const finRaw =
+        obra.fechaTerminoDate ||
+        obra.fechaTerminoTime ||
+        obra.fechaTerminacionDate ||
+        obra.fechaFinDate ||
+        obra.fechaTermino ||
+        obra.fechaTerminacion ||
+        obra.fechaFin ||
+        obra.Fecha_Terminacion ||
+        obra.Fecha_Termino ||
+        obra.FECHA_TERMINACION ||
+        obra.FECHA_TERMINO ||
+        obra.fecha_terminacion ||
+        obra.fecha_termino ||
+        obra.FechaTerminacion ||
+        obra.FechaTermino ||
+        obra.fechaterminacion ||
+        obra.fechatermino ||
+        obra.Fecha_Fin ||
+        obra.FECHA_FIN ||
+        obra.fecha_fin ||
+        '-';
+      const publicacionRaw =
+        obra.fechaPublicacionDate ||
+        obra.fechaPublicacionTime ||
+        obra.fechaPublicacion ||
+        obra.Fecha_publicacion ||
+        obra.FECHA_PUBLICACION ||
+        obra.fecha_publicacion ||
+        obra.FechaPublicacion ||
+        obra.fechapublicacion ||
+        obra.Fecha_Publicacion ||
+        '-';
+
+      return {
       id:
         `${getObraSource(obra)}:${
           obra.Id_Obra ||
@@ -266,63 +347,11 @@ function ResultadosView({
         obra.tipoobra ||
         '-',
 
-      inversionRaw:
-        parseNumberValue(
-          obra.inversion ||
-          obra.Inversion ||
-          obra.INVERSION ||
-          obra.inversionTotal ||
-          obra.InversionTotal ||
-          null
-        ),
-      inversion:
-        parseNumberValue(
-          obra.inversion ||
-          obra.Inversion ||
-          obra.INVERSION ||
-          obra.inversionTotal ||
-          null
-        ) !== null
-          ? formatCurrencyMXN(
-              parseNumberValue(
-                obra.inversion ||
-                obra.Inversion ||
-                obra.INVERSION ||
-                obra.inversionTotal ||
-                null
-              )
-            )
-          : '-',
+      inversionRaw,
+      inversion: inversion !== null ? formatCurrencyMXN(inversion) : '-',
 
-      superficieRaw:
-        parseNumberValue(
-          obra.superficie ??
-          obra.Superficie ??
-          obra.SUPERFICIE ??
-          obra.superficieTotal ??
-          obra.SuperficieTotal ??
-          0
-        ),
-      superficie:
-        parseNumberValue(
-          obra.superficie ??
-          obra.Superficie ??
-          obra.SUPERFICIE ??
-          obra.superficieTotal ??
-          obra.SuperficieTotal ??
-          0
-        ) > 0
-          ? `${formatNumberMX(
-              parseNumberValue(
-                obra.superficie ??
-                obra.Superficie ??
-                obra.SUPERFICIE ??
-                obra.superficieTotal ??
-                obra.SuperficieTotal ??
-                0
-              )
-            )} m²`
-          : 'No definido',
+      superficieRaw: superficie,
+      superficie: superficie > 0 ? `${formatNumberMX(superficie)} m²` : 'No definido',
 
       estado:
         obra.estado ||
@@ -342,101 +371,12 @@ function ResultadosView({
         obra.Direccion ||
         '',
 
-      inicioRaw:
-        obra.fechaInicioDate ||
-        obra.fechaInicioTime ||
-        obra.fechaInicio ||
-        obra.Fecha_Inicio ||
-        obra.FECHA_INICIO ||
-        obra.fecha_inicio ||
-        obra.FechaInicio ||
-        obra.fechainicio ||
-        '-',
-
-      inicio:
-        formatTableDateDisplay(
-          obra.fechaInicioDate ||
-            obra.fechaInicioTime ||
-            obra.fechaInicio ||
-            obra.Fecha_Inicio ||
-            obra.FECHA_INICIO ||
-            obra.fecha_inicio ||
-            obra.FechaInicio ||
-            obra.fechainicio
-        ),
-
-      finRaw:
-        obra.fechaTerminoDate ||
-        obra.fechaTerminoTime ||
-        obra.fechaTerminacionDate ||
-        obra.fechaFinDate ||
-        obra.fechaTermino ||
-        obra.fechaTerminacion ||
-        obra.fechaFin ||
-        obra.Fecha_Terminacion ||
-        obra.Fecha_Termino ||
-        obra.FECHA_TERMINACION ||
-        obra.FECHA_TERMINO ||
-        obra.fecha_terminacion ||
-        obra.fecha_termino ||
-        obra.FechaTerminacion ||
-        obra.FechaTermino ||
-        obra.fechaterminacion ||
-        obra.fechatermino ||
-        obra.Fecha_Fin ||
-        obra.FECHA_FIN ||
-        obra.fecha_fin ||
-        '-',
-
-      fin:
-        formatTableDateDisplay(
-          obra.fechaTerminoDate ||
-            obra.fechaTerminoTime ||
-            obra.fechaTerminacionDate ||
-            obra.fechaFinDate ||
-            obra.fechaTermino ||
-            obra.fechaTerminacion ||
-            obra.fechaFin ||
-            obra.Fecha_Terminacion ||
-            obra.Fecha_Termino ||
-            obra.FECHA_TERMINACION ||
-            obra.FECHA_TERMINO ||
-            obra.fecha_terminacion ||
-            obra.fecha_termino ||
-            obra.FechaTerminacion ||
-            obra.FechaTermino ||
-            obra.fechaterminacion ||
-            obra.fechatermino ||
-            obra.Fecha_Fin ||
-            obra.FECHA_FIN ||
-            obra.fecha_fin ||
-            '-'
-        ),
-
-      publicacionRaw:
-        obra.fechaPublicacionDate ||
-        obra.fechaPublicacionTime ||
-        obra.fechaPublicacion ||
-        obra.Fecha_publicacion ||
-        obra.FECHA_PUBLICACION ||
-        obra.fecha_publicacion ||
-        obra.FechaPublicacion ||
-        obra.fechapublicacion ||
-        obra.Fecha_Publicacion ||
-        '-',
-
-      publicacion:
-        formatTableDateDisplay(
-          obra.fechaPublicacionDate ||
-            obra.fechaPublicacionTime ||
-            obra.fechaPublicacion ||
-            obra.Fecha_publicacion ||
-            obra.FECHA_PUBLICACION ||
-            obra.fecha_publicacion ||
-            obra.FechaPublicacion ||
-            obra.fechapublicacion ||
-            obra.Fecha_Publicacion
-        ),
+      inicioRaw,
+      inicio: formatTableDateDisplay(inicioRaw),
+      finRaw,
+      fin: formatTableDateDisplay(finRaw),
+      publicacionRaw,
+      publicacion: formatTableDateDisplay(publicacionRaw),
 
       // El parser ya expone el valor canónico entregado por el WS. La tabla no
       // debe traducirlo, corregirlo ni reconstruirlo con aliases.
@@ -449,7 +389,8 @@ function ResultadosView({
         '-',
 
       source: obra,
-    })));
+      };
+    }));
   }, [tableObras]);
 
   const getRowKey = (row) => String(row.id || row.clave || row.proyecto);
@@ -551,9 +492,14 @@ function ResultadosView({
     };
   }, []);
 
+  const columnFilterEntries = useMemo(
+    () => prepareColumnFilterEntries(columnFilters),
+    [columnFilters]
+  );
+
   const filteredData = useMemo(
-    () => tableData.filter((row) => rowMatchesColumnFilters(row, columnFilters)),
-    [tableData, columnFilters]
+    () => tableData.filter((row) => rowMatchesColumnFilters(row, columnFilterEntries)),
+    [tableData, columnFilterEntries]
   );
 
   const sortedData = useMemo(() => {
@@ -658,12 +604,12 @@ function ResultadosView({
 
       return fields.reduce((acc, field) => {
         acc[field] = tableData.filter((row) => (
-          rowMatchesColumnFilters(row, columnFilters, getFacetExclusions(field))
+          rowMatchesColumnFilters(row, columnFilterEntries, getFacetExclusions(field))
         ));
         return acc;
       }, {});
     });
-  }, [tableData, columnFilters]);
+  }, [tableData, columnFilterEntries]);
 
   const uniqueValuesByField = useMemo(() => {
     return Object.entries(facetedRowsByField).reduce((acc, [field, rows]) => {
@@ -687,8 +633,8 @@ function ResultadosView({
   }, [columnFilters, facetedRowsByField]);
 
   const genreFacetRows = useMemo(
-    () => tableData.filter((row) => rowMatchesColumnFilters(row, columnFilters, ['categoria'])),
-    [tableData, columnFilters]
+    () => tableData.filter((row) => rowMatchesColumnFilters(row, columnFilterEntries, new Set([CATEGORY_FIELD]))),
+    [tableData, columnFilterEntries]
   );
 
   const genreHierarchy = useMemo(() => {

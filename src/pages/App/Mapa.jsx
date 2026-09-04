@@ -260,6 +260,7 @@ function Mapa({
   const unclusteredMarkerElementsRef = useRef(new Set());
   const markerCacheRef = useRef(new Map());
   const activeMarkerKeysRef = useRef(new Set());
+  const lastRenderedObrasRef = useRef(null);
   const markerUpdateTokenRef = useRef(0);
   const fitRequestTokenRef = useRef(0);
   const mapNeedsRefreshRef = useRef(false);
@@ -1085,6 +1086,7 @@ debugLog(
 
       markerElementsRef.current = [];
       activeMarkerKeysRef.current = new Set();
+      lastRenderedObrasRef.current = null;
     };
 
     const createClusterContent = (count) => {
@@ -1477,6 +1479,21 @@ debugLog(
         return;
       }
 
+      // El contenedor puede pedir un refresco al volver a ser visible, aun
+      // cuando el universo de obras no cambió. En ese caso los mismos pines y
+      // clusterer ya están montados: evitar recorrerlos de nuevo mantiene el
+      // mapa fluido sin cambiar su apariencia ni su estado de cámara.
+      if (
+        lastRenderedObrasRef.current === filteredObras &&
+        markerElementsRef.current.length === activeMarkerKeysRef.current.size &&
+        markerElementsRef.current.length > 0
+      ) {
+        setMarkerProgress({ loaded: filteredObras.length, total: filteredObras.length });
+        setIsMapLoading(false);
+        scheduleClusterRender();
+        return;
+      }
+
       if (!markerLibraryReadyRef.current) {
         await importLibrary('marker');
         if (cancelled || !mapInstanceRef.current) return;
@@ -1557,6 +1574,7 @@ debugLog(
 
       markerElementsRef.current = markers;
       activeMarkerKeysRef.current = nextMarkerKeys;
+      lastRenderedObrasRef.current = filteredObras;
       if (!isClusteringEnabledRef.current) {
         renderUnclusteredMarkersRef.current?.();
       }

@@ -150,29 +150,35 @@ const compactFormatter = new Intl.NumberFormat('es-MX', {
   maximumFractionDigits: 0,
 });
 
-const totalProyectos = obras.length;
-const inversionTotal = obras.reduce(
-  (acc, o) => acc + (Number(o.inversion) || 0),
-  0
-);
-const superficieTotal = obras.reduce(
-  (acc, o) => acc + (Number(o.superficie) || 0),
-  0
-);
+const {
+  totalProyectos,
+  inversionTotal,
+  superficieTotal,
+  estadosConProyectos,
+  companiasUnicas,
+} = useMemo(() => {
+  let inversion = 0;
+  let superficie = 0;
+  const estados = new Set();
+  const companias = new Set();
 
-const estadosMap = {};
-obras.forEach((o) => {
-  const estado = o.estado;
-  if (!estado) return;
-  estadosMap[estado] = (estadosMap[estado] || 0) + 1;
-});
+  obras.forEach((obra) => {
+    inversion += Number(obra.inversion) || 0;
+    superficie += Number(obra.superficie) || 0;
 
-const estadosConProyectos = Object.keys(estadosMap).length;
-const companiasUnicas = new Set(
-  obras
-    .map((obra) => String(obra?.compania || '').trim())
-    .filter(Boolean),
-).size;
+    if (obra.estado) estados.add(obra.estado);
+    const compania = String(obra?.compania || '').trim();
+    if (compania) companias.add(compania);
+  });
+
+  return {
+    totalProyectos: obras.length,
+    inversionTotal: inversion,
+    superficieTotal: superficie,
+    estadosConProyectos: estados.size,
+    companiasUnicas: companias.size,
+  };
+}, [obras]);
 
 const metricasDinamicas = [
   ...(leadingMetric ? [{
