@@ -9,7 +9,7 @@ import {
   FiX,
 } from 'react-icons/fi';
 
-const MAX_ROUTE_STOPS = 10;
+const MAX_ROUTE_STOPS_PER_SEGMENT = 10;
 
 function getCoordinate(obra) {
   const lat = Number(obra?.lat ?? obra?.latitud ?? obra?.Latitud);
@@ -65,7 +65,7 @@ function formatSurface(value) {
   return amount > 0 ? `${Math.round(amount).toLocaleString('es-MX')} m²` : 'No definida';
 }
 
-function buildSuggestedRoute(obras, maxStops = 10) {
+function buildSuggestedRoute(obras) {
   const remaining = obras
     .map((obra) => ({ obra, coordinate: getCoordinate(obra) }))
     .filter(({ coordinate }) => coordinate);
@@ -82,7 +82,7 @@ function buildSuggestedRoute(obras, maxStops = 10) {
   );
   const route = [remaining.splice(northernmostIndex, 1)[0]];
 
-  while (remaining.length && route.length < maxStops) {
+  while (remaining.length) {
     const current = route.at(-1).coordinate;
     let nearestIndex = 0;
     let nearestDistance = Number.POSITIVE_INFINITY;
@@ -100,6 +100,35 @@ function buildSuggestedRoute(obras, maxStops = 10) {
   }
 
   return route;
+}
+
+function buildRouteSegments(route, maxStopsPerSegment = MAX_ROUTE_STOPS_PER_SEGMENT) {
+  if (!route.length) return [];
+
+  const segments = [];
+  let nextRouteIndex = 0;
+
+  while (nextRouteIndex < route.length) {
+    const isFirstSegment = segments.length === 0;
+    const newStops = route.slice(nextRouteIndex, nextRouteIndex + maxStopsPerSegment);
+    const stops = isFirstSegment
+      ? newStops
+      // Cada tramo posterior parte del último destino del anterior. Así la
+      // experiencia es continua aunque Google Maps abra la navegación por
+      // enlaces separados.
+      : [route[nextRouteIndex - 1], ...newStops];
+
+    segments.push({
+      number: segments.length + 1,
+      stops,
+      destinationCount: newStops.length,
+      startStop: nextRouteIndex + 1,
+      endStop: nextRouteIndex + newStops.length,
+    });
+    nextRouteIndex += newStops.length;
+  }
+
+  return segments;
 }
 
 function openSuggestedRoute(route) {
@@ -141,13 +170,18 @@ function buildSelectionRows(obras) {
   });
 }
 
-function buildRouteRows(route) {
+function buildRouteRows(route, routeSegments) {
   if (!route.length) {
     return [{ Nota: 'No hay suficientes proyectos con coordenadas para sugerir una ruta.' }];
   }
 
-  return route.map(({ obra, coordinate }, index) => ({
-    Parada: index + 1,
+  return route.map(({ obra, coordinate }, index) => {
+    const segment = routeSegments.find(({ startStop, endStop }) => (
+      index + 1 >= startStop && index + 1 <= endStop
+    ));
+    return {
+    'Parada global': index + 1,
+    Tramo: segment?.number || 1,
     Proyecto: getProjectName(obra),
     Clave: getProjectKey(obra),
     Estado: getFirstValue(obra?.estado, obra?.estadoNombre),
@@ -155,7 +189,8 @@ function buildRouteRows(route) {
     'Tipo de obra': getProjectType(obra),
     Latitud: coordinate.lat,
     Longitud: coordinate.lng,
-  }));
+    };
+  });
 }
 
 function setSheetPresentation(sheet, columnWidths, numericColumns = []) {
@@ -172,7 +207,7 @@ function setSheetPresentation(sheet, columnWidths, numericColumns = []) {
   });
 }
 
-async function exportSelectionToExcel(obras, route) {
+async function exportSelectionToExcel(obras, route, routeSegments) {
   // Carga diferida: la librería de Excel sólo se descarga cuando hace falta.
   const XLSX = await import('xlsx');
   const workbook = XLSX.utils.book_new();
@@ -189,10 +224,10 @@ async function exportSelectionToExcel(obras, route) {
   );
   XLSX.utils.book_append_sheet(workbook, selectionSheet, 'Proyectos seleccionados');
 
-  const routeSheet = XLSX.utils.json_to_sheet(buildRouteRows(route));
-  setSheetPresentation(routeSheet, [12, 54, 18, 20, 34, 14, 14, 14], [
-    { column: 'G', format: '0.000000' },
+  const routeSheet = XLSX.utils.json_to_sheet(buildRouteRows(route, routeSegments));
+  setSheetPresentation(routeSheet, [14, 10, 54, 18, 20, 34, 14, 14, 14], [
     { column: 'H', format: '0.000000' },
+    { column: 'I', format: '0.000000' },
   ]);
   XLSX.utils.book_append_sheet(workbook, routeSheet, 'Ruta sugerida');
 
@@ -205,7 +240,8 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject, 
   const states = new Set(obras.map((obra) => obra?.estado).filter(Boolean));
   const investment = obras.reduce((total, obra) => total + (Number(obra?.inversion) || 0), 0);
   const surface = obras.reduce((total, obra) => total + (Number(obra?.superficie) || 0), 0);
-  const route = useMemo(() => buildSuggestedRoute(obras, MAX_ROUTE_STOPS), [obras]);
+  const route = useMemo(() => buildSuggestedRoute(obras), [obras]);
+  const routeSegments = useMemo(() => buildRouteSegments(route), [route]);
   const geoLocatedCount = useMemo(
     () => obras.filter((obra) => Boolean(getCoordinate(obra))).length,
     [obras],
@@ -215,7 +251,7 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject, 
   const handleExcelExport = async () => {
     setIsExporting(true);
     try {
-      await exportSelectionToExcel(obras, route);
+      await exportSelectionToExcel(obras, route, routeSegments);
     } finally {
       setIsExporting(false);
     }
@@ -340,13 +376,20 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject, 
                       Inicio: {getProjectAddress(routeStart)}
                     </Text>
                     <Text mt={0.5} fontSize="10px" color="var(--cl-text-muted)" lineClamp={1}>
-                      Ordenada para minimizar el recorrido entre destinos.
+                      {routeSegments.length > 1
+                        ? `${routeSegments.length} tramos consecutivos: cada uno retoma el destino final del anterior.`
+                        : 'Ordenada para minimizar el recorrido entre destinos.'}
                     </Text>
                   </Box>
                 </Flex>
                 <Box px={3} py={1.5} borderRadius="10px" bg="var(--cl-surface)" border="1px solid var(--cl-border)" textAlign={{ base: 'left', md: 'right' }}>
                   <Text fontSize="18px" lineHeight="1" fontWeight="800" color="#D95B27">{route.length}</Text>
                   <Text mt={1} fontSize="9px" fontWeight="700" color="var(--cl-text-muted)" whiteSpace="nowrap">de {geoLocatedCount} destinos</Text>
+                  {routeSegments.length > 1 && (
+                    <Text mt={0.5} fontSize="9px" fontWeight="700" color="#B9471E" whiteSpace="nowrap">
+                      {routeSegments.length} tramos
+                    </Text>
+                  )}
                 </Box>
               </Flex>
             )}
@@ -440,25 +483,52 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject, 
 
           <Flex flexShrink={0} align="center" justify="space-between" gap={3} flexWrap="wrap" px={5} py={3.5} borderTop="1px solid var(--cl-border)" bg="var(--cl-surface-muted)">
             <Text fontSize="10px" color="var(--cl-text-muted)">
-              Excel incluye los {obras.length} proyectos{geoLocatedCount ? ` y hasta ${MAX_ROUTE_STOPS} paradas sugeridas` : ''}.
+              Excel incluye los {obras.length} proyectos{geoLocatedCount ? ` y los ${route.length} destinos ordenados` : ''}
+              {routeSegments.length > 1 ? ` en ${routeSegments.length} tramos consecutivos.` : '.'}
             </Text>
             <Flex gap={2} flexWrap="wrap">
-              <Button
-                h="34px"
-                minW="172px"
-                px={3}
-                variant="outline"
-                borderColor="var(--cl-border)"
-                color="var(--cl-text-strong)"
-                fontSize="12px"
-                fontWeight="600"
-                leftIcon={<FiNavigation size={15} />}
-                isDisabled={route.length < 2}
-                title={route.length < 2 ? 'Selecciona al menos dos proyectos con coordenadas' : `Abrir recorrido con ${route.length} paradas`}
-                onClick={() => openSuggestedRoute(route)}
-              >
-                {route.length > 1 ? `Abrir ruta · ${route.length} paradas` : 'Ruta no disponible'}
-              </Button>
+              {routeSegments.length ? routeSegments.map((segment) => (
+                <Button
+                  key={segment.number}
+                  h="34px"
+                  minW="172px"
+                  px={3}
+                  variant="outline"
+                  borderColor="var(--cl-border)"
+                  color="var(--cl-text-strong)"
+                  fontSize="12px"
+                  fontWeight="600"
+                  leftIcon={<FiNavigation size={15} />}
+                  isDisabled={segment.stops.length < 2}
+                  title={segment.stops.length < 2
+                    ? 'Selecciona al menos dos proyectos con coordenadas'
+                    : routeSegments.length > 1
+                      ? `Abrir tramo ${segment.number}: destinos ${segment.startStop} a ${segment.endStop}`
+                      : `Abrir recorrido con ${segment.destinationCount} paradas`}
+                  onClick={() => openSuggestedRoute(segment.stops)}
+                >
+                  {segment.stops.length < 2
+                    ? 'Ruta no disponible'
+                    : routeSegments.length > 1
+                      ? `Abrir tramo ${segment.number} · ${segment.destinationCount} destinos`
+                      : `Abrir ruta · ${segment.destinationCount} paradas`}
+                </Button>
+              )) : (
+                <Button
+                  h="34px"
+                  minW="172px"
+                  px={3}
+                  variant="outline"
+                  borderColor="var(--cl-border)"
+                  color="var(--cl-text-muted)"
+                  fontSize="12px"
+                  fontWeight="600"
+                  leftIcon={<FiNavigation size={15} />}
+                  isDisabled
+                >
+                  Ruta no disponible
+                </Button>
+              )}
               <Button
                 h="34px"
                 minW="146px"

@@ -10,6 +10,7 @@ import {
 const TRACKED_OPERATIONS = [
   ['map.refresh', 'Mapa'],
   ['filters.obras', 'Filtros'],
+  ['obras.request', 'WS obras'],
   ['obras.load', 'Carga obras'],
   ['obras.parse', 'Parseo obras'],
   ['licitaciones.load', 'Licitaciones'],
@@ -18,9 +19,11 @@ const TRACKED_OPERATIONS = [
 ];
 
 function formatMetadata(metadata = {}) {
-  if (Number.isFinite(metadata.records)) return `${metadata.records.toLocaleString('es-MX')} registros`;
-  if (Number.isFinite(metadata.relationships)) return `${metadata.relationships.toLocaleString('es-MX')} relaciones`;
-  return '';
+  const details = [];
+  if (Number.isFinite(metadata.records)) details.push(`${metadata.records.toLocaleString('es-MX')} registros`);
+  if (Number.isFinite(metadata.relationships)) details.push(`${metadata.relationships.toLocaleString('es-MX')} relaciones`);
+  if (Number.isFinite(metadata.firstPreviewMs)) details.push(`1er punto ${metadata.firstPreviewMs} ms`);
+  return details.join(' · ');
 }
 
 export default function PerformanceAuditOverlay() {

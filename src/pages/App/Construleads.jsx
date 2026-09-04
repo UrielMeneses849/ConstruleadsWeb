@@ -426,12 +426,46 @@ export default function Construleads() {
       let loadedRecords = 0;
       let loadStatus = 'error';
       let servedFromCache = false;
+      let firstPreviewMs = null;
       const loadSpan = startPerformanceSpan('obras.load', { userId: Boolean(userId) });
 
       try {
         setLoadingObras(true);
 
-        cachedObras = await readCachedObras(userId);
+        // La red y el disco no deben esperar uno al otro. En una primera
+        // visita no habrá caché; arrancar el WS antes de consultar IndexedDB
+        // elimina esa espera de la ruta crítica hacia el primer marcador.
+        const cachePromise = readCachedObras(userId);
+        const previewFragments = [];
+        let firstPreviewPublished = false;
+        const requestStartedAt = performance.now();
+        const requestSpan = startPerformanceSpan('obras.request', { cached: false });
+        const requestPromise = obtenerObrasProgresivas({
+          signal: abortController.signal,
+          // Un solo registro completo basta para mostrar el primer punto. El
+          // resto de la carga sigue en segundo plano sin repintar el mapa por
+          // cada bloque de red.
+          firstBatchSize: 1,
+          onBatch: (fragments) => {
+            if (!isActive || cachedObras?.length || firstPreviewPublished) return;
+            previewFragments.push(...fragments);
+            const previewSpan = startPerformanceSpan('obras.preview-parse', { fragments: previewFragments.length });
+            const previewObras = parseObrasXml(
+              `<NewDataSet>${previewFragments.join('')}</NewDataSet>`
+            );
+            previewSpan.end({ records: previewObras.length });
+
+            // Una primera fila sin coordenadas no debe consumir la única
+            // oportunidad de preview y dejar el mapa vacío hasta el final.
+            if (!previewObras.some((obra) => obra?.hasValidCoordinates)) return;
+            firstPreviewPublished = true;
+            firstPreviewMs = Math.round(performance.now() - requestStartedAt);
+            setMapPreviewObras(previewObras);
+            setLoadingObras(false);
+          },
+        });
+
+        cachedObras = await cachePromise;
         if (isActive && cachedObras?.length) {
           servedFromCache = true;
           loadedRecords = cachedObras.length;
@@ -443,32 +477,14 @@ export default function Construleads() {
           await new Promise((resolve) => window.setTimeout(resolve, 900));
         }
 
-        let firstPreviewPublished = false;
-        const requestSpan = startPerformanceSpan('obras.request', { cached: Boolean(cachedObras?.length) });
         let streamedResponse;
         try {
-          streamedResponse = await obtenerObrasProgresivas({
-            signal: abortController.signal,
-            onBatch: (fragments) => {
-              if (!isActive || cachedObras?.length || firstPreviewPublished) return;
-              const previewSpan = startPerformanceSpan('obras.preview-parse', { fragments: fragments.length });
-              const previewObras = parseObrasXml(
-                `<NewDataSet>${fragments.join('')}</NewDataSet>`
-              );
-              previewSpan.end({ records: previewObras.length });
-            // El primer bloque sirve también a Resultados, Gráficas y
-            // Compañías: no requiere coordenadas para ser útil. Antes se
-            // descartaba hasta encontrar un punto de mapa y esos módulos se
-            // quedaban vacíos mientras el WS seguía descargando miles de filas.
-            if (!previewObras.length) return;
-            firstPreviewPublished = true;
-            setMapPreviewObras(previewObras);
-            setLoadingObras(false);
-            },
-          });
+          streamedResponse = await requestPromise;
           requestSpan.end({
             streamed: streamedResponse.streamed,
             fragments: streamedResponse.fragments?.length || 0,
+            cache: Boolean(cachedObras?.length),
+            firstPreviewMs,
           });
         } catch (error) {
           requestSpan.end({ error: true });
@@ -500,7 +516,12 @@ export default function Construleads() {
         loadStatus = abortController.signal.aborted ? 'aborted' : 'error';
         if (isActive && !cachedObras?.length) setObras([]);
       } finally {
-        loadSpan.end({ records: loadedRecords, status: loadStatus, cache: servedFromCache });
+        loadSpan.end({
+          records: loadedRecords,
+          status: loadStatus,
+          cache: servedFromCache,
+          firstPreviewMs,
+        });
         if (isActive) setLoadingObras(false);
       }
     }
