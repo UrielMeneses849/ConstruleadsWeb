@@ -72,10 +72,24 @@ function buildCompanyDetailsIndex(relationships = []) {
   return index;
 }
 
+function buildRelationshipEntriesByProjectId(relationships = []) {
+  const index = new Map();
+
+  relationships.forEach((relationship, relationshipIndex) => {
+    const projectId = relationship?.project?.id;
+    const entries = index.get(projectId) || [];
+    entries.push({ relationship, relationshipIndex });
+    index.set(projectId, entries);
+  });
+
+  return index;
+}
+
 function getRelationshipIndexes(relationships = []) {
   if (!Array.isArray(relationships)) {
     return {
       companyDetailsIndex: new Map(),
+      relationshipEntriesByProjectId: new Map(),
     };
   }
 
@@ -87,6 +101,7 @@ function getRelationshipIndexes(relationships = []) {
   // render del panel.
   const indexes = {
     companyDetailsIndex: buildCompanyDetailsIndex(relationships),
+    relationshipEntriesByProjectId: buildRelationshipEntriesByProjectId(relationships),
   };
   relationshipIndexesCache.set(relationships, indexes);
   return indexes;
@@ -165,6 +180,10 @@ export function getCompanyProjects(relationships = []) {
   });
 
   return [...projects.values()];
+}
+
+export function getCompanyRelationshipEntriesByProjectId(relationships = []) {
+  return getRelationshipIndexes(relationships).relationshipEntriesByProjectId;
 }
 
 export function buildCompanyRows(relationships = []) {

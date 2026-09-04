@@ -9,6 +9,7 @@ import {
 } from 'react-icons/fi';
 import {
   buildCompanyRows, companiesToCsv, formatCompactInvestment, formatNumber, getCompanyGenreColor, getCompanyProjects,
+  getCompanyRelationshipEntriesByProjectId,
 } from './companyData';
 import { getCompanyActivityAlerts, toggleCompanyActivityAlert } from '../../utils/radarNotifications';
 import { filterObrasByFilters } from '../../utils/filterObras';
@@ -505,9 +506,19 @@ export default function CompaniasView({ companyRelationships = [], isLoadingComp
     () => new Set(filteredCompanyProjects.map((project) => project.id)),
     [filteredCompanyProjects]
   );
+  const relationshipEntriesByProjectId = useMemo(
+    () => getCompanyRelationshipEntriesByProjectId(companyRelationships),
+    [companyRelationships],
+  );
   const filteredRelationships = useMemo(
-    () => companyRelationships.filter((relationship) => filteredProjectKeys.has(relationship?.project?.id)),
-    [companyRelationships, filteredProjectKeys]
+    () => [...filteredProjectKeys]
+      .flatMap((projectId) => relationshipEntriesByProjectId.get(projectId) || [])
+      // Al reconstruir sólo los grupos seleccionados, recuperamos el orden
+      // original del WS para que la ficha continúe mostrando sus proyectos
+      // recientes exactamente igual que antes.
+      .sort((first, second) => first.relationshipIndex - second.relationshipIndex)
+      .map(({ relationship }) => relationship),
+    [filteredProjectKeys, relationshipEntriesByProjectId]
   );
   const companies = useMemo(
     () => measurePerformance(

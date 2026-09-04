@@ -32,6 +32,13 @@ import {
 } from 'react-icons/fi';
 import MapSelectionModal from './MapSelectionModal';
 import { getObraSource, getObraSourceMeta } from '../../utils/obrasSources';
+import {
+  createMapSpatialIndex,
+  getSpatialClusters,
+  isSpatialCluster,
+  MAP_CLUSTER_OPTIONS,
+  MAP_VIRTUALIZATION_THRESHOLD,
+} from '../../utils/mapSpatialIndex';
 import { startPerformanceSpan } from '../../utils/performanceMonitor';
 
 const DEBUG_MAPA = false;
@@ -261,6 +268,10 @@ function Mapa({
   const markerCacheRef = useRef(new Map());
   const activeMarkerKeysRef = useRef(new Set());
   const lastRenderedObrasRef = useRef(null);
+  const spatialIndexRef = useRef(null);
+  const virtualModeRef = useRef(false);
+  const virtualRenderedMarkersRef = useRef(new Map());
+  const renderVirtualMarkersRef = useRef(null);
   const markerUpdateTokenRef = useRef(0);
   const fitRequestTokenRef = useRef(0);
   const mapNeedsRefreshRef = useRef(false);
@@ -297,6 +308,10 @@ function Mapa({
   const renderUnclusteredMarkers = useCallback(() => {
     const map = mapInstanceRef.current;
     if (!map || isClusteringEnabledRef.current) return;
+    if (virtualModeRef.current) {
+      renderVirtualMarkersRef.current?.({ clustering: false });
+      return;
+    }
 
     const allMarkers = markerElementsRef.current;
     const bounds = map.getBounds?.();
@@ -356,7 +371,9 @@ function Mapa({
     if (clusterRenderFrameRef.current !== null) return;
     clusterRenderFrameRef.current = window.requestAnimationFrame(() => {
       clusterRenderFrameRef.current = null;
-      if (isClusteringEnabledRef.current && markerElementsRef.current.length) {
+      if (isClusteringEnabledRef.current && virtualModeRef.current) {
+        renderVirtualMarkersRef.current?.({ clustering: true });
+      } else if (isClusteringEnabledRef.current && markerElementsRef.current.length) {
         markerClusterRef.current?.render?.();
       }
     });
@@ -390,7 +407,25 @@ function Mapa({
     isClusteringEnabledRef.current = isClusteringEnabled;
     const map = mapInstanceRef.current;
     const clusterer = markerClusterRef.current;
-    if (!map || !clusterer) return;
+    if (!map) return;
+
+    if (virtualModeRef.current) {
+      clusterer?.setMap(null);
+      unclusteredMarkerElementsRef.current.forEach((marker) => { marker.map = null; });
+      unclusteredMarkerElementsRef.current = new Set();
+      if (isClusteringEnabled) {
+        // El clusterer está vacío en modo virtual, pero conservarlo montado
+        // permite volver a una vista pequeña sin dejar los pines heredados
+        // sobre un clusterer desmontado.
+        clusterer?.setMap(map);
+        scheduleClusterRender();
+      } else {
+        renderVirtualMarkersRef.current?.({ clustering: false });
+      }
+      return;
+    }
+
+    if (!clusterer) return;
 
     if (isClusteringEnabled) {
       // Un MarkerClusterer que se desmonta conserva su algoritmo interno.
@@ -1062,6 +1097,15 @@ debugLog(
       return `${Math.round(millions)} MDP`;
     };
 
+    const clearVirtualRenderedMarkers = () => {
+      virtualRenderedMarkersRef.current.forEach((marker) => {
+        if (marker) marker.map = null;
+      });
+      virtualRenderedMarkersRef.current.clear();
+      spatialIndexRef.current = null;
+      virtualModeRef.current = false;
+    };
+
     const cleanupMarkers = ({ clearCache = false } = {}) => {
       if (markerClusterRef.current) {
         markerClusterRef.current.clearMarkers();
@@ -1075,6 +1119,7 @@ debugLog(
       });
       unclusteredMarkerElementsRef.current = new Set();
       setUnclusteredSummary(null);
+      clearVirtualRenderedMarkers();
 
       if (clearCache) {
         markerCacheRef.current.forEach((marker) => {
@@ -1255,6 +1300,161 @@ debugLog(
 
       return marker;
     };
+
+    const focusVirtualCluster = (position) => {
+      const clusterMap = mapInstanceRef.current;
+      if (!clusterMap || !position) return;
+
+      selectedProjectRef.current = null;
+      setSelectedProject(null);
+      setPopupPosition(null);
+
+      const targetLat = Number(position.lat);
+      const targetLng = Number(position.lng);
+      const currentZoom = Number(clusterMap.getZoom()) || MAP_MIN_ZOOM;
+      const targetZoom = Math.min(currentZoom + 2, MAP_MAX_ZOOM);
+      const startCenter = clusterMap.getCenter?.();
+      const startLat = Number(startCenter?.lat?.());
+      const startLng = Number(startCenter?.lng?.());
+
+      if (!Number.isFinite(targetLat) || !Number.isFinite(targetLng) ||
+        !Number.isFinite(startLat) || !Number.isFinite(startLng)) {
+        clusterMap.moveCamera({ center: position, zoom: targetZoom });
+        return;
+      }
+
+      mapFocusTokenRef.current += 1;
+      const focusToken = mapFocusTokenRef.current;
+      if (cameraAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(cameraAnimationFrameRef.current);
+      }
+
+      const distance = Math.hypot(targetLat - startLat, targetLng - startLng);
+      const duration = Math.min(760, Math.max(480, 380 + distance * 6));
+      const startedAt = performance.now();
+      let lastCameraUpdateAt = 0;
+      const easeOutQuart = (progress) => 1 - ((1 - progress) ** 4);
+      const animateClusterFocus = (now) => {
+        if (mapFocusTokenRef.current !== focusToken || mapInstanceRef.current !== clusterMap) {
+          cameraAnimationFrameRef.current = null;
+          return;
+        }
+
+        const progress = Math.min(1, (now - startedAt) / duration);
+        if (progress < 1 && now - lastCameraUpdateAt < 28) {
+          cameraAnimationFrameRef.current = window.requestAnimationFrame(animateClusterFocus);
+          return;
+        }
+
+        lastCameraUpdateAt = now;
+        const eased = easeOutQuart(progress);
+        clusterMap.moveCamera({
+          center: {
+            lat: startLat + (targetLat - startLat) * eased,
+            lng: startLng + (targetLng - startLng) * eased,
+          },
+          zoom: currentZoom + (targetZoom - currentZoom) * eased,
+        });
+
+        if (progress < 1) {
+          cameraAnimationFrameRef.current = window.requestAnimationFrame(animateClusterFocus);
+        } else {
+          clusterMap.moveCamera({ center: { lat: targetLat, lng: targetLng }, zoom: targetZoom });
+          cameraAnimationFrameRef.current = null;
+        }
+      };
+
+      cameraAnimationFrameRef.current = window.requestAnimationFrame(animateClusterFocus);
+    };
+
+    const buildVirtualClusterMarker = (feature) => {
+      const [lng, lat] = feature.geometry.coordinates;
+      const count = Number(feature.properties.point_count) || 0;
+      const marker = new window.google.maps.marker.AdvancedMarkerElement({
+        position: { lat, lng },
+        content: createClusterContent(count),
+        zIndex: 1000000 + count,
+      });
+      marker.addListener('click', () => focusVirtualCluster({ lat, lng }));
+      return marker;
+    };
+
+    const renderVirtualMarkers = ({ clustering = isClusteringEnabledRef.current } = {}) => {
+      const map = mapInstanceRef.current;
+      const spatialData = spatialIndexRef.current;
+      const bounds = map?.getBounds?.();
+      if (!map || !spatialData || !bounds || !virtualModeRef.current) return;
+
+      const zoom = Number(map.getZoom?.()) || MAP_MIN_ZOOM;
+      const featureZoom = clustering ? zoom : MAP_CLUSTER_OPTIONS.maxZoom + 1;
+      let features = getSpatialClusters(spatialData.index, bounds, featureZoom);
+      let visibleCount = features.length;
+
+      if (!clustering) {
+        const maxMarkers = zoom <= 5
+          ? UNCLUSTERED_MARKER_LIMITS.overview
+          : zoom <= 7
+            ? UNCLUSTERED_MARKER_LIMITS.regional
+            : UNCLUSTERED_MARKER_LIMITS.detail;
+        const selectedFeatures = features.filter((feature) => (
+          selectedObraKeysRef.current.has(feature.properties.markerKey)
+        ));
+        const selectedKeys = new Set(selectedFeatures.map((feature) => feature.properties.markerKey));
+        const remaining = features.filter((feature) => !selectedKeys.has(feature.properties.markerKey));
+        const remainingLimit = Math.max(0, maxMarkers - selectedFeatures.length);
+        const sampled = remaining.length <= remainingLimit
+          ? remaining
+          : Array.from({ length: remainingLimit }, (_, index) => (
+              remaining[Math.floor((index * remaining.length) / remainingLimit)]
+            ));
+        visibleCount = features.length;
+        features = [...selectedFeatures, ...sampled];
+      }
+
+      const previousMarkers = virtualRenderedMarkersRef.current;
+      const nextMarkers = new Map();
+
+      features.forEach((feature) => {
+        if (isSpatialCluster(feature)) {
+          const renderKey = `cluster:${feature.properties.cluster_id}`;
+          const marker = previousMarkers.get(renderKey) || buildVirtualClusterMarker(feature);
+          nextMarkers.set(renderKey, marker);
+          return;
+        }
+
+        const markerKey = feature.properties.markerKey;
+        const entry = spatialData.entriesByKey.get(markerKey);
+        if (!entry) return;
+        let marker = markerCacheRef.current.get(markerKey);
+        if (!marker) {
+          marker = buildMarker(entry.obra, markerKey);
+          if (marker) markerCacheRef.current.set(markerKey, marker);
+        }
+        if (!marker) return;
+        markerKeyByElementRef.current.set(marker, markerKey);
+        nextMarkers.set(`marker:${markerKey}`, marker);
+      });
+
+      previousMarkers.forEach((marker, renderKey) => {
+        if (!nextMarkers.has(renderKey)) marker.map = null;
+      });
+      nextMarkers.forEach((marker, renderKey) => {
+        if (previousMarkers.get(renderKey) !== marker) marker.map = map;
+      });
+      virtualRenderedMarkersRef.current = nextMarkers;
+
+      if (!clustering) {
+        const nextSummary = { visible: visibleCount, shown: nextMarkers.size };
+        setUnclusteredSummary((current) => (
+          current?.visible === nextSummary.visible && current?.shown === nextSummary.shown
+            ? current
+            : nextSummary
+        ));
+      } else {
+        setUnclusteredSummary(null);
+      }
+    };
+    renderVirtualMarkersRef.current = renderVirtualMarkers;
 
 
     const createMap = async () => {
@@ -1443,6 +1643,90 @@ debugLog(
       });
     };
 
+    const applyFitToPositions = async ({ positions, markerSetChanged, updateToken }) => {
+      const shouldFitToCurrentFilters = Boolean(fitRequestKey) &&
+        fitRequestKey !== lastAppliedFitRequestKeyRef.current;
+      const shouldApplyLegacyInitialFit = !fitRequestKey && fitInitialBounds &&
+        !didFitInitialBoundsRef.current;
+
+      if (
+        !(shouldFitToCurrentFilters || shouldApplyLegacyInitialFit) ||
+        !markerSetChanged ||
+        !positions.length ||
+        !mapInstanceRef.current
+      ) return;
+
+      if (shouldFitToCurrentFilters) {
+        // Registramos la solicitud al confirmar el conjunto de marcadores,
+        // no al comenzar el filtrado. Así sólo la última selección estable
+        // puede mover la cámara.
+        lastAppliedFitRequestKeyRef.current = fitRequestKey;
+      }
+      const fitRequestToken = fitRequestTokenRef.current + 1;
+      fitRequestTokenRef.current = fitRequestToken;
+      await new Promise((resolve) => window.setTimeout(resolve, 220));
+      if (
+        markerUpdateTokenRef.current !== updateToken ||
+        fitRequestTokenRef.current !== fitRequestToken ||
+        !mapRef.current ||
+        !mapInstanceRef.current
+      ) return;
+
+      const camera = getCameraForPositions(
+        positions,
+        mapRef.current.clientWidth,
+        mapRef.current.clientHeight,
+        FILTER_FIT_PADDING
+      );
+      if (!camera) return;
+
+      const map = mapInstanceRef.current;
+      const startCenter = map.getCenter();
+      const startZoom = Number(map.getZoom());
+      const from = {
+        lat: Number(startCenter?.lat()),
+        lng: Number(startCenter?.lng()),
+        zoom: Number.isFinite(startZoom) ? startZoom : MAP_MIN_ZOOM,
+      };
+      const distance = Math.hypot(camera.center.lat - from.lat, camera.center.lng - from.lng);
+      const zoomDistance = Math.abs(camera.zoom - from.zoom);
+      const duration = Math.min(950, Math.max(560, 500 + distance * 12 + zoomDistance * 45));
+      const startedAt = performance.now();
+      const easeInOutCubic = (progress) => progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - ((-2 * progress + 2) ** 3) / 2;
+
+      const animateCamera = (now) => {
+        if (
+          markerUpdateTokenRef.current !== updateToken ||
+          fitRequestTokenRef.current !== fitRequestToken ||
+          !mapInstanceRef.current
+        ) {
+          cameraAnimationFrameRef.current = null;
+          return;
+        }
+
+        const progress = Math.min(1, (now - startedAt) / duration);
+        const eased = easeInOutCubic(progress);
+        mapInstanceRef.current.moveCamera({
+          center: {
+            lat: from.lat + (camera.center.lat - from.lat) * eased,
+            lng: from.lng + (camera.center.lng - from.lng) * eased,
+          },
+          zoom: from.zoom + (camera.zoom - from.zoom) * eased,
+        });
+
+        if (progress < 1) {
+          cameraAnimationFrameRef.current = window.requestAnimationFrame(animateCamera);
+        } else {
+          mapInstanceRef.current.moveCamera(camera);
+          cameraAnimationFrameRef.current = null;
+        }
+      };
+
+      cameraAnimationFrameRef.current = window.requestAnimationFrame(animateCamera);
+    };
+
     const updateMarkers = async () => {
       if (!mapInstanceRef.current || !mapReadyRef.current) return;
 
@@ -1483,11 +1767,11 @@ debugLog(
       // cuando el universo de obras no cambió. En ese caso los mismos pines y
       // clusterer ya están montados: evitar recorrerlos de nuevo mantiene el
       // mapa fluido sin cambiar su apariencia ni su estado de cámara.
-      if (
-        lastRenderedObrasRef.current === filteredObras &&
-        markerElementsRef.current.length === activeMarkerKeysRef.current.size &&
-        markerElementsRef.current.length > 0
-      ) {
+      const hasCurrentMarkerInventory = virtualModeRef.current
+        ? spatialIndexRef.current?.count === activeMarkerKeysRef.current.size
+        : markerElementsRef.current.length === activeMarkerKeysRef.current.size &&
+          markerElementsRef.current.length > 0;
+      if (lastRenderedObrasRef.current === filteredObras && hasCurrentMarkerInventory) {
         setMarkerProgress({ loaded: filteredObras.length, total: filteredObras.length });
         setIsMapLoading(false);
         scheduleClusterRender();
@@ -1501,6 +1785,51 @@ debugLog(
       }
 
       const startedAt = DEBUG_MAPA ? performance.now() : 0;
+      const spatialData = createMapSpatialIndex({
+        obras: filteredObras,
+        getCoordinates: getObraCoordinates,
+        getMarkerKey: getObraMarkerKey,
+        bounds: MEXICO_MAP_BOUNDS,
+      });
+
+      if (spatialData.count >= MAP_VIRTUALIZATION_THRESHOLD) {
+        const markerSetChanged =
+          spatialData.markerKeys.size !== activeMarkerKeysRef.current.size ||
+          [...spatialData.markerKeys].some((key) => !activeMarkerKeysRef.current.has(key));
+
+        // El índice mantiene todas las coordenadas, pero no crea un
+        // AdvancedMarker por obra. Sólo se materializan los clústeres o pines
+        // de la vista actual; al alejarse el DOM vuelve a ser mínimo.
+        cleanupMarkers();
+        if (markerUpdateTokenRef.current !== updateToken) return;
+        spatialIndexRef.current = spatialData;
+        virtualModeRef.current = true;
+        markerElementsRef.current = [];
+        activeMarkerKeysRef.current = spatialData.markerKeys;
+        lastRenderedObrasRef.current = filteredObras;
+        renderVirtualMarkers({ clustering: isClusteringEnabledRef.current });
+
+        setMarkerProgress({ loaded: filteredObras.length, total: filteredObras.length });
+        setIsMapLoading(false);
+        await applyFitToPositions({
+          positions: spatialData.positions,
+          markerSetChanged,
+          updateToken,
+        });
+
+        debugLog('[Construleads][Mapa] índice virtual listo:', {
+          obrasFiltradas: filteredObras.length,
+          puntosIndexados: spatialData.count,
+          montados: virtualRenderedMarkersRef.current.size,
+          cache: markerCacheRef.current.size,
+          ms: DEBUG_MAPA ? Math.round(performance.now() - startedAt) : undefined,
+        });
+        return;
+      }
+
+      if (virtualModeRef.current || spatialIndexRef.current) {
+        clearVirtualRenderedMarkers();
+      }
       const markers = [];
       const markerKeys = [];
       let builtMarkers = 0;
@@ -1580,95 +1909,17 @@ debugLog(
       }
       scheduleClusterRender();
 
-      const shouldFitToCurrentFilters = Boolean(fitRequestKey) &&
-        fitRequestKey !== lastAppliedFitRequestKeyRef.current;
-      const shouldApplyLegacyInitialFit = !fitRequestKey && fitInitialBounds &&
-        !didFitInitialBoundsRef.current;
-
-      if (
-        (shouldFitToCurrentFilters || shouldApplyLegacyInitialFit) &&
-        markerSetChanged &&
-        markers.length &&
-        mapInstanceRef.current
-      ) {
-        if (shouldFitToCurrentFilters) {
-          // Registramos la solicitud al confirmar el conjunto de marcadores,
-          // no al comenzar el filtrado. Así sólo la última selección estable
-          // puede mover la cámara.
-          lastAppliedFitRequestKeyRef.current = fitRequestKey;
-        }
-        const fitRequestToken = fitRequestTokenRef.current + 1;
-        fitRequestTokenRef.current = fitRequestToken;
-        const validPositions = filteredObras.reduce((positions, obra) => {
-          const lat = Number(obra?.lat);
-          const lng = Number(obra?.lng);
-          if (Number.isFinite(lat) && Number.isFinite(lng) && isCoordinateInsideMexicoMap(lat, lng)) {
-            positions.push({ lat, lng });
-          }
-          return positions;
-        }, []);
-        await new Promise((resolve) => window.setTimeout(resolve, 220));
-        if (
-          markerUpdateTokenRef.current !== updateToken ||
-          fitRequestTokenRef.current !== fitRequestToken ||
-          !mapRef.current ||
-          !mapInstanceRef.current
-        ) return;
-
-        const camera = getCameraForPositions(
-          validPositions,
-          mapRef.current.clientWidth,
-          mapRef.current.clientHeight,
-          FILTER_FIT_PADDING
-        );
-        if (camera) {
-          const map = mapInstanceRef.current;
-          const startCenter = map.getCenter();
-          const startZoom = Number(map.getZoom());
-          const from = {
-            lat: Number(startCenter?.lat()),
-            lng: Number(startCenter?.lng()),
-            zoom: Number.isFinite(startZoom) ? startZoom : MAP_MIN_ZOOM,
-          };
-          const distance = Math.hypot(camera.center.lat - from.lat, camera.center.lng - from.lng);
-          const zoomDistance = Math.abs(camera.zoom - from.zoom);
-          const duration = Math.min(950, Math.max(560, 500 + distance * 12 + zoomDistance * 45));
-          const startedAt = performance.now();
-          const easeInOutCubic = (progress) => progress < 0.5
-            ? 4 * progress * progress * progress
-            : 1 - ((-2 * progress + 2) ** 3) / 2;
-
-          const animateCamera = (now) => {
-            if (
-              markerUpdateTokenRef.current !== updateToken ||
-              fitRequestTokenRef.current !== fitRequestToken ||
-              !mapInstanceRef.current
-            ) {
-              cameraAnimationFrameRef.current = null;
-              return;
+      const validPositions = markerSetChanged
+        ? filteredObras.reduce((positions, obra) => {
+            const lat = Number(obra?.lat);
+            const lng = Number(obra?.lng);
+            if (Number.isFinite(lat) && Number.isFinite(lng) && isCoordinateInsideMexicoMap(lat, lng)) {
+              positions.push({ lat, lng });
             }
-
-            const progress = Math.min(1, (now - startedAt) / duration);
-            const eased = easeInOutCubic(progress);
-            mapInstanceRef.current.moveCamera({
-              center: {
-                lat: from.lat + (camera.center.lat - from.lat) * eased,
-                lng: from.lng + (camera.center.lng - from.lng) * eased,
-              },
-              zoom: from.zoom + (camera.zoom - from.zoom) * eased,
-            });
-
-            if (progress < 1) {
-              cameraAnimationFrameRef.current = window.requestAnimationFrame(animateCamera);
-            } else {
-              mapInstanceRef.current.moveCamera(camera);
-              cameraAnimationFrameRef.current = null;
-            }
-          };
-
-          cameraAnimationFrameRef.current = window.requestAnimationFrame(animateCamera);
-        }
-      }
+            return positions;
+          }, [])
+        : [];
+      await applyFitToPositions({ positions: validPositions, markerSetChanged, updateToken });
 
       if (AUTO_FIT_INITIAL_BOUNDS && !didFitInitialBoundsRef.current && markers.length && mapInstanceRef.current) {
         const bounds = new window.google.maps.LatLngBounds();
@@ -1718,6 +1969,9 @@ debugLog(
           status: refreshStatus,
           markers: markerElementsRef.current.length,
           markerCache: markerCacheRef.current.size,
+          virtualized: virtualModeRef.current,
+          indexedPoints: spatialIndexRef.current?.count || 0,
+          mountedMarkers: virtualRenderedMarkersRef.current.size,
         });
       }
     }, 0);

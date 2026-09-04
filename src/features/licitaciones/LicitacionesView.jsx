@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Button, Flex, Heading, Spinner, Text } from '@chakra-ui/react';
 import { FiChevronLeft, FiChevronRight, FiRefreshCw, FiStar } from 'react-icons/fi';
 import { leerLicitacionesCache, obtenerLicitaciones } from './licitacionesApi';
@@ -29,6 +29,10 @@ function normalizeLoadedLicitaciones(items = []) {
     ...item,
     estado: formatLicitacionState(item.estado),
     proveedor_adjudicado: formatLicitacionProvider(item.proveedor_adjudicado),
+    // Las fechas se usan para filtros y ordenamiento. Dejarlas listas al
+    // entrar evita volver a parsear las mismas cadenas en cada interacción.
+    __fechaPublicacionTimestamp: parseLicitacionDate(item.fecha_de_publicacion)?.getTime() ?? null,
+    __fechaFalloTimestamp: parseLicitacionDate(item.fecha_de_fallo)?.getTime() ?? null,
   }));
 }
 
@@ -47,12 +51,18 @@ function selectedIncludes(selected, value) {
   return selected.some((item) => normalizeSearchText(item) === normalized);
 }
 
-function matchesDateRange(value, from, to) {
-  if (!from && !to) return true;
-  const date = parseLicitacionDate(value);
-  if (!date) return false;
-  if (from && date < new Date(`${from}T00:00:00`)) return false;
-  if (to && date > new Date(`${to}T23:59:59`)) return false;
+function createDateRange(from, to) {
+  return {
+    from: from ? new Date(`${from}T00:00:00`).getTime() : null,
+    to: to ? new Date(`${to}T23:59:59`).getTime() : null,
+  };
+}
+
+function matchesDateRange(timestamp, range) {
+  if (!range?.from && !range?.to) return true;
+  if (!Number.isFinite(timestamp)) return false;
+  if (range.from && timestamp < range.from) return false;
+  if (range.to && timestamp > range.to) return false;
   return true;
 }
 
@@ -62,7 +72,7 @@ function getAmountRange(tableFilters = {}) {
   return { min, max };
 }
 
-function matchesTableFilters(item, tableFilters = {}, amountRange) {
+function matchesTableFilters(item, tableFilters = {}, amountRange, dateRanges) {
   const textKeys = ['clave', 'expediente', 'descripcion', 'institucion_convocante', 'proveedor_adjudicado'];
   if (textKeys.some((key) => {
     const filter = tableFilters[key];
@@ -81,7 +91,7 @@ function matchesTableFilters(item, tableFilters = {}, amountRange) {
 
   const selectedFallos = Array.isArray(tableFilters.fecha_de_fallo) ? tableFilters.fecha_de_fallo : [];
   if (selectedFallos.length) {
-    const hasFallo = Boolean(parseLicitacionDate(item.fecha_de_fallo));
+    const hasFallo = Number.isFinite(item.__fechaFalloTimestamp);
     const matchesFallo = selectedFallos.some((value) => (
       value === LICITACION_MISSING_FALLO_VALUE ? !hasFallo : value === item.fecha_de_fallo
     ));
@@ -97,14 +107,44 @@ function matchesTableFilters(item, tableFilters = {}, amountRange) {
     if (!isWithinAmountRange && !(tableFilters.montoMissing && isAmountMissing)) return false;
   }
 
-  if (!matchesDateRange(item.fecha_de_publicacion, tableFilters.fecha_de_publicacionDesde, tableFilters.fecha_de_publicacionHasta)) return false;
-  if (!matchesDateRange(item.fecha_de_fallo, tableFilters.fecha_de_falloDesde, tableFilters.fecha_de_falloHasta)) return false;
+  if (!matchesDateRange(item.__fechaPublicacionTimestamp, dateRanges?.publication)) return false;
+  if (!matchesDateRange(item.__fechaFalloTimestamp, dateRanges?.failure)) return false;
   return true;
 }
 
+function createSidebarFilterLookup(filters) {
+  const periodIndex = filters.periodIndex;
+  const days = periodIndex >= 0 ? [0, 1, 7, 30, 90, 180][periodIndex] : null;
+  const periodStart = Number.isFinite(days) ? new Date() : null;
+  if (periodStart) {
+    periodStart.setHours(0, 0, 0, 0);
+    periodStart.setDate(periodStart.getDate() - days);
+  }
+  const periodEnd = periodStart ? new Date() : null;
+  if (periodEnd) periodEnd.setHours(23, 59, 59, 999);
+
+  const selected = (values) => new Set((values || []).map(normalizeSearchText));
+  return {
+    states: selected(filters.states),
+    orders: selected(filters.orders),
+    procedures: selected(filters.procedures),
+    statuses: selected(filters.statuses),
+    sources: selected(filters.sources),
+    dateField: filters.dateField,
+    periodStart: periodStart?.getTime() ?? null,
+    periodEnd: periodEnd?.getTime() ?? null,
+  };
+}
+
+function matchesLookup(values, value) {
+  return !values.size || values.has(normalizeSearchText(value));
+}
+
 export default function LicitacionesView({ user }) {
-  const rawInitialCache = leerLicitacionesCache(user.idUsuario, user.idSession);
-  const initialCache = rawInitialCache ? normalizeLoadedLicitaciones(rawInitialCache) : null;
+  const [initialCache] = useState(() => {
+    const rawInitialCache = leerLicitacionesCache(user.idUsuario, user.idSession);
+    return rawInitialCache ? normalizeLoadedLicitaciones(rawInitialCache) : null;
+  });
   const [data, setData] = useState(() => initialCache || []);
   const [loading, setLoading] = useState(() => !initialCache);
   const [error, setError] = useState('');
@@ -117,6 +157,8 @@ export default function LicitacionesView({ user }) {
   const [detail, setDetail] = useState(null);
   const [page, setPage] = useState(1);
   const [sortConfig, setSortConfig] = useState({ field: null, direction: 'asc' });
+  const progressiveDataRef = useRef([]);
+  const progressiveFrameRef = useRef(null);
   const favoritesKey = `construleads-licitaciones-favoritos-${user.idUsuario}`;
   const [favorites, setFavorites] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem(favoritesKey) || '[]')); } catch { return new Set(); }
@@ -129,6 +171,22 @@ export default function LicitacionesView({ user }) {
     let hasVisibleData = false;
     let wrotePreviewCache = false;
     let networkCompleted = false;
+    progressiveDataRef.current = [];
+
+    const cancelProgressiveCommit = () => {
+      if (progressiveFrameRef.current !== null) {
+        window.cancelAnimationFrame(progressiveFrameRef.current);
+        progressiveFrameRef.current = null;
+      }
+    };
+    const scheduleProgressiveCommit = () => {
+      if (progressiveFrameRef.current !== null) return;
+      progressiveFrameRef.current = window.requestAnimationFrame(() => {
+        progressiveFrameRef.current = null;
+        if (!isActive || hasPersistentCache) return;
+        setData([...progressiveDataRef.current]);
+      });
+    };
 
     // IndexedDB y la petición corren en paralelo: la primera visita no espera
     // al disco y las siguientes pintan la última respuesta inmediatamente.
@@ -136,6 +194,8 @@ export default function LicitacionesView({ user }) {
       if (!isActive || networkCompleted || !cached?.length) return null;
       hasPersistentCache = true;
       hasVisibleData = true;
+      cancelProgressiveCommit();
+      progressiveDataRef.current = [];
       setData(normalizeLoadedLicitaciones(cached));
       setError('');
       setLoading(false);
@@ -149,7 +209,13 @@ export default function LicitacionesView({ user }) {
       onBatch: (batch) => {
         if (!isActive || !batch.length || hasPersistentCache) return;
         hasVisibleData = true;
-        setData((current) => current.length ? [...current, ...normalizeLoadedLicitaciones(batch)] : normalizeLoadedLicitaciones(batch));
+        const normalizedBatch = normalizeLoadedLicitaciones(batch);
+        const hasPreview = progressiveDataRef.current.length > 0;
+        progressiveDataRef.current.push(...normalizedBatch);
+        // La primera tanda continúa siendo inmediata. Las siguientes se
+        // consolidan por frame para no forzar un render por paquete de red.
+        if (hasPreview) scheduleProgressiveCommit();
+        else setData(normalizedBatch);
         setLoading(false);
 
         // Incluso si la respuesta tarda en terminar, la próxima recarga ya
@@ -164,7 +230,10 @@ export default function LicitacionesView({ user }) {
         if (!isActive) return;
         networkCompleted = true;
         hasVisibleData = Boolean(items?.length);
-        setData(normalizeLoadedLicitaciones(items));
+        cancelProgressiveCommit();
+        const normalizedItems = normalizeLoadedLicitaciones(items);
+        progressiveDataRef.current = normalizedItems;
+        setData(normalizedItems);
         setError('');
         if (items?.length) void writeCachedLicitaciones(user.idUsuario, items);
       })
@@ -179,6 +248,7 @@ export default function LicitacionesView({ user }) {
 
     return () => {
       isActive = false;
+      cancelProgressiveCommit();
       controller.abort();
     };
   }, [retryToken, user.idSession, user.idUsuario]);
@@ -220,31 +290,35 @@ export default function LicitacionesView({ user }) {
     setRetryToken((value) => value + 1);
   }, []);
 
-  const matchesSidebarFilters = useCallback((item, activeFilters, { ignoreStates = false } = {}) => {
+  const sidebarFilterLookup = useMemo(
+    () => createSidebarFilterLookup(filters),
+    [filters],
+  );
+  const matchesSidebarFilters = useCallback((item, { ignoreStates = false } = {}) => {
     if (onlyFollowed) return favorites.has(item.id);
-    if (!ignoreStates && !selectedIncludes(activeFilters.states, item.estado)) return false;
-    if (!selectedIncludes(activeFilters.orders, item.orden_de_gobierno)) return false;
-    if (!selectedIncludes(activeFilters.procedures, item.tipo_de_procedimiento)) return false;
-    if (!selectedIncludes(activeFilters.statuses, item.estatus)) return false;
-    if (!selectedIncludes(activeFilters.sources, item.fuente_del_registro)) return false;
-    if (activeFilters.periodIndex >= 0) {
-      const days = [0, 1, 7, 30, 90, 180][activeFilters.periodIndex];
-      const value = parseLicitacionDate(item[activeFilters.dateField]);
-      if (!value) return false;
-      const start = new Date(); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - days);
-      const end = new Date(); end.setHours(23, 59, 59, 999);
-      if (value < start || value > end) return false;
+    if (!ignoreStates && !matchesLookup(sidebarFilterLookup.states, item.estado)) return false;
+    if (!matchesLookup(sidebarFilterLookup.orders, item.orden_de_gobierno)) return false;
+    if (!matchesLookup(sidebarFilterLookup.procedures, item.tipo_de_procedimiento)) return false;
+    if (!matchesLookup(sidebarFilterLookup.statuses, item.estatus)) return false;
+    if (!matchesLookup(sidebarFilterLookup.sources, item.fuente_del_registro)) return false;
+    if (sidebarFilterLookup.periodStart !== null) {
+      const timestamp = sidebarFilterLookup.dateField === 'fecha_de_publicacion'
+        ? item.__fechaPublicacionTimestamp
+        : sidebarFilterLookup.dateField === 'fecha_de_fallo'
+          ? item.__fechaFalloTimestamp
+          : parseLicitacionDate(item[sidebarFilterLookup.dateField])?.getTime();
+      if (!Number.isFinite(timestamp) || timestamp < sidebarFilterLookup.periodStart || timestamp > sidebarFilterLookup.periodEnd) return false;
     }
     return true;
-  }, [favorites, onlyFollowed]);
+  }, [favorites, onlyFollowed, sidebarFilterLookup]);
 
   const sidebarContext = useMemo(
     () => measurePerformance(
       'licitaciones.sidebar-filters',
       { records: data.length },
-      () => data.filter((item) => matchesSidebarFilters(item, filters))
+      () => data.filter((item) => matchesSidebarFilters(item))
     ),
-    [data, filters, matchesSidebarFilters],
+    [data, matchesSidebarFilters],
   );
 
   const sidebarAmountBounds = useMemo(() => {
@@ -285,21 +359,31 @@ export default function LicitacionesView({ user }) {
     () => getAmountRange(debouncedTableFilters),
     [debouncedTableFilters],
   );
+  const tableDateRanges = useMemo(() => ({
+    publication: createDateRange(
+      debouncedTableFilters.fecha_de_publicacionDesde,
+      debouncedTableFilters.fecha_de_publicacionHasta,
+    ),
+    failure: createDateRange(
+      debouncedTableFilters.fecha_de_falloDesde,
+      debouncedTableFilters.fecha_de_falloHasta,
+    ),
+  }), [debouncedTableFilters]);
   const availableStates = useMemo(() => {
     const tableFiltersWithoutState = { ...debouncedTableFilters };
     delete tableFiltersWithoutState.estado;
     return data
-      .filter((item) => matchesSidebarFilters(item, filters, { ignoreStates: true }))
+      .filter((item) => matchesSidebarFilters(item, { ignoreStates: true }))
       .filter((item) => matchesSidebarAmount(item, sidebarAmountRange))
-      .filter((item) => matchesTableFilters(item, tableFiltersWithoutState, amountRange));
-  }, [amountRange, data, debouncedTableFilters, filters, matchesSidebarAmount, matchesSidebarFilters, sidebarAmountRange]);
+      .filter((item) => matchesTableFilters(item, tableFiltersWithoutState, amountRange, tableDateRanges));
+  }, [amountRange, data, debouncedTableFilters, matchesSidebarAmount, matchesSidebarFilters, sidebarAmountRange, tableDateRanges]);
   const filtered = useMemo(
     () => measurePerformance(
       'licitaciones.apply-filters',
       { records: sidebarFiltered.length },
-      () => sidebarFiltered.filter((item) => matchesTableFilters(item, debouncedTableFilters, amountRange))
+      () => sidebarFiltered.filter((item) => matchesTableFilters(item, debouncedTableFilters, amountRange, tableDateRanges))
     ),
-    [amountRange, debouncedTableFilters, sidebarFiltered],
+    [amountRange, debouncedTableFilters, sidebarFiltered, tableDateRanges],
   );
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -312,7 +396,8 @@ export default function LicitacionesView({ user }) {
         const field = sortConfig.field;
         if (field === 'monto') return ((a.monto_del_contrato_MXN ?? -Infinity) - (b.monto_del_contrato_MXN ?? -Infinity)) * direction;
         if (field === 'fecha_de_publicacion' || field === 'fecha_de_fallo') {
-          return ((parseLicitacionDate(a[field])?.getTime() ?? 0) - (parseLicitacionDate(b[field])?.getTime() ?? 0)) * direction;
+          const timestampField = field === 'fecha_de_publicacion' ? '__fechaPublicacionTimestamp' : '__fechaFalloTimestamp';
+          return ((a[timestampField] ?? 0) - (b[timestampField] ?? 0)) * direction;
         }
         return String(a[field] || '').localeCompare(String(b[field] || ''), 'es', { sensitivity: 'base' }) * direction;
       });

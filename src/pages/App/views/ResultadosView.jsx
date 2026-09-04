@@ -21,6 +21,20 @@ const RESULTS_PER_PAGE = 100;
 const DATE_FIELDS = ['inicio', 'fin', 'publicacion'];
 const CATEGORY_FIELD = 'categoria';
 const SHARED_STATE_PROJECT_EXCLUSIONS = new Set(['estado', 'proyecto']);
+const FACET_FIELDS = [
+  'clave',
+  'proyecto',
+  'genero',
+  'subgenero',
+  'estado',
+  'inversion',
+  'superficie',
+  'inicio',
+  'fin',
+  'publicacion',
+  'tipoobra',
+  'compania',
+];
 
 function parseTableDate(value) {
   if (!value || value === '-') return null;
@@ -587,22 +601,12 @@ function ResultadosView({
 
   const facetedRowsByField = useMemo(() => {
     return measurePerformance('results.facets', { records: tableData.length, fields: 12 }, () => {
-      const fields = [
-      'clave',
-      'proyecto',
-      'genero',
-      'subgenero',
-      'estado',
-      'inversion',
-      'superficie',
-      'inicio',
-      'fin',
-      'publicacion',
-      'tipoobra',
-      'compania',
-    ];
+      // En la carga inicial todavía no hay ninguna selección de columna. Las
+      // opciones se construyen en un solo recorrido abajo, en vez de filtrar
+      // las mismas filas una vez por cada menú de la tabla.
+      if (!columnFilterEntries.length) return null;
 
-      return fields.reduce((acc, field) => {
+      return FACET_FIELDS.reduce((acc, field) => {
         acc[field] = tableData.filter((row) => (
           rowMatchesColumnFilters(row, columnFilterEntries, getFacetExclusions(field))
         ));
@@ -612,6 +616,27 @@ function ResultadosView({
   }, [tableData, columnFilterEntries]);
 
   const uniqueValuesByField = useMemo(() => {
+    if (!columnFilterEntries.length) {
+      const valuesByField = Object.fromEntries(FACET_FIELDS.map((field) => [field, new Set()]));
+
+      tableData.forEach((row) => {
+        FACET_FIELDS.forEach((field) => {
+          const value = String(row[`${field}Raw`] || row[field] || '');
+          if (value) valuesByField[field].add(value);
+        });
+      });
+
+      return Object.fromEntries(FACET_FIELDS.map((field) => [
+        field,
+        [...valuesByField[field]].sort((a, b) => {
+          const dateA = parseTableDate(a);
+          const dateB = parseTableDate(b);
+          if (dateA && dateB) return dateA.getTime() - dateB.getTime();
+          return a.localeCompare(b, 'es');
+        }),
+      ]));
+    }
+
     return Object.entries(facetedRowsByField).reduce((acc, [field, rows]) => {
       const selectedValues = columnFilters[field] || [];
       acc[field] = [
@@ -630,10 +655,14 @@ function ResultadosView({
 
       return acc;
     }, {});
-  }, [columnFilters, facetedRowsByField]);
+  }, [columnFilterEntries.length, columnFilters, facetedRowsByField, tableData]);
 
   const genreFacetRows = useMemo(
-    () => tableData.filter((row) => rowMatchesColumnFilters(row, columnFilterEntries, new Set([CATEGORY_FIELD]))),
+    () => (
+      columnFilterEntries.length
+        ? tableData.filter((row) => rowMatchesColumnFilters(row, columnFilterEntries, new Set([CATEGORY_FIELD])))
+        : tableData
+    ),
     [tableData, columnFilterEntries]
   );
 
