@@ -1,8 +1,13 @@
 import { CONSTRULEADS_TOKEN, CONSTRULEADS_WS_BASE_URL } from '../../api/obras';
 import { normalizeLicitacion } from './licitacionesUtils';
 import { startPerformanceSpan } from '../../utils/performanceMonitor';
+import { writeCachedLicitaciones } from '../../utils/licitacionesCache';
 
 const licitacionesCache = new Map();
+// Una navegación puede ocurrir mientras la precarga sigue en curso. Mantener
+// la promesa por sesión evita abrir una segunda conexión al mismo WS y hace
+// que la vista se conecte a la descarga que ya comenzó en segundo plano.
+const licitacionesRequests = new Map();
 
 function cacheKey(userId, sessionId) {
   return `${String(userId)}:${String(sessionId)}`;
@@ -43,7 +48,7 @@ function normalizeLicitacionFragment(fragment, parser) {
   return node ? normalizeLicitacion(node) : null;
 }
 
-async function readLicitacionesProgressively(response, onBatch) {
+async function readLicitacionesProgressively(response, onBatch, onSnapshot) {
   const reader = response.body?.getReader?.();
   if (!reader) return null;
 
@@ -55,9 +60,14 @@ async function readLicitacionesProgressively(response, onBatch) {
   let hasPublished = false;
   const publish = () => {
     if (!pending.length) return;
-    onBatch?.(pending);
+    const batch = pending;
     pending = [];
     hasPublished = true;
+    // Publicamos una instantánea acumulada en memoria antes de avisar a la
+    // vista. Si el usuario entra a Licitaciones entre dos paquetes, verá lo
+    // ya disponible en lugar de iniciar desde una pantalla vacía.
+    onSnapshot?.(all.slice());
+    onBatch?.(batch);
   };
   const extractRows = () => {
     while (true) {
@@ -119,17 +129,9 @@ export async function solicitarExcelLicitaciones({ userId, sessionId, claves, si
   return { fileUrl, message };
 }
 
-export async function obtenerLicitaciones({ userId, sessionId, signal, onBatch } = {}) {
-  if (!userId || !sessionId) throw new Error('La sesión del usuario no está disponible.');
-  const key = cacheKey(userId, sessionId);
-  const cached = licitacionesCache.get(key);
-  const loadSpan = startPerformanceSpan('licitaciones.load', { cached: Boolean(cached) });
+async function requestLicitaciones({ key, userId, sessionId, signal, onBatch }) {
+  const loadSpan = startPerformanceSpan('licitaciones.load', { cached: false });
   try {
-    if (cached) {
-      loadSpan.end({ records: cached.length, source: 'memory-cache' });
-      return cached;
-    }
-
     const response = await fetch(`${CONSTRULEADS_WS_BASE_URL}/ws_cl_licitaciones`, {
       method: 'POST',
       body: new URLSearchParams({
@@ -144,7 +146,11 @@ export async function obtenerLicitaciones({ userId, sessionId, signal, onBatch }
     const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
     const isChrome = /Chrome\//i.test(userAgent) && !/Edg\//i.test(userAgent) && !/OPR\//i.test(userAgent);
     if (isChrome && response.body?.getReader) {
-      const progressive = await readLicitacionesProgressively(response, onBatch);
+      const progressive = await readLicitacionesProgressively(
+        response,
+        onBatch,
+        (snapshot) => licitacionesCache.set(key, snapshot)
+      );
       if (progressive) {
         licitacionesCache.set(key, progressive);
         loadSpan.end({ records: progressive.length, source: 'stream' });
@@ -165,7 +171,51 @@ export async function obtenerLicitaciones({ userId, sessionId, signal, onBatch }
     loadSpan.end({ records: normalized.length, source: 'document' });
     return normalized;
   } catch (error) {
+    // Una instantánea parcial no es una caché válida si el WS falló. Al
+    // quitarla, el siguiente intento podrá volver a solicitar la respuesta.
+    licitacionesCache.delete(key);
     loadSpan.end({ error: true, aborted: signal?.aborted === true });
     throw error;
+  }
+}
+
+export async function obtenerLicitaciones({ userId, sessionId, signal, onBatch } = {}) {
+  if (!userId || !sessionId) throw new Error('La sesión del usuario no está disponible.');
+
+  const key = cacheKey(userId, sessionId);
+  const pendingRequest = licitacionesRequests.get(key);
+  if (pendingRequest) {
+    const partial = licitacionesCache.get(key);
+    if (partial?.length) onBatch?.(partial);
+    return pendingRequest;
+  }
+
+  const cached = licitacionesCache.get(key);
+  if (cached) {
+    const loadSpan = startPerformanceSpan('licitaciones.load', { cached: true });
+    loadSpan.end({ records: cached.length, source: 'memory-cache' });
+    return cached;
+  }
+
+  const request = requestLicitaciones({ key, userId, sessionId, signal, onBatch });
+  licitacionesRequests.set(key, request);
+  try {
+    return await request;
+  } finally {
+    if (licitacionesRequests.get(key) === request) {
+      licitacionesRequests.delete(key);
+    }
+  }
+}
+
+export async function precargarLicitaciones({ userId, sessionId } = {}) {
+  try {
+    const licitaciones = await obtenerLicitaciones({ userId, sessionId });
+    if (licitaciones?.length) void writeCachedLicitaciones(userId, licitaciones);
+    return licitaciones;
+  } catch {
+    // La precarga nunca debe alterar la navegación ni mostrar un error antes
+    // de que el usuario entre al módulo.
+    return null;
   }
 }

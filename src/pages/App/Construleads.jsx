@@ -47,9 +47,10 @@ const PREFILTERED_MAP_FILTERS = Object.freeze({ __preFiltered: true });
 const loadResultadosView = () => import('./views/ResultadosView');
 const loadGraficasView = () => import('./views/GraficasView');
 const loadCompaniasView = () => import('../../features/companias/CompaniasView');
+const loadLicitacionesView = () => import('../../features/licitaciones/LicitacionesView');
 const Resultados = lazy(loadResultadosView);
 const GraficasView = lazy(loadGraficasView);
-const LicitacionesView = lazy(() => import('../../features/licitaciones/LicitacionesView'));
+const LicitacionesView = lazy(loadLicitacionesView);
 const CompaniasView = lazy(loadCompaniasView);
 
 const TOP_LEVEL_MODULE_ORDER = {
@@ -415,7 +416,9 @@ export default function Construleads() {
   }, [colorMode]);
 
   useEffect(() => {
-    if (isLicitacionesModule) return undefined;
+    // Compañías y Licitaciones tienen sus propios WS. Descargar Obras al
+    // entrar directamente a uno de esos módulos sólo les roba red y CPU.
+    if (isLicitacionesModule || isCompaniesModule) return undefined;
 
     let isActive = true;
     const abortController = new AbortController();
@@ -531,13 +534,14 @@ export default function Construleads() {
       isActive = false;
       abortController.abort();
     };
-  }, [isLicitacionesModule, user.idUsuario]);
+  }, [isCompaniesModule, isLicitacionesModule, user.idUsuario]);
 
   useEffect(() => {
     // Compañías usa su propio WS, que ya contiene su portafolio y relaciones.
     // No debe depender de la descarga de obras (ni de sus fuentes activas).
     if (isLicitacionesModule || isProfileModule) return undefined;
-    if (!mountedViews.companias) return undefined;
+    const isBackgroundPreload = !mountedViews.companias;
+    if (loadingObras && isBackgroundPreload) return undefined;
 
     const sessionKey = `${COMPANY_PROFILE_DATA_VERSION}:${user.idUsuario || ''}:${user.idSession || ''}`;
     if (companiesSessionKey === sessionKey) return undefined;
@@ -585,12 +589,53 @@ export default function Construleads() {
       }
     }
 
-    cargarCompanias();
+    // El primer marcador conserva prioridad. Después, calentamos el módulo
+    // de compañías mientras el usuario explora el mapa. Si pulsa la pestaña
+    // antes de ese momento, el efecto se reinicia y arranca de inmediato.
+    const startLoading = () => {
+      void loadCompaniasView();
+      cargarCompanias();
+    };
+    const preloadTimer = isBackgroundPreload
+      ? window.setTimeout(startLoading, 500)
+      : null;
+    if (!isBackgroundPreload) startLoading();
+
     return () => {
+      if (preloadTimer !== null) window.clearTimeout(preloadTimer);
       isActive = false;
       abortController.abort();
     };
-  }, [companiesSessionKey, isLicitacionesModule, isProfileModule, mountedViews.companias, user.idSession, user.idUsuario]);
+  }, [companiesSessionKey, isLicitacionesModule, isProfileModule, loadingObras, mountedViews.companias, user.idSession, user.idUsuario]);
+
+  const prefetchLicitaciones = useCallback(() => {
+    if (!user.idUsuario || !user.idSession) return;
+
+    // El código de la vista y el WS se calientan juntos. La API conserva una
+    // promesa compartida: al navegar no se duplica la descarga iniciada aquí.
+    void Promise.all([
+      loadLicitacionesView(),
+      import('../../features/licitaciones/licitacionesApi'),
+    ]).then(([, api]) => api.precargarLicitaciones({
+      userId: user.idUsuario,
+      sessionId: user.idSession,
+    }));
+  }, [user.idSession, user.idUsuario]);
+
+  useEffect(() => {
+    if (isLicitacionesModule) {
+      prefetchLicitaciones();
+      return undefined;
+    }
+    // Obras conserva prioridad hasta que aparece el primer punto. Después
+    // calentamos Licitaciones aunque Compañías siga descargando: son WS
+    // independientes y serializarlos podía convertir una espera de segundos
+    // en una espera de más de un minuto al abrir ambas pestañas.
+    if (isProfileModule || isCompaniesModule || loadingObras) return undefined;
+
+    const preloadTimer = window.setTimeout(prefetchLicitaciones, 1600);
+    return () => window.clearTimeout(preloadTimer);
+  }, [isCompaniesModule, isLicitacionesModule, isProfileModule, loadingObras, prefetchLicitaciones]);
 
   const changeView = useCallback((nextView, { animateProjectView = false } = {}) => {
     if (animateProjectView && nextView !== activeView) {
@@ -619,6 +664,11 @@ export default function Construleads() {
     ));
     navigate('/construleads/companias');
   }, [navigate]);
+
+  const openLicitacionesView = useCallback(() => {
+    prefetchLicitaciones();
+    navigate('/construleads/licitaciones');
+  }, [navigate, prefetchLicitaciones]);
 
   const openCompanyDetail = useCallback((companyName) => {
     const name = String(companyName || '').trim();
@@ -780,7 +830,7 @@ export default function Construleads() {
         userName={user.nombreUsuario}
         onProjects={() => openProjectView(['mapa', 'resultados', 'graficas'].includes(activeView) ? activeView : 'mapa')}
         onCompanies={openCompaniesView}
-        onLicitaciones={() => navigate('/construleads/licitaciones')}
+        onLicitaciones={openLicitacionesView}
         onProfile={() => navigate('/construleads/perfil')}
         onPreferences={() => navigate('/construleads/perfil', { state: { activeTab: 'preferencias' } })}
         onToggleTheme={() => setColorMode((current) => (current === 'dark' ? 'light' : 'dark'))}

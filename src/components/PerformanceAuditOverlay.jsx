@@ -14,6 +14,7 @@ const TRACKED_OPERATIONS = [
   ['obras.load', 'Carga obras'],
   ['obras.parse', 'Parseo obras'],
   ['licitaciones.load', 'Licitaciones'],
+  ['companies.request-and-parse', 'WS compañías'],
   ['companies.build-rows', 'Compañías'],
   ['results.table-data', 'Resultados'],
 ];
