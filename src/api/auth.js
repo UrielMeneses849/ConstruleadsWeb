@@ -1,4 +1,5 @@
 import { CONSTRULEADS_TOKEN as TOKEN, CONSTRULEADS_WS_BASE_URL } from './obras.js';
+import { precargarObrasMapaLigero } from './mapaLigero.js';
 
 export async function loginByEmail(email) {
   const ipResponse = await fetch(
@@ -88,6 +89,12 @@ export async function validarCodigo(email, codigo) {
       "construleadsUser",
       JSON.stringify(result)
     );
+    // Da ventaja al endpoint compacto durante el cambio de Login a Mapa. Si
+    // no está configurado, esta función no abre ninguna conexión.
+    void precargarObrasMapaLigero({
+      userId: result.idUsuario,
+      sessionId: result.idSession,
+    });
   }
 
   return result;

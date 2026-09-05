@@ -25,6 +25,7 @@ import Perfil from './Perfil';
 import WelcomeExperience from './WelcomeExperience';
 import PerformanceAuditOverlay from '../../components/PerformanceAuditOverlay';
 import { obtenerObrasProgresivas } from '../../api/obras';
+import { obtenerObrasMapaLigero } from '../../api/mapaLigero';
 import { obtenerCompanias } from '../../api/companias';
 import {
   iniciarDescargaReporte,
@@ -430,6 +431,8 @@ export default function Construleads() {
       let loadStatus = 'error';
       let servedFromCache = false;
       let firstPreviewMs = null;
+      let fullObrasReady = false;
+      let lightweightPreviewApplied = false;
       const loadSpan = startPerformanceSpan('obras.load', { userId: Boolean(userId) });
 
       try {
@@ -442,6 +445,25 @@ export default function Construleads() {
         let firstPreviewPublished = false;
         const requestStartedAt = performance.now();
         const requestSpan = startPerformanceSpan('obras.request', { cached: false });
+        // Cuando el backend habilite el endpoint compacto, éste devuelve el
+        // inventario de pines antes que el XML detallado. Ambos WS corren en
+        // paralelo; si el compacto no existe o falla, el flujo actual sigue
+        // exactamente igual y la vista nunca queda bloqueada.
+        void obtenerObrasMapaLigero({
+          userId: user.idUsuario,
+          sessionId: user.idSession,
+          signal: abortController.signal,
+        }).then((lightweightObras) => {
+          if (!isActive || fullObrasReady || !lightweightObras?.length) return;
+
+          lightweightPreviewApplied = true;
+          firstPreviewPublished = true;
+          firstPreviewMs = Math.round(performance.now() - requestStartedAt);
+          setMapPreviewObras(lightweightObras);
+          setLoadingObras(false);
+        }).catch(() => {
+          // Es un acelerador opcional. `ws_cl_obras` conserva el fallback.
+        });
         const requestPromise = obtenerObrasProgresivas({
           signal: abortController.signal,
           // Un solo registro completo basta para mostrar el primer punto. El
@@ -449,7 +471,7 @@ export default function Construleads() {
           // cada bloque de red.
           firstBatchSize: 1,
           onBatch: (fragments) => {
-            if (!isActive || cachedObras?.length || firstPreviewPublished) return;
+            if (!isActive || cachedObras?.length || firstPreviewPublished || lightweightPreviewApplied) return;
             // Antes se acumulaban todos los fragmentos sin coordenadas y se
             // reparseaba el arreglo completo con cada nueva fila. Si la
             // primera coordenada aparecía tarde, el trabajo crecía en O(n²)
@@ -514,6 +536,7 @@ export default function Construleads() {
         }
 
         if (!isActive) return;
+        fullObrasReady = true;
         loadedRecords = obrasParseadas.length;
         loadStatus = 'success';
         setObras(obrasParseadas);
@@ -543,7 +566,7 @@ export default function Construleads() {
       window.clearTimeout(startTimer);
       abortController.abort();
     };
-  }, [isCompaniesModule, isLicitacionesModule, user.idUsuario]);
+  }, [isCompaniesModule, isLicitacionesModule, user.idSession, user.idUsuario]);
 
   useEffect(() => {
     // Compañías usa su propio WS, que ya contiene su portafolio y relaciones.

@@ -11,6 +11,7 @@ const TRACKED_OPERATIONS = [
   ['map.refresh', 'Mapa'],
   ['filters.obras', 'Filtros'],
   ['obras.request', 'WS obras'],
+  ['map.light-request', 'WS mapa ligero'],
   ['obras.load', 'Carga obras'],
   ['obras.parse', 'Parseo obras'],
   ['licitaciones.load', 'Licitaciones'],
