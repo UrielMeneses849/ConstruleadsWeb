@@ -439,7 +439,6 @@ export default function Construleads() {
         // visita no habrá caché; arrancar el WS antes de consultar IndexedDB
         // elimina esa espera de la ruta crítica hacia el primer marcador.
         const cachePromise = readCachedObras(userId);
-        const previewFragments = [];
         let firstPreviewPublished = false;
         const requestStartedAt = performance.now();
         const requestSpan = startPerformanceSpan('obras.request', { cached: false });
@@ -451,19 +450,24 @@ export default function Construleads() {
           firstBatchSize: 1,
           onBatch: (fragments) => {
             if (!isActive || cachedObras?.length || firstPreviewPublished) return;
-            previewFragments.push(...fragments);
-            const previewSpan = startPerformanceSpan('obras.preview-parse', { fragments: previewFragments.length });
+            // Antes se acumulaban todos los fragmentos sin coordenadas y se
+            // reparseaba el arreglo completo con cada nueva fila. Si la
+            // primera coordenada aparecía tarde, el trabajo crecía en O(n²)
+            // justo antes de pintar el primer punto. Para el preview sólo
+            // necesitamos revisar la fila recién recibida.
+            const previewSpan = startPerformanceSpan('obras.preview-parse', { fragments: fragments.length });
             const previewObras = parseObrasXml(
-              `<NewDataSet>${previewFragments.join('')}</NewDataSet>`
+              `<NewDataSet>${fragments.join('')}</NewDataSet>`
             );
             previewSpan.end({ records: previewObras.length });
 
             // Una primera fila sin coordenadas no debe consumir la única
             // oportunidad de preview y dejar el mapa vacío hasta el final.
-            if (!previewObras.some((obra) => obra?.hasValidCoordinates)) return;
+            const firstValidPreview = previewObras.find((obra) => obra?.hasValidCoordinates);
+            if (!firstValidPreview) return;
             firstPreviewPublished = true;
             firstPreviewMs = Math.round(performance.now() - requestStartedAt);
-            setMapPreviewObras(previewObras);
+            setMapPreviewObras([firstValidPreview]);
             setLoadingObras(false);
           },
         });
@@ -529,9 +533,14 @@ export default function Construleads() {
       }
     }
 
-    cargarObras();
+    // React Strict Mode vuelve a ejecutar los efectos durante el desarrollo.
+    // Al diferir un turno el arranque, la primera ejecución de comprobación
+    // se limpia antes de abrir el WS y sólo queda una solicitud real. En
+    // producción el retraso es imperceptible (un turno de event loop).
+    const startTimer = window.setTimeout(cargarObras, 0);
     return () => {
       isActive = false;
+      window.clearTimeout(startTimer);
       abortController.abort();
     };
   }, [isCompaniesModule, isLicitacionesModule, user.idUsuario]);
