@@ -1,6 +1,6 @@
 import { CONSTRULEADS_TOKEN, CONSTRULEADS_WS_BASE_URL } from '../../api/obras';
 import { normalizeLicitacion } from './licitacionesUtils';
-import { startPerformanceSpan } from '../../utils/performanceMonitor';
+import { startPerformanceSpan, traceWsRequest } from '../../utils/performanceMonitor';
 import { writeCachedLicitaciones } from '../../utils/licitacionesCache';
 
 const licitacionesCache = new Map();
@@ -179,12 +179,13 @@ async function requestLicitaciones({ key, userId, sessionId, signal, onBatch }) 
   }
 }
 
-export async function obtenerLicitaciones({ userId, sessionId, signal, onBatch } = {}) {
+export async function obtenerLicitaciones({ userId, sessionId, signal, onBatch, caller = 'unknown', reason = 'load' } = {}) {
   if (!userId || !sessionId) throw new Error('La sesión del usuario no está disponible.');
 
   const key = cacheKey(userId, sessionId);
   const pendingRequest = licitacionesRequests.get(key);
   if (pendingRequest) {
+    traceWsRequest('ws_cl_licitaciones', 'in-flight-reused', { caller, reason });
     const partial = licitacionesCache.get(key);
     if (partial?.length) onBatch?.(partial);
     return pendingRequest;
@@ -192,11 +193,13 @@ export async function obtenerLicitaciones({ userId, sessionId, signal, onBatch }
 
   const cached = licitacionesCache.get(key);
   if (cached) {
+    traceWsRequest('ws_cl_licitaciones', 'cache-hit', { caller, reason });
     const loadSpan = startPerformanceSpan('licitaciones.load', { cached: true });
     loadSpan.end({ records: cached.length, source: 'memory-cache' });
     return cached;
   }
 
+  traceWsRequest('ws_cl_licitaciones', 'request', { caller, reason, cacheState: 'MISS' });
   const request = requestLicitaciones({ key, userId, sessionId, signal, onBatch });
   licitacionesRequests.set(key, request);
   try {
@@ -210,7 +213,7 @@ export async function obtenerLicitaciones({ userId, sessionId, signal, onBatch }
 
 export async function precargarLicitaciones({ userId, sessionId } = {}) {
   try {
-    const licitaciones = await obtenerLicitaciones({ userId, sessionId });
+    const licitaciones = await obtenerLicitaciones({ userId, sessionId, caller: 'Construleads', reason: 'prefetch' });
     if (licitaciones?.length) void writeCachedLicitaciones(userId, licitaciones);
     return licitaciones;
   } catch {

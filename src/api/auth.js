@@ -1,4 +1,4 @@
-import { CONSTRULEADS_TOKEN as TOKEN, CONSTRULEADS_WS_BASE_URL } from './obras.js';
+import { CONSTRULEADS_TOKEN as TOKEN, CONSTRULEADS_WS_BASE_URL, precargarObras } from './obras.js';
 import { precargarObrasMapaLigero } from './mapaLigero.js';
 
 export async function loginByEmail(email) {
@@ -95,6 +95,20 @@ export async function validarCodigo(email, codigo) {
       userId: result.idUsuario,
       sessionId: result.idSession,
     });
+    // La bienvenida cubre la transición de entrada, mientras la descarga real
+    // inicia ya con una sesión válida. Mapa reutiliza esta misma promesa.
+    try {
+      const welcomeSeenKey = `cl_suite_welcome_seen:${result.idUsuario}`;
+      if (sessionStorage.getItem(welcomeSeenKey) !== '1') {
+        sessionStorage.setItem(`cl_suite_welcome_pending:${result.idUsuario}`, '1');
+      }
+    } catch {
+      // El precargado sigue funcionando aunque sessionStorage no esté disponible.
+    }
+    void precargarObras({
+      userId: result.idUsuario,
+      sessionId: result.idSession,
+    })?.catch(() => null);
   }
 
   return result;

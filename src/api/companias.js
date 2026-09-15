@@ -1,5 +1,8 @@
 import { CONSTRULEADS_TOKEN, CONSTRULEADS_WS_BASE_URL } from './obras';
-import { startPerformanceSpan } from '../utils/performanceMonitor';
+import { startPerformanceSpan, traceWsRequest } from '../utils/performanceMonitor';
+
+const companiesCache = new Map();
+const companiesRequests = new Map();
 
 function cleanText(value = '') {
   return String(value).trim();
@@ -378,19 +381,45 @@ function getSessionCredentials() {
   };
 }
 
-export async function obtenerCompanias({ signal, timeoutMs = 90000 } = {}) {
+export async function obtenerCompanias({ timeoutMs = 90000, caller = 'unknown', reason = 'load' } = {}) {
+  const credentials = getSessionCredentials();
+  const cacheKey = `${credentials.sId_usuario}:${credentials.sId_session}`;
+  const cached = companiesCache.get(cacheKey);
+  if (cached) {
+    traceWsRequest('ws_cl_companias', 'cache-hit', { caller, reason });
+    return cached;
+  }
+  const pending = companiesRequests.get(cacheKey);
+  if (pending) {
+    traceWsRequest('ws_cl_companias', 'in-flight-reused', { caller, reason });
+    return pending;
+  }
+
+  // La solicitud pertenece al repositorio, no a un componente individual.
+  // Un unmount no debe abortar una precarga que otra vista puede reutilizar.
+  const request = requestCompanias({ credentials, timeoutMs, caller, reason });
+  companiesRequests.set(cacheKey, request);
+  try {
+    const relationships = await request;
+    companiesCache.set(cacheKey, relationships);
+    return relationships;
+  } finally {
+    if (companiesRequests.get(cacheKey) === request) companiesRequests.delete(cacheKey);
+  }
+}
+
+async function requestCompanias({ credentials, timeoutMs, caller, reason }) {
   const loadSpan = startPerformanceSpan('companies.request-and-parse');
   const requestController = new AbortController();
-  const abortFromCaller = () => requestController.abort();
-  signal?.addEventListener('abort', abortFromCaller, { once: true });
   // Este catálogo contiene los contactos y puede tardar bastante más que las
   // obras. En producción no debe abortarse antes de poder enriquecer la vista.
   const requestTimeout = window.setTimeout(() => requestController.abort(), timeoutMs);
 
   try {
+    traceWsRequest('ws_cl_companias', 'request', { caller, reason, cacheState: 'MISS' });
     const response = await fetch(`${CONSTRULEADS_WS_BASE_URL}/ws_cl_companias`, {
       method: 'POST',
-      body: new URLSearchParams(getSessionCredentials()),
+      body: new URLSearchParams(credentials),
       signal: requestController.signal,
     });
 
@@ -403,12 +432,11 @@ export async function obtenerCompanias({ signal, timeoutMs = 90000 } = {}) {
     return relationships;
   } catch (error) {
     loadSpan.end({ error: true, aborted: requestController.signal.aborted });
-    if (requestController.signal.aborted && !signal?.aborted) {
+    if (requestController.signal.aborted) {
       throw new Error('El servicio de compañías tardó demasiado en responder.', { cause: error });
     }
     throw error;
   } finally {
     window.clearTimeout(requestTimeout);
-    signal?.removeEventListener('abort', abortFromCaller);
   }
 }

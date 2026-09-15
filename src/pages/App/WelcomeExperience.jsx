@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Box, Flex, Text } from '@chakra-ui/react';
 
-const WELCOME_DURATION_MS = 2400;
+const WELCOME_DURATION_MS = 1500;
 
-export default function WelcomeExperience({ userId, userName }) {
-  const storageKey = `cl_suite_welcome_v1:${userId || 'guest'}`;
+export default function WelcomeExperience({ userId, userName, onComplete }) {
+  const storageKey = `cl_suite_welcome_pending:${userId || 'guest'}`;
+  const seenKey = `cl_suite_welcome_seen:${userId || 'guest'}`;
   const [isVisible, setIsVisible] = useState(() => {
     try {
-      return sessionStorage.getItem(storageKey) !== 'seen';
+      return sessionStorage.getItem(storageKey) === '1';
     } catch {
       return false;
     }
@@ -18,14 +19,20 @@ export default function WelcomeExperience({ userId, userName }) {
     if (!isVisible) return undefined;
 
     try {
-      sessionStorage.setItem(storageKey, 'seen');
+      // La bienvenida corresponde al ingreso que acaba de validarse; un reload
+      // normal no la repite ni añade espera artificial.
+      sessionStorage.removeItem(storageKey);
+      sessionStorage.setItem(seenKey, '1');
     } catch {
       // La experiencia no debe interrumpir el acceso si el almacenamiento está bloqueado.
     }
 
-    const timeout = window.setTimeout(() => setIsVisible(false), WELCOME_DURATION_MS);
+    const timeout = window.setTimeout(() => {
+      setIsVisible(false);
+      onComplete?.();
+    }, WELCOME_DURATION_MS);
     return () => window.clearTimeout(timeout);
-  }, [isVisible, storageKey]);
+  }, [isVisible, onComplete, seenKey, storageKey]);
 
   if (!isVisible) return null;
 
@@ -39,7 +46,7 @@ export default function WelcomeExperience({ userId, userName }) {
       zIndex={300}
       align="center"
       justify="center"
-      bg="rgba(18, 18, 18, .94)"
+      bg="#121212"
       color="white"
       pointerEvents="none"
       role="status"
@@ -84,7 +91,7 @@ export default function WelcomeExperience({ userId, userName }) {
           Bienvenido a Bimsa Suite
         </Text>
         <Text mt={2} fontSize={{ base: '13px', md: '14px' }} color="rgba(255,255,255,.62)" fontWeight="400">
-          {firstName ? `Hola, ${firstName}. ` : ''}Información que impulsa mejores decisiones.
+          {firstName ? `Hola, ${firstName}. ` : ''}Estamos preparando tu tablero.
         </Text>
       </Flex>
     </Flex>,

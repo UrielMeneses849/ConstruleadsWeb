@@ -18,6 +18,7 @@ import {
   FiUsers,
 } from 'react-icons/fi';
 import { getSelectedDateField } from '../../utils/filterObras';
+import { measurePerformance } from '../../utils/performanceMonitor';
 
 const SUMMARY_METRIC_META = {
   projects: { Icon: FiBriefcase, color: '#2854C5', background: 'rgba(40, 84, 197, .11)' },
@@ -157,27 +158,28 @@ const {
   estadosConProyectos,
   companiasUnicas,
 } = useMemo(() => {
-  let inversion = 0;
-  let superficie = 0;
-  const estados = new Set();
-  const companias = new Set();
+  return measurePerformance('summary.top-metrics', { records: obras.length }, () => {
+    let inversion = 0;
+    let superficie = 0;
+    const estados = new Set();
+    const companias = new Set();
 
-  obras.forEach((obra) => {
-    inversion += Number(obra.inversion) || 0;
-    superficie += Number(obra.superficie) || 0;
+    obras.forEach((obra) => {
+      inversion += Number(obra.inversion) || 0;
+      superficie += Number(obra.superficie) || 0;
+      if (obra.estado) estados.add(obra.estado);
+      const compania = String(obra?.compania || '').trim();
+      if (compania) companias.add(compania);
+    });
 
-    if (obra.estado) estados.add(obra.estado);
-    const compania = String(obra?.compania || '').trim();
-    if (compania) companias.add(compania);
+    return {
+      totalProyectos: obras.length,
+      inversionTotal: inversion,
+      superficieTotal: superficie,
+      estadosConProyectos: estados.size,
+      companiasUnicas: companias.size,
+    };
   });
-
-  return {
-    totalProyectos: obras.length,
-    inversionTotal: inversion,
-    superficieTotal: superficie,
-    estadosConProyectos: estados.size,
-    companiasUnicas: companias.size,
-  };
 }, [obras]);
 
 const metricasDinamicas = [
@@ -218,6 +220,7 @@ const metricasDinamicas = [
 if (variant === 'map') {
   return (
     <Grid
+      className="cl-summary-metrics"
       alignItems="stretch"
       gap={2}
       w="100%"

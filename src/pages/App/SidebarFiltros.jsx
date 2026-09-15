@@ -593,26 +593,29 @@ export default function SidebarFiltros({ obras = [], onApplyFilters, isGraphView
   };
 
   const estadosPorRegion = useMemo(() => {
-    const grouped = new Map();
-    obras.forEach((obra) => {
-      const estado = String(obra.estado || '').trim();
-      if (!estado) return;
-      const regionFromData = String(obra.region || '').trim();
-      const inferredRegion = Object.entries(ESTADOS_POR_REGION_CATALOG).find(([, estados]) => (
-        estados.some((item) => normalizeFilterLabel(item) === normalizeFilterLabel(estado))
-      ))?.[0];
-      const region = regionFromData || inferredRegion || 'Sin región';
-      const regionKey = normalizeFilterLabel(region);
-      if (!grouped.has(regionKey)) grouped.set(regionKey, { label: region, estados: new Map() });
-      grouped.get(regionKey).estados.set(normalizeFilterLabel(estado), estado);
+    return measurePerformance('sidebar.regions-options', { records: obras.length }, () => {
+      const grouped = new Map();
+      obras.forEach((obra) => {
+        const estado = String(obra.estado || '').trim();
+        if (!estado) return;
+        const regionFromData = String(obra.region || '').trim();
+        const inferredRegion = Object.entries(ESTADOS_POR_REGION_CATALOG).find(([, estados]) => (
+          estados.some((item) => normalizeFilterLabel(item) === normalizeFilterLabel(estado))
+        ))?.[0];
+        const region = regionFromData || inferredRegion || 'Sin región';
+        const regionKey = normalizeFilterLabel(region);
+        if (!grouped.has(regionKey)) grouped.set(regionKey, { label: region, estados: new Map() });
+        grouped.get(regionKey).estados.set(normalizeFilterLabel(estado), estado);
+      });
+      return Object.fromEntries([...grouped.values()].map(({ label, estados }) => [
+        label,
+        [...estados.values()].sort((a, b) => a.localeCompare(b, 'es')),
+      ]));
     });
-    return Object.fromEntries([...grouped.values()].map(({ label, estados }) => [
-      label,
-      [...estados.values()].sort((a, b) => a.localeCompare(b, 'es')),
-    ]));
   }, [obras]);
 
   const subgenerosPorGenero = useMemo(() => {
+    return measurePerformance('sidebar.categories-options', { records: obras.length }, () => {
     const grouped = new Map();
     obras.forEach((obra) => {
       const genero = String(obra.genero || '').trim();
@@ -634,9 +637,11 @@ export default function SidebarFiltros({ obras = [], onApplyFilters, isGraphView
         [...tipos.values()].sort((a, b) => a.localeCompare(b, 'es')),
       ])),
     ]));
+    });
   }, [obras]);
 
   const dynamicOptions = useMemo(() => {
+    return measurePerformance('sidebar.dynamic-options', { records: obras.length }, () => {
     const unique = (key) => {
       const values = new Map();
       obras.forEach((obra) => {
@@ -659,6 +664,7 @@ export default function SidebarFiltros({ obras = [], onApplyFilters, isGraphView
       tiposProyecto: unique('tipoProyecto'),
       etapasPorTipo: Object.fromEntries(Object.entries(etapasPorTipo).map(([tipo, etapas]) => [tipo, [...etapas.values()]])),
     };
+    });
   }, [obras]);
 
   useEffect(() => {

@@ -1,8 +1,10 @@
 const DATABASE_NAME = 'construleads-performance-cache';
 const STORE_NAME = 'obras';
 const COMPANIES_STORE_NAME = 'companias';
-const DATABASE_VERSION = 2;
+const MAP_STORE_NAME = 'map-projects';
+const DATABASE_VERSION = 3;
 const OBRAS_CACHE_VERSION = 2;
+const MAP_PROJECTS_CACHE_VERSION = 1;
 const COMPANY_RELATIONSHIPS_CACHE_VERSION = 4;
 
 function openDatabase() {
@@ -17,10 +19,41 @@ function openDatabase() {
       if (!database.objectStoreNames.contains(COMPANIES_STORE_NAME)) {
         database.createObjectStore(COMPANIES_STORE_NAME);
       }
+      if (!database.objectStoreNames.contains(MAP_STORE_NAME)) {
+        database.createObjectStore(MAP_STORE_NAME);
+      }
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
+}
+
+export async function readCachedMapProjects(userId) {
+  if (!userId || !('indexedDB' in window)) return null;
+  try {
+    const database = await openDatabase();
+    const cached = await new Promise((resolve, reject) => {
+      const request = database.transaction(MAP_STORE_NAME, 'readonly').objectStore(MAP_STORE_NAME).get(String(userId));
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+    database.close();
+    return cached?.version === MAP_PROJECTS_CACHE_VERSION && Array.isArray(cached.projects) ? cached : null;
+  } catch { return null; }
+}
+
+export async function writeCachedMapProjects(userId, projects, datasetVersion = null) {
+  if (!userId || !Array.isArray(projects) || !('indexedDB' in window)) return;
+  try {
+    const database = await openDatabase();
+    await new Promise((resolve, reject) => {
+      const transaction = database.transaction(MAP_STORE_NAME, 'readwrite');
+      transaction.objectStore(MAP_STORE_NAME).put({ version: MAP_PROJECTS_CACHE_VERSION, datasetVersion, savedAt: Date.now(), projects }, String(userId));
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+    });
+    database.close();
+  } catch { /* La caché nunca impide mostrar el mapa. */ }
 }
 
 export async function readCachedObras(userId) {

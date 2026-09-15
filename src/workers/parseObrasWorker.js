@@ -17,17 +17,39 @@ function decodeXml(value = '') {
     .trim();
 }
 
-function escapeRegExp(value) {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const TAG_PATTERN = /<([^\s/>]+)(?:\s[^>]*)?>([\s\S]*?)<\/\1>/g;
+
+function normalizeTagName(value = '') {
+  return String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 }
 
-function getValue(fragment, ...tags) {
+// Antes cada campo recorría el XML completo con una RegExp nueva. Para una
+// obra con 30 campos eso repetía la misma búsqueda ~30 veces. Aquí leemos los
+// hijos directos una vez y conservamos el texto crudo; sólo se decodifican los
+// valores efectivamente consumidos abajo.
+function buildValueMap(fragment) {
+  const firstContentCharacter = fragment.indexOf('>') + 1;
+  const lastContentCharacter = fragment.lastIndexOf('</');
+  const content = firstContentCharacter > 0 && lastContentCharacter > firstContentCharacter
+    ? fragment.slice(firstContentCharacter, lastContentCharacter)
+    : '';
+  const values = Object.create(null);
+  TAG_PATTERN.lastIndex = 0;
+  let match;
+  while ((match = TAG_PATTERN.exec(content))) {
+    const key = normalizeTagName(match[1]);
+    if (values[key] === undefined) values[key] = match[2];
+  }
+  return values;
+}
+
+function getValue(values, ...tags) {
   for (const tag of tags) {
-    const match = new RegExp(
-      `<${escapeRegExp(tag)}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${escapeRegExp(tag)}>`,
-      'i'
-    ).exec(fragment);
-    if (match?.[1]) return decodeXml(match[1]);
+    const raw = values[normalizeTagName(tag)];
+    if (raw) return decodeXml(raw);
   }
   return '';
 }
@@ -55,20 +77,22 @@ function parseDate(value = '') {
 function parseObras(xml = '') {
   const fragments = String(xml).match(/<datos(?:\s[^>]*)?>[\s\S]*?<\/datos>/gi) || [];
   return fragments.map((fragment, index) => {
-    const clave = getValue(fragment, 'Clave_Proyecto');
-    const region = cleanText(getValue(fragment, 'Region'));
-    const estado = cleanText(getValue(fragment, 'Estado_Proyecto'));
-    const inversion = parseNumber(getValue(fragment, 'Inversion'));
-    const superficie = parseNumber(getValue(fragment, 'Sup_Construida'));
-    const lat = parseNumber(getValue(fragment, 'proy_ubicacionlatitud'));
-    const lng = parseNumber(getValue(fragment, 'proy_ubicacionlongitud'));
+    const values = buildValueMap(fragment);
+    const get = (...tags) => getValue(values, ...tags);
+    const clave = get('Clave_Proyecto');
+    const region = cleanText(get('Region'));
+    const estado = cleanText(get('Estado_Proyecto'));
+    const inversion = parseNumber(get('Inversion'));
+    const superficie = parseNumber(get('Sup_Construida'));
+    const lat = parseNumber(get('proy_ubicacionlatitud'));
+    const lng = parseNumber(get('proy_ubicacionlongitud'));
     const fechaPublicacion = getValue(
-      fragment,
+      values,
       'Fecha_publicacion', 'Fecha_Publicacion', 'FECHA_PUBLICACION', 'Fecha_Publicación'
     );
-    const fechaInicio = getValue(fragment, 'Fecha_Inicio', 'FECHA_INICIO', 'Fecha_inicio');
+    const fechaInicio = get('Fecha_Inicio', 'FECHA_INICIO', 'Fecha_inicio');
     const fechaTermino = getValue(
-      fragment,
+      values,
       'Fecha_Terminacion', 'Fecha_Termino', 'Fecha_Terminación', 'Fecha_Término',
       'FECHA_TERMINACION', 'FECHA_TERMINO', 'fecha_terminacion', 'fecha_termino',
       'FechaTerminacion', 'FechaTermino', 'Fecha_Fin', 'FECHA_FIN', 'fecha_fin'
@@ -76,21 +100,24 @@ function parseObras(xml = '') {
     const fechaPublicacionDate = parseDate(fechaPublicacion);
     const fechaInicioDate = parseDate(fechaInicio);
     const fechaTerminoDate = parseDate(fechaTermino);
+    const compania = cleanText(get('Compania'));
+    const rfcCompania = cleanText(get('RFC_Compania', 'RFC_Proveedor', 'RFC'));
+    const claveCompania = cleanText(get('Clave_Compania', 'Clave_Empresa', 'Empresa_Clave'));
 
     return {
       id: clave || `${lat}-${lng}-${index}`,
       clave,
-      origen: getObraSource(getValue(fragment, 'Origen')),
-      proyecto: cleanText(getValue(fragment, 'Proyecto')),
+      origen: getObraSource(get('Origen')),
+      proyecto: cleanText(get('Proyecto')),
       region,
       estado,
-      genero: cleanText(getValue(fragment, 'Genero')),
-      subgenero: cleanText(getValue(fragment, 'Subgenero')),
-      tipoObra: cleanText(getValue(fragment, 'Tipo_Obra')),
-      tipoDesarrollo: cleanText(getValue(fragment, 'Tipo_Desarrollo')),
-      tipoProyecto: cleanText(getValue(fragment, 'Tipo_Proyecto')),
-      etapa: cleanText(getValue(fragment, 'Etapa')),
-      sector: cleanText(getValue(fragment, 'Sector')),
+      genero: cleanText(get('Genero')),
+      subgenero: cleanText(get('Subgenero')),
+      tipoObra: cleanText(get('Tipo_Obra')),
+      tipoDesarrollo: cleanText(get('Tipo_Desarrollo')),
+      tipoProyecto: cleanText(get('Tipo_Proyecto')),
+      etapa: cleanText(get('Etapa')),
+      sector: cleanText(get('Sector')),
       inversion,
       superficie,
       fechaPublicacion,
@@ -112,9 +139,11 @@ function parseObras(xml = '') {
       lng,
       hasValidCoordinates:
         Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0,
-      localizacion: getValue(fragment, 'Localizacion1'),
-      descripcion: getValue(fragment, 'Descripcion'),
-      compania: getValue(fragment, 'Compania'),
+      localizacion: get('Localizacion1'),
+      descripcion: get('Descripcion'),
+      compania,
+      rfcCompania,
+      claveCompania,
     };
   });
 }

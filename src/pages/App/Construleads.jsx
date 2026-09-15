@@ -24,22 +24,25 @@ import ConstruleadsNavbar from './ConstruleadsNavbar';
 import Perfil from './Perfil';
 import WelcomeExperience from './WelcomeExperience';
 import PerformanceAuditOverlay from '../../components/PerformanceAuditOverlay';
-import { obtenerObrasProgresivas } from '../../api/obras';
-import { obtenerObrasMapaLigero } from '../../api/mapaLigero';
+import { obtenerObrasProgresivas, obtenerPrefetchObras } from '../../api/obras';
+import { isMapPreviewEndpointEnabled, obtenerObrasMapaLigero } from '../../api/mapaLigero';
 import { obtenerCompanias } from '../../api/companias';
 import {
   iniciarDescargaReporte,
-  solicitarFichaDatos,
+  getProjectDetail,
   solicitarReporte,
 } from '../../api/reportes';
 import { parseObrasXml } from '../../utils/parseObrasXml';
 import { parseObrasOffMainThread } from '../../utils/parseObrasOffMainThread';
 import { filterObrasByFilters } from '../../utils/filterObras';
 import { getObraSource, OBRA_SOURCES } from '../../utils/obrasSources';
+import { mapProjectsFromObras } from '../../utils/mapProjects';
 import {
   readCachedCompanyRelationships,
+  readCachedMapProjects,
   readCachedObras,
   writeCachedCompanyRelationships,
+  writeCachedMapProjects,
   writeCachedObras,
 } from '../../utils/obrasCache';
 import { measurePerformance, startPerformanceSpan } from '../../utils/performanceMonitor';
@@ -59,7 +62,10 @@ const TOP_LEVEL_MODULE_ORDER = {
   companias: 1,
   licitaciones: 2,
 };
+const PROJECT_VIEWS = new Set(['mapa', 'resultados', 'graficas']);
 const COMPANY_PROFILE_DATA_VERSION = 4;
+const FIRST_ENTRY_INTRO_DURATION_MS = 2700;
+const MAP_REVEAL_DURATION_MS = 800;
 
 function readPersistedFilters() {
   try {
@@ -266,9 +272,42 @@ export default function Construleads() {
     user = {};
   }
 
+  // Sólo la primera entrada autenticada de esta pestaña recibe la coreografía.
+  // Las navegaciones posteriores conservan una interfaz inmediata.
+  const [isFirstConstruleadsEntry] = useState(() => {
+    try {
+      return sessionStorage.getItem(`cl_suite_welcome_pending:${user.idUsuario || 'guest'}`) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [introPhase, setIntroPhase] = useState(() => (
+    isFirstConstruleadsEntry ? 'welcome' : 'idle'
+  ));
+  const [isMapCoverVisible, setIsMapCoverVisible] = useState(isFirstConstruleadsEntry);
+  const [isMapCoverFading, setIsMapCoverFading] = useState(false);
+  const [isMapVisualReady, setIsMapVisualReady] = useState(!isFirstConstruleadsEntry);
+  const showFirstEntryIntro = introPhase === 'content';
+  const handleWelcomeComplete = useCallback(() => {
+    setIntroPhase((current) => current === 'welcome' ? 'content' : current);
+  }, []);
+  const handleMapVisualReady = useCallback(() => {
+    setIsMapVisualReady(true);
+  }, []);
+  useEffect(() => {
+    if (!showFirstEntryIntro) return undefined;
+    const timer = window.setTimeout(() => setIntroPhase('idle'), FIRST_ENTRY_INTRO_DURATION_MS);
+    return () => window.clearTimeout(timer);
+  }, [showFirstEntryIntro]);
+
   const [filtros, setFiltros] = useState(readPersistedFilters);
   const [obras, setObras] = useState([]);
   const [mapPreviewObras, setMapPreviewObras] = useState([]);
+  // Sólo el endpoint ligero permite retrasar el catálogo rico. La bandera no
+  // depende de cada cambio de pestaña, evitando abortar/repetir ws_cl_obras.
+  const [fullCatalogRequested, setFullCatalogRequested] = useState(
+    () => !isMapPreviewEndpointEnabled()
+  );
   const [loadingObras, setLoadingObras] = useState(true);
   const [companyRelationships, setCompanyRelationships] = useState([]);
   const [loadingCompanies, setLoadingCompanies] = useState(false);
@@ -290,6 +329,21 @@ export default function Construleads() {
     ),
     [mapPreviewObras, filtros]
   );
+  const mapDatasetObras = obras.length ? filteredObras : filteredMapPreviewObras;
+  useEffect(() => {
+    // La capa se conserva hasta que termina la coreografía y existe contenido
+    // real. El mapa de Google nunca se transforma: sólo se revela la capa.
+    if (
+      !isMapCoverVisible ||
+      introPhase !== 'idle' ||
+      !isMapVisualReady ||
+      (loadingObras && !mapDatasetObras.length)
+    ) return undefined;
+
+    setIsMapCoverFading(true);
+    const timer = window.setTimeout(() => setIsMapCoverVisible(false), MAP_REVEAL_DURATION_MS);
+    return () => window.clearTimeout(timer);
+  }, [introPhase, isMapCoverVisible, isMapVisualReady, loadingObras, mapDatasetObras.length]);
   const mapFitRequestKey = useMemo(
     () => getMapFitRequestKey(filtros),
     [filtros]
@@ -299,6 +353,9 @@ export default function Construleads() {
   const [companyDetailRequest, setCompanyDetailRequest] = useState(null);
   const selectionResetToken = 0;
   const [activeView, setActiveView] = useState('mapa');
+  const lastProjectView = useRef(
+    location.pathname.match(/\/proyectos\/(mapa|resultados|graficas)\/?$/)?.[1] || 'mapa'
+  );
   const graphFilters = useMemo(() => ({
     ...filtros,
     fuentes: [OBRA_SOURCES.CONSTRULEADS],
@@ -442,6 +499,8 @@ export default function Construleads() {
         // visita no habrá caché; arrancar el WS antes de consultar IndexedDB
         // elimina esa espera de la ruta crítica hacia el primer marcador.
         const cachePromise = readCachedObras(userId);
+        const mapCachePromise = readCachedMapProjects(userId);
+        const streamedPreviewKeys = new Set();
         let firstPreviewPublished = false;
         const requestStartedAt = performance.now();
         const requestSpan = startPerformanceSpan('obras.request', { cached: false });
@@ -449,7 +508,8 @@ export default function Construleads() {
         // inventario de pines antes que el XML detallado. Ambos WS corren en
         // paralelo; si el compacto no existe o falla, el flujo actual sigue
         // exactamente igual y la vista nunca queda bloqueada.
-        void obtenerObrasMapaLigero({
+        const mapEndpointEnabled = isMapPreviewEndpointEnabled();
+        const lightweightRequest = obtenerObrasMapaLigero({
           userId: user.idUsuario,
           sessionId: user.idSession,
           signal: abortController.signal,
@@ -460,36 +520,79 @@ export default function Construleads() {
           firstPreviewPublished = true;
           firstPreviewMs = Math.round(performance.now() - requestStartedAt);
           setMapPreviewObras(lightweightObras);
+          void writeCachedMapProjects(userId, lightweightObras);
           setLoadingObras(false);
+          return lightweightObras;
         }).catch(() => {
           // Es un acelerador opcional. `ws_cl_obras` conserva el fallback.
+          return null;
         });
-        const requestPromise = obtenerObrasProgresivas({
+
+        // Stale-while-revalidate: el dataset mínimo persistido es suficiente
+        // para montar el mapa; la respuesta ligera lo sustituye sólo si llega.
+        const cachedMapDataset = await mapCachePromise;
+        if (isActive && cachedMapDataset?.projects?.length) {
+          setMapPreviewObras(cachedMapDataset.projects);
+          setLoadingObras(false);
+        }
+
+        // Con contrato ligero habilitado, Mapa no descarga el XML completo.
+        // Resultados/Gráficas lo pedirán al activarse; un fallo ligero continúa
+        // por el fallback actual sin ocultar el mapa ni silenciar el error.
+        if (mapEndpointEnabled && !fullCatalogRequested) {
+          const lightweightObras = await lightweightRequest;
+          if (lightweightObras?.length) {
+            loadedRecords = lightweightObras.length;
+            loadStatus = 'map-light-success';
+            return;
+          }
+        }
+        const prefetchedRequest = obtenerPrefetchObras({
+          userId,
+          sessionId: user.idSession,
+        });
+        const requestPromise = prefetchedRequest || obtenerObrasProgresivas({
           signal: abortController.signal,
-          // Un solo registro completo basta para mostrar el primer punto. El
-          // resto de la carga sigue en segundo plano sin repintar el mapa por
-          // cada bloque de red.
+          // El primer punto aparece de inmediato y los siguientes bloques se
+          // incorporan al mapa. No esperamos a que el ASMX cierre todo el XML:
+          // ese servicio puede tardar bastante en completar la respuesta.
           firstBatchSize: 1,
+          batchSize: 25,
           onBatch: (fragments) => {
-            if (!isActive || cachedObras?.length || firstPreviewPublished || lightweightPreviewApplied) return;
-            // Antes se acumulaban todos los fragmentos sin coordenadas y se
-            // reparseaba el arreglo completo con cada nueva fila. Si la
-            // primera coordenada aparecía tarde, el trabajo crecía en O(n²)
-            // justo antes de pintar el primer punto. Para el preview sólo
-            // necesitamos revisar la fila recién recibida.
+            if (!isActive || cachedObras?.length || lightweightPreviewApplied) return;
+            // Cada fragmento se procesa una sola vez. Así evitamos reprocesar
+            // todo el XML en cada actualización y el mapa sigue creciendo
+            // mientras la respuesta del WS continúa abierta.
             const previewSpan = startPerformanceSpan('obras.preview-parse', { fragments: fragments.length });
             const previewObras = parseObrasXml(
               `<NewDataSet>${fragments.join('')}</NewDataSet>`
-            );
+            ).filter((obra) => obra?.hasValidCoordinates);
             previewSpan.end({ records: previewObras.length });
 
-            // Una primera fila sin coordenadas no debe consumir la única
-            // oportunidad de preview y dejar el mapa vacío hasta el final.
-            const firstValidPreview = previewObras.find((obra) => obra?.hasValidCoordinates);
-            if (!firstValidPreview) return;
-            firstPreviewPublished = true;
-            firstPreviewMs = Math.round(performance.now() - requestStartedAt);
-            setMapPreviewObras([firstValidPreview]);
+            if (!previewObras.length) return;
+            const newPreviewObras = previewObras.filter((obra) => {
+              const key = String(obra.clave || obra.id || '');
+              if (!key || streamedPreviewKeys.has(key)) return false;
+              streamedPreviewKeys.add(key);
+              return true;
+            });
+            if (!newPreviewObras.length) return;
+
+            if (!firstPreviewPublished) {
+              firstPreviewPublished = true;
+              firstPreviewMs = Math.round(performance.now() - requestStartedAt);
+            }
+            setMapPreviewObras((current) => {
+              const existingKeys = new Set(current.map((obra) => String(
+                obra.clave || obra.id || `${obra.lat}:${obra.lng}`
+              )));
+              return [
+                ...current,
+                ...newPreviewObras.filter((obra) => !existingKeys.has(String(
+                  obra.clave || obra.id || `${obra.lat}:${obra.lng}`
+                ))),
+              ];
+            });
             setLoadingObras(false);
           },
         });
@@ -541,6 +644,7 @@ export default function Construleads() {
         loadStatus = 'success';
         setObras(obrasParseadas);
         setMapPreviewObras([]);
+        void writeCachedMapProjects(userId, mapProjectsFromObras(obrasParseadas));
         void writeCachedObras(userId, obrasParseadas);
       } catch {
         loadStatus = abortController.signal.aborted ? 'aborted' : 'error';
@@ -566,20 +670,21 @@ export default function Construleads() {
       window.clearTimeout(startTimer);
       abortController.abort();
     };
-  }, [isCompaniesModule, isLicitacionesModule, user.idSession, user.idUsuario]);
+  }, [fullCatalogRequested, isCompaniesModule, isLicitacionesModule, user.idSession, user.idUsuario]);
+
+  useEffect(() => {
+    if (activeView !== 'mapa') setFullCatalogRequested(true);
+  }, [activeView]);
 
   useEffect(() => {
     // Compañías usa su propio WS, que ya contiene su portafolio y relaciones.
-    // No debe depender de la descarga de obras (ni de sus fuentes activas).
-    if (isLicitacionesModule || isProfileModule) return undefined;
-    const isBackgroundPreload = !mountedViews.companias;
-    if (loadingObras && isBackgroundPreload) return undefined;
+    // Se carga exclusivamente al entrar a su módulo: no compite con Mapa.
+    if (!isCompaniesModule || isLicitacionesModule || isProfileModule) return undefined;
 
     const sessionKey = `${COMPANY_PROFILE_DATA_VERSION}:${user.idUsuario || ''}:${user.idSession || ''}`;
     if (companiesSessionKey === sessionKey) return undefined;
 
     let isActive = true;
-    const abortController = new AbortController();
 
     async function cargarCompanias() {
       const userId = user.idUsuario;
@@ -593,7 +698,10 @@ export default function Construleads() {
         // iniciarlas juntas reducimos el tiempo hasta contactos frescos sin
         // perder el primer pintado inmediato desde caché.
         const cachedRelationshipsPromise = readCachedCompanyRelationships(userId);
-        const relationshipsPromise = obtenerCompanias({ signal: abortController.signal });
+        const relationshipsPromise = obtenerCompanias({
+          caller: 'Construleads',
+          reason: 'companies-view',
+        });
         const cachedRelationships = await cachedRelationshipsPromise;
         if (isActive && cachedRelationships?.length) {
           // Se pintan los perfiles de la última respuesta antes de esperar la
@@ -609,8 +717,8 @@ export default function Construleads() {
           void writeCachedCompanyRelationships(userId, relationships);
         }
       } catch (error) {
-        loadStatus = abortController.signal.aborted ? 'aborted' : 'error';
-        if (isActive && !abortController.signal.aborted) {
+        loadStatus = 'error';
+        if (isActive) {
           setCompaniesError(error instanceof Error
             ? error.message
             : 'No fue posible actualizar los datos de compañías.');
@@ -621,55 +729,16 @@ export default function Construleads() {
       }
     }
 
-    // El primer marcador conserva prioridad. Después, calentamos el módulo
-    // de compañías mientras el usuario explora el mapa. Si pulsa la pestaña
-    // antes de ese momento, el efecto se reinicia y arranca de inmediato.
-    const startLoading = () => {
-      void loadCompaniasView();
-      cargarCompanias();
-    };
-    const preloadTimer = isBackgroundPreload
-      ? window.setTimeout(startLoading, 500)
-      : null;
-    if (!isBackgroundPreload) startLoading();
+    void loadCompaniasView();
+    cargarCompanias();
 
     return () => {
-      if (preloadTimer !== null) window.clearTimeout(preloadTimer);
       isActive = false;
-      abortController.abort();
     };
-  }, [companiesSessionKey, isLicitacionesModule, isProfileModule, loadingObras, mountedViews.companias, user.idSession, user.idUsuario]);
-
-  const prefetchLicitaciones = useCallback(() => {
-    if (!user.idUsuario || !user.idSession) return;
-
-    // El código de la vista y el WS se calientan juntos. La API conserva una
-    // promesa compartida: al navegar no se duplica la descarga iniciada aquí.
-    void Promise.all([
-      loadLicitacionesView(),
-      import('../../features/licitaciones/licitacionesApi'),
-    ]).then(([, api]) => api.precargarLicitaciones({
-      userId: user.idUsuario,
-      sessionId: user.idSession,
-    }));
-  }, [user.idSession, user.idUsuario]);
-
-  useEffect(() => {
-    if (isLicitacionesModule) {
-      prefetchLicitaciones();
-      return undefined;
-    }
-    // Obras conserva prioridad hasta que aparece el primer punto. Después
-    // calentamos Licitaciones aunque Compañías siga descargando: son WS
-    // independientes y serializarlos podía convertir una espera de segundos
-    // en una espera de más de un minuto al abrir ambas pestañas.
-    if (isProfileModule || isCompaniesModule || loadingObras) return undefined;
-
-    const preloadTimer = window.setTimeout(prefetchLicitaciones, 1600);
-    return () => window.clearTimeout(preloadTimer);
-  }, [isCompaniesModule, isLicitacionesModule, isProfileModule, loadingObras, prefetchLicitaciones]);
+  }, [companiesSessionKey, isCompaniesModule, isLicitacionesModule, isProfileModule, user.idSession, user.idUsuario]);
 
   const changeView = useCallback((nextView, { animateProjectView = false } = {}) => {
+    if (PROJECT_VIEWS.has(nextView)) lastProjectView.current = nextView;
     if (animateProjectView && nextView !== activeView) {
       setProjectViewTransition({
         id: `${nextView}-${Date.now()}`,
@@ -698,19 +767,39 @@ export default function Construleads() {
   }, [navigate]);
 
   const openLicitacionesView = useCallback(() => {
-    prefetchLicitaciones();
     navigate('/construleads/licitaciones');
-  }, [navigate, prefetchLicitaciones]);
+  }, [navigate]);
 
-  const openCompanyDetail = useCallback((companyName) => {
-    const name = String(companyName || '').trim();
-    if (!name) return;
+  const openCompanyDetail = useCallback((companyReference) => {
+    const source = typeof companyReference === 'object' && companyReference
+      ? companyReference
+      : {};
+    const company = source.company || {};
+    const name = String(
+      typeof companyReference === 'string'
+        ? companyReference
+        : source.compania || source.Compania || company.name || source.name || source.nombre || ''
+    ).trim();
+    const clave = String(
+      source.claveCompania || source.Clave_Compania || source.clave_cia || company.clave || ''
+    ).trim();
+    const rfc = String(
+      source.rfcCompania || source.RFC_Compania || company.rfc || source.rfc || source.RFC || ''
+    ).trim();
+    const projectKey = String(
+      source.clave || source.Clave_Proyecto || source.clave_proyecto || source.id || ''
+    ).trim();
+    if (!name && !clave && !rfc) return;
 
     // Cada solicitud conserva un identificador propio para permitir volver a
-    // abrir la misma compañía desde Gráficas sin depender del valor anterior.
+    // abrir la misma compañía desde Gráficas o Resultados sin depender del
+    // valor anterior. Clave y RFC evitan colisiones entre razones sociales.
     setCompanyDetailRequest({
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name,
+      clave,
+      rfc,
+      projectKey,
     });
     openCompaniesView();
   }, [openCompaniesView]);
@@ -754,7 +843,7 @@ export default function Construleads() {
       data: null, title, obraKey, error: '', downloadError: '',
     });
     try {
-      const data = await solicitarFichaDatos({
+      const data = await getProjectDetail({
         userId: user.idUsuario,
         sessionId: user.idSession,
         obraKey,
@@ -819,7 +908,7 @@ export default function Construleads() {
 
   return (
     <Box
-      className="cl-app-shell"
+      className={`cl-app-shell${showFirstEntryIntro ? ' cl-first-entry' : ''}`}
       bg={appColors.pageBg}
       p={3}
       color={appColors.text}
@@ -860,7 +949,7 @@ export default function Construleads() {
         activeModule={isProfileModule ? 'perfil' : isLicitacionesModule ? 'licitaciones' : isCompaniesModule ? 'companias' : 'proyectos'}
         isDarkMode={isDarkMode}
         userName={user.nombreUsuario}
-        onProjects={() => openProjectView(['mapa', 'resultados', 'graficas'].includes(activeView) ? activeView : 'mapa')}
+        onProjects={() => openProjectView(lastProjectView.current)}
         onCompanies={openCompaniesView}
         onLicitaciones={openLicitacionesView}
         onProfile={() => navigate('/construleads/perfil')}
@@ -892,10 +981,36 @@ export default function Construleads() {
         }
         .cl-module-enter-left { animation: cl-module-enter-from-left 280ms cubic-bezier(.22, 1, .36, 1) both; }
         .cl-module-enter-right { animation: cl-module-enter-from-right 280ms cubic-bezier(.22, 1, .36, 1) both; }
+        @keyframes cl-app-intro-sidebar {
+          from { opacity: 0; transform: translate3d(-28px, 0, 0); }
+          to { opacity: 1; transform: none; }
+        }
+        @keyframes cl-app-intro-rise {
+          from { opacity: 0; transform: translate3d(0, 18px, 0) scale(.985); }
+          to { opacity: 1; transform: none; }
+        }
+        .cl-first-entry .cl-app-intro-sidebar { animation: cl-app-intro-sidebar 760ms cubic-bezier(.22, 1, .36, 1) 160ms both; }
+        .cl-first-entry .cl-app-intro-sidebar { animation-delay: 100ms; }
+        .cl-first-entry .cl-app-intro-tabs { animation: cl-app-intro-rise 700ms cubic-bezier(.22, 1, .36, 1) 320ms both; }
+        .cl-first-entry .cl-summary-metrics > * { animation: cl-app-intro-rise 620ms cubic-bezier(.22, 1, .36, 1) both; }
+        .cl-first-entry .cl-summary-metrics > *:nth-child(1) { animation-delay: 620ms; }
+        .cl-first-entry .cl-summary-metrics > *:nth-child(2) { animation-delay: 790ms; }
+        .cl-first-entry .cl-summary-metrics > *:nth-child(3) { animation-delay: 960ms; }
+        .cl-first-entry .cl-summary-metrics > *:nth-child(4) { animation-delay: 1130ms; }
+        .cl-first-entry .cl-summary-metrics > *:nth-child(5) { animation-delay: 1300ms; }
+        .cl-first-entry .cl-summary-metrics > *:nth-child(6) { animation-delay: 1470ms; }
+        .cl-first-entry .cl-summary-metrics > *:nth-child(7) { animation-delay: 1640ms; }
+        .cl-first-entry .cl-app-intro-download { animation: cl-app-intro-rise 640ms cubic-bezier(.22, 1, .36, 1) 1950ms both; }
+        .cl-map-intro-cover { opacity: 1; transition: opacity ${MAP_REVEAL_DURATION_MS}ms cubic-bezier(.22, 1, .36, 1); }
+        .cl-map-intro-cover.is-fading { opacity: 0; }
         @media (prefers-reduced-motion: reduce) {
           .cl-view-enter,
           .cl-module-enter-left,
-          .cl-module-enter-right { animation: none; }
+          .cl-module-enter-right,
+          .cl-app-intro-sidebar,
+          .cl-app-intro-tabs,
+          .cl-summary-metrics > *,
+          .cl-app-intro-download { animation: none; }
         }
       `}</style>
       {isProfileModule ? (
@@ -921,9 +1036,9 @@ export default function Construleads() {
         ) : (
         <Flex className={moduleEnterClass} gap={3} flex="1" minW="0" minH="0" h="100%" overflow="hidden">
         {!isCompaniesModule && activeView !== 'companias' && (
-          <Box position="relative" flexShrink={0} h="100%">
+          <Box className="cl-app-intro-sidebar" position="relative" flexShrink={0} h="100%">
             <SidebarFiltros
-              obras={obras}
+              obras={obras.length ? obras : mapPreviewObras}
               onApplyFilters={setFiltros}
               isGraphView={activeView === 'graficas'}
             />
@@ -941,6 +1056,7 @@ export default function Construleads() {
         >
           {!isCompaniesModule && (
             <Flex
+              className="cl-app-intro-tabs"
               h="44px"
               mb={1}
               px={3}
@@ -993,15 +1109,16 @@ export default function Construleads() {
             >
               <Box flex="1" minW="0">
                 <PanelResumen
-                  obras={activeView === 'graficas' ? graphSummaryObras : filteredObras}
+                  obras={activeView === 'graficas' ? graphSummaryObras : mapDatasetObras}
                   filtros={activeView === 'graficas' ? graphFilters : filtros}
                   variant="map"
                 />
               </Box>
-              <Box flexShrink={0} display="flex" alignItems="center">
+              <Box className="cl-app-intro-download" flexShrink={0} display="flex" alignItems="center">
                 <DownloadPanel
                   selectedObras={selectedResultObras}
                   filteredObras={filteredObras}
+                  obras={obras}
                   filtros={filtros}
                   user={user}
                 />
@@ -1010,19 +1127,38 @@ export default function Construleads() {
           )}
 
           <Box flex="1" minH="0" position="relative">
-            <Box className={activeView === 'mapa' ? projectViewEnterClass('mapa') : undefined}
+            <Box className={activeView === 'mapa' ? projectViewEnterClass('mapa') || undefined : undefined}
               display={activeView === 'mapa' ? 'block' : 'none'} h="100%" minH="0">
               <Mapa
                 key={`map-theme-${isDarkMode ? 'dark' : 'light'}`}
-                obras={obras.length ? filteredObras : filteredMapPreviewObras}
+                obras={mapDatasetObras}
                 filtros={PREFILTERED_MAP_FILTERS}
                 isDataReady={!loadingObras}
                 isVisible={activeView === 'mapa'}
+                onVisualReady={handleMapVisualReady}
                 fitRequestKey={mapFitRequestKey}
                 isDarkMode={isDarkMode}
                 onViewFicha={handleViewFicha}
               />
             </Box>
+            {activeView === 'mapa' && isMapCoverVisible && (
+              <Flex
+                className={`cl-map-intro-cover${isMapCoverFading ? ' is-fading' : ''}`}
+                position="absolute"
+                inset={0}
+                zIndex={100}
+                align="center"
+                justify="center"
+                direction="column"
+                bg={appColors.surfaceMuted}
+                borderRadius="12px"
+                pointerEvents="none"
+              >
+                <Spinner thickness="2px" speed=".75s" color="#D95B27" size="sm" mb={3} />
+                <Text fontSize="13px" fontWeight="650" color={appColors.textStrong}>Preparando el mapa</Text>
+                <Text mt={1} fontSize="11px" color={appColors.textMuted}>Ubicando proyectos disponibles…</Text>
+              </Flex>
+            )}
 
             {mountedViews.resultados && (
               <Box className={activeView === 'resultados' ? projectViewEnterClass('resultados') : undefined}
@@ -1036,6 +1172,7 @@ export default function Construleads() {
                     selectionResetToken={selectionResetToken}
                     onGoToMap={() => openProjectView('mapa')}
                     onViewFicha={handleViewFicha}
+                    onOpenCompany={openCompanyDetail}
                   />
                 </Suspense>
               </Box>
@@ -1087,6 +1224,7 @@ export default function Construleads() {
       <WelcomeExperience
         userId={user.idUsuario}
         userName={user.nombreUsuario}
+        onComplete={handleWelcomeComplete}
       />
       <PerformanceAuditOverlay />
     </Box>

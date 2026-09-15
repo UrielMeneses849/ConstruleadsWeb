@@ -112,6 +112,17 @@ function recentProjects(company) {
   return [...(company?.projects || [])].sort((a, b) => (dateOf(b)?.getTime() || 0) - (dateOf(a)?.getTime() || 0) || (Number(b.inversion) || 0) - (Number(a.inversion) || 0));
 }
 
+function normalizeProjectIdentity(value = '') {
+  return String(value || '').trim().replace(/\s+/g, '').toUpperCase();
+}
+
+function matchesFocusedProject(project, projectKey) {
+  const requestedKey = normalizeProjectIdentity(projectKey);
+  if (!requestedKey) return false;
+  return [project?.id, project?.clave]
+    .some((value) => normalizeProjectIdentity(value) === requestedKey);
+}
+
 function Metric({ label, value, detail }) {
   return <Box className="company-metric"><Text>{label}</Text><Text>{value}</Text><Text>{detail}</Text></Box>;
 }
@@ -323,9 +334,23 @@ function Activity({ company, alertEnabled }) {
   return <Box className="company-card company-activity-card"><Text className="company-card-title">Actividad reciente <Text as="span">(12 meses)</Text></Text><Box className="company-activity">{rows.map(([label, value, change]) => <Flex key={label} align="center"><Text>{label}</Text><Text>{value}</Text><Text className={change.startsWith('-') ? 'negative' : ''}>{change}</Text></Flex>)}</Box><Flex className={`company-opportunity ${opportunity.tone}`} align="center" gap={2}><span aria-hidden="true" /><Box flex="1" minW={0}><Text>Semáforo de oportunidad</Text><Text>{opportunity.reasons.join(' · ') || 'Sin señales suficientes aún'}</Text></Box><Box textAlign="right"><Text>{opportunity.level}</Text><Text>{opportunity.score}/100</Text></Box></Flex></Box>;
 }
 
-function Projects({ company, onViewFicha, onShowAll }) {
+function Projects({ company, onViewFicha, onShowAll, projectFocus }) {
   const projects = recentProjects(company);
-  return <Box className="company-bottom-card company-project-card"><Flex className="company-bottom-title" align="center" justify="space-between"><Text>Proyectos recientes</Text><Flex align="center" gap={3} flexShrink={0}><Text>{formatNumber(company.projectCount)} obras</Text>{projects.length > 0 && <button type="button" className="company-bottom-link company-bottom-header-link" onClick={onShowAll}>Ver todos <FiArrowRight size={14} /></button>}</Flex></Flex><Box className="company-project-head"><Text>Proyecto</Text><Text>Ubicación</Text><Text>Inversión</Text><Text>Inicio</Text></Box><Box className="company-project-list">{projects.map((project, index) => <button type="button" key={project.id || project.clave || `${project.proyecto}-${index}`} className="company-project-row" onClick={() => onViewFicha?.(project)} title="Ver ficha técnica"><span><strong>{project.proyecto || 'Proyecto sin nombre'}</strong><small>{project.clave || 'Clave por confirmar'}</small></span><span>{project.estado || 'Estado por confirmar'} · {project.genero || 'Sin género'}</span><span>{formatCompactInvestment(project.inversion)}</span><span>{monthOf(project)}</span></button>)}{!projects.length && <Text className="company-card-empty">Esta compañía aún no tiene obras para mostrar.</Text>}</Box></Box>;
+  const focusRef = useRef(null);
+  useEffect(() => {
+    if (!projectFocus?.id || !focusRef.current) return undefined;
+    const revealTimer = window.setTimeout(() => {
+      const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      focusRef.current?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+    }, 80);
+    return () => window.clearTimeout(revealTimer);
+  }, [projectFocus?.id]);
+
+  return <Box className="company-bottom-card company-project-card"><Flex className="company-bottom-title" align="center" justify="space-between"><Text>Proyectos recientes</Text><Flex align="center" gap={3} flexShrink={0}><Text>{formatNumber(company.projectCount)} obras</Text>{projects.length > 0 && <button type="button" className="company-bottom-link company-bottom-header-link" onClick={onShowAll}>Ver todos <FiArrowRight size={14} /></button>}</Flex></Flex><Box className="company-project-head"><Text>Proyecto</Text><Text>Ubicación</Text><Text>Inversión</Text><Text>Inicio</Text></Box><Box className="company-project-list">{projects.map((project, index) => {
+    const isFocused = matchesFocusedProject(project, projectFocus?.projectKey);
+    const projectId = project.id || project.clave || `${project.proyecto}-${index}`;
+    return <button type="button" key={`${projectId}:${isFocused ? projectFocus.id : 'default'}`} ref={isFocused ? focusRef : undefined} className={`company-project-row${isFocused ? ' is-arrival-focus' : ''}`} onClick={() => onViewFicha?.(project)} title="Ver ficha técnica"><span><strong>{project.proyecto || 'Proyecto sin nombre'}</strong><small>{project.clave || 'Clave por confirmar'}</small></span><span>{project.estado || 'Estado por confirmar'} · {project.genero || 'Sin género'}</span><span>{formatCompactInvestment(project.inversion)}</span><span>{monthOf(project)}</span></button>;
+  })}{!projects.length && <Text className="company-card-empty">Esta compañía aún no tiene obras para mostrar.</Text>}</Box></Box>;
 }
 
 function contactPhones(contact = {}) {
@@ -436,7 +461,7 @@ function CompanyAlertDialog({ company, enabled, onClose, onConfirm }) {
   </Box>;
 }
 
-function Dashboard({ company, saved, alertEnabled, isLoadingCompanies, onSave, onOpenAlert, onDownload, onViewFicha, onShowProjects, onShowContacts }) {
+function Dashboard({ company, saved, alertEnabled, isLoadingCompanies, onSave, onOpenAlert, onDownload, onViewFicha, onShowProjects, onShowContacts, projectFocus }) {
   if (!company) return <Flex className="company-dashboard-empty" direction="column" align="center" justify="center"><FiBriefcase size={28} /><Text>Selecciona una compañía para ver su actividad.</Text></Flex>;
   const trend = trendData(company); const recent = recentActivity(company);
   const linkedin = company.linkedinContacts?.find((contact) => contact.url)?.url || '';
@@ -465,12 +490,13 @@ function Dashboard({ company, saved, alertEnabled, isLoadingCompanies, onSave, o
     </Flex>
     <Box className="company-metrics"><Metric label="Obras" value={formatNumber(company.projectCount)} detail="Proyectos publicados" /><Metric label="Inversión total" value={formatCompactInvestment(company.totalInvestment)} detail="Monto identificado" /><Metric label="Estados" value={formatNumber(company.stateCount)} detail="Donde tiene presencia" /><Metric label="Superficie total" value={`${formatNumber(company.totalSurface)} m²`} detail="Construidos" /></Box>
     <Flex className="company-signal" align="center" gap={3}><Flex align="center" justify="center"><FiTrendingUp size={18} /></Flex><Box flex="1" minW={0}><Text>Señal comercial</Text><Text>{recent.projects.value ? `${recent.projects.value} obras identificadas en la actividad más reciente.` : 'Actividad registrada en su portafolio.'} Mayor presencia en {company.states[0] || 'sus estados activos'}.</Text></Box><Box className="company-trend"><ResponsiveContainer width="100%" height="100%"><LineChart data={trend} margin={{ top: 5, right: 2, bottom: 0, left: 2 }}><Line type="monotone" dataKey="value" stroke="#D95B27" strokeWidth={2} dot={{ r: 2, fill: '#D95B27', strokeWidth: 0 }} activeDot={{ r: 4 }} /><Tooltip formatter={(value) => [`${value} obras`, 'Publicaciones']} /></LineChart></ResponsiveContainer></Box></Flex>
-    <Box className="company-insights"><Genres company={company} /><States company={company} /><Activity company={company} alertEnabled={alertEnabled} /></Box><Box className="company-bottom"><Projects company={company} onViewFicha={onViewFicha} onShowAll={onShowProjects} /><Contacts company={company} onShowAll={onShowContacts} isLoading={isLoadingCompanies} /></Box>
+    <Box className="company-insights"><Genres company={company} /><States company={company} /><Activity company={company} alertEnabled={alertEnabled} /></Box><Box className="company-bottom"><Projects company={company} onViewFicha={onViewFicha} onShowAll={onShowProjects} projectFocus={projectFocus} /><Contacts company={company} onShowAll={onShowContacts} isLoading={isLoadingCompanies} /></Box>
   </Box>;
 }
 
 export default function CompaniasView({ companyRelationships = [], isLoadingCompanies = false, isDarkMode = false, onViewFicha, companyDetailRequest = null }) {
   const [selectedId, setSelectedId] = useState();
+  const [projectFocus, setProjectFocus] = useState(null);
   const [openDirectory, setOpenDirectory] = useState(null);
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
@@ -532,17 +558,36 @@ export default function CompaniasView({ companyRelationships = [], isLoadingComp
   useEffect(() => {
     if (!companyDetailRequest?.id || handledCompanyRequest.current === companyDetailRequest.id) return;
     const requestedName = normal(companyDetailRequest.name);
-    const requestedCompany = companies.find((item) => normal(item.name) === requestedName);
+    const requestedClave = normal(companyDetailRequest.clave);
+    const requestedRfc = normal(companyDetailRequest.rfc);
+    const requestedProjectKey = String(companyDetailRequest.projectKey || '').trim();
+    const requestedCompany = companies.find((item) => (
+      (requestedClave && normal(item.clave) === requestedClave)
+      || (requestedRfc && normal(item.rfc) === requestedRfc)
+      || (requestedName && normal(item.name) === requestedName)
+    ));
     if (!requestedCompany) return;
 
     handledCompanyRequest.current = companyDetailRequest.id;
+    let clearProjectFocusTimer = null;
     const selectionTimer = window.setTimeout(() => {
       setSelectedId(requestedCompany.key);
       setSavedOnly(false);
       setOpenDirectory(null);
       setAlertDialogOpen(false);
+      if (requestedProjectKey) {
+        setProjectFocus({ id: companyDetailRequest.id, projectKey: requestedProjectKey });
+        clearProjectFocusTimer = window.setTimeout(() => {
+          setProjectFocus((current) => current?.id === companyDetailRequest.id ? null : current);
+        }, 4200);
+      } else {
+        setProjectFocus(null);
+      }
     }, 0);
-    return () => window.clearTimeout(selectionTimer);
+    return () => {
+      window.clearTimeout(selectionTimer);
+      if (clearProjectFocusTimer) window.clearTimeout(clearProjectFocusTimer);
+    };
   }, [companies, companyDetailRequest]);
   const activeId = savedOnly
     ? (companies.some((item) => item.key === selectedId && saved.has(item.key)) ? selectedId : companies.find((item) => saved.has(item.key))?.key)
@@ -903,6 +948,17 @@ export default function CompaniasView({ companyRelationships = [], isLoadingComp
       .companias-view .company-list-item { height: ${COMPANY_LIST_ROW_HEIGHT}px; min-height: ${COMPANY_LIST_ROW_HEIGHT}px; overflow: hidden; }
     `}</style>
     <style>{`
+      @keyframes company-project-arrival-focus {
+        0%, 18% { background: rgba(217, 91, 39, .16); box-shadow: 0 0 0 5px rgba(217, 91, 39, .12); }
+        72% { background: rgba(217, 91, 39, .06); box-shadow: 0 0 0 3px rgba(217, 91, 39, .04); }
+        100% { background: transparent; box-shadow: none; }
+      }
+      .companias-view .company-project-row.is-arrival-focus { animation: company-project-arrival-focus 3.8s ease-out both; }
+      @media (prefers-reduced-motion: reduce) {
+        .companias-view .company-project-row.is-arrival-focus { animation: none; background: rgba(217, 91, 39, .12); box-shadow: 0 0 0 4px rgba(217, 91, 39, .08); }
+      }
+    `}</style>
+    <style>{`
       /* Densidad y contraste: las visualizaciones ocupan su tarjeta y siguen siendo legibles en oscuro. */
       .companias-view .company-saved-filter { align-items: center; background: #FFF; border: 1px solid #DCE3EB; border-radius: 8px; color: #526074; cursor: pointer; display: inline-flex; font-family: inherit; font-size: 11px; font-weight: 750; gap: 5px; height: 31px; padding: 0 9px; white-space: nowrap; }
       .companias-view .company-saved-filter:hover, .companias-view .company-saved-filter.active { background: #F1F5FF; border-color: #91A4C8; color: #344A73; }
@@ -972,7 +1028,7 @@ export default function CompaniasView({ companyRelationships = [], isLoadingComp
       .companias-view.company-dark .company-alert-dialog-explainer p:last-child { color: #C4CEDA; }
       @media (max-width: 1180px) { .companias-view .company-pie { flex-basis: 154px; height: 154px; } .companias-view .company-legend { flex-basis: 126px; } }
     `}</style>
-    <Box className="company-workspace"><CompanyList companies={companies} selected={activeId} onSelect={(id) => { setSelectedId(id); setOpenDirectory(null); setAlertDialogOpen(false); }} loading={isLoadingCompanies} companyProjects={companyProjects} filtros={companyFilters} onApplyFilters={setCompanyFilters} savedKeys={saved} savedOnly={savedOnly} onToggleSavedOnly={() => setSavedOnly((current) => !current)} /><Dashboard company={company} saved={company ? saved.has(company.key) : false} alertEnabled={company ? alertKeys.has(company.key) : false} isLoadingCompanies={isLoadingCompanies} onSave={save} onOpenAlert={() => setAlertDialogOpen(true)} onDownload={download} onViewFicha={onViewFicha} onShowProjects={() => setOpenDirectory('projects')} onShowContacts={() => setOpenDirectory('contacts')} /></Box>
+    <Box className="company-workspace"><CompanyList companies={companies} selected={activeId} onSelect={(id) => { setSelectedId(id); setProjectFocus(null); setOpenDirectory(null); setAlertDialogOpen(false); }} loading={isLoadingCompanies} companyProjects={companyProjects} filtros={companyFilters} onApplyFilters={setCompanyFilters} savedKeys={saved} savedOnly={savedOnly} onToggleSavedOnly={() => setSavedOnly((current) => !current)} /><Dashboard company={company} saved={company ? saved.has(company.key) : false} alertEnabled={company ? alertKeys.has(company.key) : false} isLoadingCompanies={isLoadingCompanies} onSave={save} onOpenAlert={() => setAlertDialogOpen(true)} onDownload={download} onViewFicha={onViewFicha} onShowProjects={() => setOpenDirectory('projects')} onShowContacts={() => setOpenDirectory('contacts')} projectFocus={projectFocus} /></Box>
     <CompanyDirectoryDialog mode={openDirectory} company={company} onClose={() => setOpenDirectory(null)} onViewFicha={onViewFicha} />
     {alertDialogOpen && <CompanyAlertDialog company={company} enabled={company ? alertKeys.has(company.key) : false} onClose={() => setAlertDialogOpen(false)} onConfirm={() => { toggleAlert(); setAlertDialogOpen(false); }} />}
   </Box>;

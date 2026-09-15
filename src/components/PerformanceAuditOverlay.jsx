@@ -9,11 +9,21 @@ import {
 
 const TRACKED_OPERATIONS = [
   ['map.refresh', 'Mapa'],
+  ['map.initialize', 'Init mapa'],
+  ['map.geo-index', 'Índice geo'],
+  ['map.markers', 'Markers/clusters'],
   ['filters.obras', 'Filtros'],
   ['obras.request', 'WS obras'],
+  ['obras.response-headers', 'WS primer byte'],
+  ['obras.network', 'Red obras'],
   ['map.light-request', 'WS mapa ligero'],
+  ['map.light-network', 'Red mapa ligero'],
   ['obras.load', 'Carga obras'],
   ['obras.parse', 'Parseo obras'],
+  ['sidebar.regions-options', 'Filtros: región'],
+  ['sidebar.categories-options', 'Filtros: categorías'],
+  ['sidebar.dynamic-options', 'Filtros: opciones'],
+  ['summary.top-metrics', 'Resumen superior'],
   ['licitaciones.load', 'Licitaciones'],
   ['companies.request-and-parse', 'WS compañías'],
   ['companies.build-rows', 'Compañías'],
@@ -25,6 +35,9 @@ function formatMetadata(metadata = {}) {
   if (Number.isFinite(metadata.records)) details.push(`${metadata.records.toLocaleString('es-MX')} registros`);
   if (Number.isFinite(metadata.relationships)) details.push(`${metadata.relationships.toLocaleString('es-MX')} relaciones`);
   if (Number.isFinite(metadata.firstPreviewMs)) details.push(`1er punto ${metadata.firstPreviewMs} ms`);
+  if (Number.isFinite(metadata.ttfb)) details.push(`TTFB ${metadata.ttfb} ms`);
+  if (Number.isFinite(metadata.download)) details.push(`DL ${metadata.download} ms`);
+  if (Number.isFinite(metadata.transferSize)) details.push(`${Math.round(metadata.transferSize / 1024)} KB`);
   return details.join(' · ');
 }
 
@@ -48,8 +61,8 @@ export default function PerformanceAuditOverlay() {
   const trackedMeasurements = useMemo(() => TRACKED_OPERATIONS.map(([name, label]) => ({
     name,
     label,
-    measurement: snapshot.measurements.find((item) => item.name === name),
-  })), [snapshot.measurements]);
+    measurement: snapshot.latestMeasurements.find((item) => item.name === name),
+  })), [snapshot.latestMeasurements]);
 
   if (!enabled) return null;
 
@@ -106,6 +119,16 @@ export default function PerformanceAuditOverlay() {
             <Text color="rgba(255,255,255,.72)">Heap JS</Text>
             <Text fontWeight="800">{snapshot.heapMegabytes === null ? 'No disponible' : `${snapshot.heapMegabytes} MB`}</Text>
           </Flex>
+          {snapshot.wsStats.length > 0 && (
+            <Box mt={2} pt={2} borderTop="1px solid rgba(255,255,255,.15)">
+              <Text fontSize="10px" fontWeight="800">NETWORK CACHE</Text>
+              {snapshot.wsStats.map((stats) => (
+                <Text key={stats.service} mt={0.5} fontSize="9px" color="rgba(255,255,255,.78)">
+                  {stats.service}: {stats.requests} red · {stats.cacheHits} hit · {stats.inFlightReused} shared
+                </Text>
+              ))}
+            </Box>
+          )}
         </>
       )}
     </Box>

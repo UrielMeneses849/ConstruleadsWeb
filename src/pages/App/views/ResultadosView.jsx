@@ -12,6 +12,7 @@ import {
   FiChevronDown,
   FiChevronLeft,
   FiChevronRight,
+  FiBriefcase,
   FiSliders,
 } from 'react-icons/fi';
 import { getObraSource, OBRA_SOURCE_META, OBRA_SOURCES } from '../../../utils/obrasSources';
@@ -167,6 +168,7 @@ function ResultadosView({
   onSelectionChange,
   selectionResetToken = 0,
   onViewFicha,
+  onOpenCompany,
 }) {
   const [filterMenu, setFilterMenu] = useState(null);
   const [columnFilters, setColumnFilters] = useState({});
@@ -1402,6 +1404,7 @@ function ResultadosView({
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                gap: 6px;
                 background: inherit;
               }
               /* Jerarquía editorial: lo operativo se lee primero; la ubicación
@@ -1607,7 +1610,7 @@ function ResultadosView({
                   background: ui.surfaceMuted,
                 }}
               >
-                Ficha
+                Acciones
               </th>
             </tr>
           </thead>
@@ -1616,6 +1619,7 @@ function ResultadosView({
             {visibleData.map((row, index) => {
               const rowKey = getRowKey(row);
               const selected = selectedRowsSet.has(rowKey);
+              const hasCompanyProfile = showCompanyColumn && row.compania && row.compania !== '-';
 
               const rowBg = selected
                 ? 'var(--cl-selected)'
@@ -1668,6 +1672,25 @@ function ResultadosView({
                         onClick={() => onViewFicha?.(row.source || row)}
                       >
                         <FiEye size={15} />
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        aria-label={hasCompanyProfile ? `Ver compañía ${row.compania}` : 'Compañía no disponible'}
+                        title={hasCompanyProfile ? `Ver compañía: ${row.compania}` : 'Compañía no disponible'}
+                        w="32px"
+                        h="32px"
+                        minW="32px"
+                        p={0}
+                        borderColor={ui.border}
+                        color={ui.textStrong}
+                        borderRadius="8px"
+                        bg={rowBg}
+                        isDisabled={!hasCompanyProfile}
+                        _hover={{ bg: ui.surfaceMuted, borderColor: '#D95B27', color: '#D95B27' }}
+                        onClick={() => onOpenCompany?.(row.source || row)}
+                      >
+                        <FiBriefcase size={15} />
                       </Button>
                     </div>
                   </td>

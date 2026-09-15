@@ -15,6 +15,13 @@ export const DATE_TYPE_WS_MAP = {
   'Fecha de término probable': 'fecha de termino',
 };
 
+const projectDetailCache = new Map();
+const projectDetailRequests = new Map();
+
+function projectDetailCacheKey({ userId, sessionId, obraKey }) {
+  return `${String(userId)}:${String(sessionId)}:${String(obraKey)}`;
+}
+
 export const buildObrasKeys = (obras = []) =>
   [...new Set(
     obras
@@ -287,4 +294,20 @@ export async function solicitarFichaDatos({ userId, sessionId, obraKey, signal }
   }));
 
   return obra;
+}
+
+// El WS existente ws_cl_sobrasficha es el detalle real disponible hoy. Esta
+// capa deja listo el contrato getProjectDetail sin inventar una URL nueva.
+export function getProjectDetail({ userId, sessionId, obraKey }) {
+  const key = projectDetailCacheKey({ userId, sessionId, obraKey });
+  if (projectDetailCache.has(key)) return Promise.resolve(projectDetailCache.get(key));
+  if (projectDetailRequests.has(key)) return projectDetailRequests.get(key);
+  const request = solicitarFichaDatos({ userId, sessionId, obraKey })
+    .then((detail) => {
+      projectDetailCache.set(key, detail);
+      return detail;
+    })
+    .finally(() => projectDetailRequests.delete(key));
+  projectDetailRequests.set(key, request);
+  return request;
 }

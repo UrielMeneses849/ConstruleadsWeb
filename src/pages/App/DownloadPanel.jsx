@@ -6,7 +6,7 @@ import {
   Spinner,
   Text,
 } from '@chakra-ui/react';
-import { FiDownload } from 'react-icons/fi';
+import { FiClock, FiDownload } from 'react-icons/fi';
 import {
   buildObrasKeys,
   DATE_TYPE_WS_MAP,
@@ -15,6 +15,8 @@ import {
   solicitarReporte,
 } from '../../api/reportes';
 import { addDownloadHistoryItem } from '../../utils/downloadHistory';
+import { clearScheduledReport, getScheduledReport, saveScheduledReport } from '../../utils/scheduledReports';
+import ScheduledReportModal from './ScheduledReportModal';
 
 const downloadOptions = [
   { value: 'pdf_obras', label: 'PDF - Obras' },
@@ -25,6 +27,35 @@ const downloadOptions = [
   { value: 'excel_mapa', label: 'Excel - Mapa' },
   { value: 'excel_prospeccion', label: 'Excel - Prospección' },
 ];
+
+function maskScheduleRecipient(value) {
+  const [name, domain] = String(value || '').split('@');
+  if (!domain) return 'No especificado';
+  return `${name.slice(0, 2)}${name.length > 2 ? '…' : ''}@${domain}`;
+}
+
+function logScheduledReportSave(schedule) {
+  const diagnostic = {
+    event: 'scheduled-report:saved',
+    persistence: 'localStorage',
+    schedule: {
+      id: schedule.id,
+      reportType: schedule.reportType,
+      reportLabel: schedule.reportLabel,
+      recipient: maskScheduleRecipient(schedule.recipient),
+      frequency: schedule.frequency,
+      day: schedule.day,
+      time: schedule.time,
+      filterMode: schedule.filterMode,
+      resultCount: schedule.resultCount,
+      updatedAt: schedule.updatedAt,
+    },
+    filters: schedule.filters,
+  };
+
+  console.log('[BIMSA] Programación de reporte guardada (local)', diagnostic);
+  window.dispatchEvent(new CustomEvent('construleads-scheduled-report-saved', { detail: diagnostic }));
+}
 
 function ReportFileIcon({ isPdf }) {
   const color = isPdf ? '#E5484D' : '#1F9D61';
@@ -59,6 +90,7 @@ function ReportFileIcon({ isPdf }) {
 export default function DownloadPanel({
   selectedObras = [],
   filteredObras = [],
+  obras = [],
   filtros = {},
   user = {},
 }) {
@@ -68,6 +100,8 @@ export default function DownloadPanel({
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadStage, setDownloadStage] = useState('Preparando reporte…');
   const [notification, setNotification] = useState(null);
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [scheduledReport, setScheduledReport] = useState(() => getScheduledReport(user));
   const panelRef = useRef(null);
   const downloadAbortRef = useRef(null);
   const hasSelection = selectedObras.length > 0;
@@ -245,6 +279,27 @@ export default function DownloadPanel({
     }
   };
 
+  const handleSaveSchedule = (schedule) => {
+    const savedSchedule = saveScheduledReport(user, schedule);
+    logScheduledReportSave(savedSchedule);
+    setScheduledReport(savedSchedule);
+    setIsScheduleOpen(false);
+    setNotification({
+      type: 'success',
+      message: 'Programación guardada en este navegador.',
+    });
+  };
+
+  const handleClearSchedule = () => {
+    clearScheduledReport(user);
+    setScheduledReport(null);
+    setIsScheduleOpen(false);
+    setNotification({
+      type: 'cancelled',
+      message: 'Programación desactivada.',
+    });
+  };
+
   return (
     <Flex
       ref={panelRef}
@@ -354,7 +409,7 @@ export default function DownloadPanel({
         </Box>
       )}
 
-      <Box flex="1" position="relative">
+      <Box flex="1" minW="0" position="relative">
         <Flex
           as="button"
           type="button"
@@ -432,6 +487,25 @@ export default function DownloadPanel({
 
       <Button
         h="36px"
+        minW="36px"
+        p={0}
+        position="relative"
+        variant="outline"
+        borderColor={scheduledReport ? '#EAA98F' : 'var(--cl-border)'}
+        color={scheduledReport ? '#B9471E' : 'var(--cl-text-muted)'}
+        borderRadius="8px"
+        aria-label="Programar envío de reporte"
+        title={scheduledReport ? 'Administrar programación de reporte' : 'Programar envío de reporte'}
+        disabled={isGenerating}
+        _hover={{ bg: 'rgba(217, 91, 39, .08)', borderColor: '#D95B27', color: '#B9471E' }}
+        onClick={() => setIsScheduleOpen(true)}
+      >
+        <FiClock size={15} />
+        {scheduledReport && <Box position="absolute" top="5px" right="5px" w="6px" h="6px" borderRadius="full" bg="#D95B27" border="1px solid var(--cl-surface)" />}
+      </Button>
+
+      <Button
+        h="36px"
         minW={hasSelection ? '140px' : '128px'}
         bg="#D95B27"
         color="white"
@@ -450,6 +524,18 @@ export default function DownloadPanel({
           </Flex>
         ) : hasSelection ? 'Descargar selección' : 'Descargar todos'}
       </Button>
+      {isScheduleOpen && <ScheduledReportModal
+        isOpen={isScheduleOpen}
+        onClose={() => setIsScheduleOpen(false)}
+        onSave={handleSaveSchedule}
+        onClear={handleClearSchedule}
+        scheduledReport={scheduledReport}
+        downloadOptions={downloadOptions}
+        selectedOption={selectedOption}
+        filtros={filtros}
+        obras={obras}
+        user={user}
+      />}
     </Flex>
   );
 }

@@ -28,7 +28,7 @@ const duplicatedLogos = [...logos, ...logos];
 
 export default function Carrusel() {
   return (
-    <Box {...carruselContainer}>
+    <Box {...carruselContainer} className="landing-logo-carousel">
       <Flex {...carruselTrack}>
         {duplicatedLogos.map((logo, index) => (
           <Flex key={index} {...carruselItem}>

@@ -1,6 +1,6 @@
 import { CONSTRULEADS_TOKEN } from './obras';
-import { getObraSource } from '../utils/obrasSources';
-import { startPerformanceSpan } from '../utils/performanceMonitor';
+import { normalizeMapProject } from '../utils/mapProjects';
+import { startNetworkSpan, startPerformanceSpan } from '../utils/performanceMonitor';
 
 const MAP_REQUEST_TIMEOUT_MS = 2800;
 const previewCache = new Map();
@@ -15,23 +15,6 @@ function cacheKey(userId, sessionId) {
   return `${String(userId || '')}:${String(sessionId || '')}`;
 }
 
-function parseNumber(value) {
-  const normalized = String(value ?? '')
-    .trim()
-    .replace(/,/g, '')
-    .replace(/[^0-9.eE+-]/g, '');
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function valueOf(record, ...keys) {
-  for (const key of keys) {
-    const value = record?.[key];
-    if (value !== undefined && value !== null && String(value).trim() !== '') return String(value).trim();
-  }
-  return '';
-}
-
 function getRecords(payload) {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.obras)) return payload.obras;
@@ -39,41 +22,6 @@ function getRecords(payload) {
   if (Array.isArray(payload?.data?.obras)) return payload.data.obras;
   if (Array.isArray(payload?.resultado)) return payload.resultado;
   return [];
-}
-
-function normalizeMapRecord(record, index) {
-  const lat = parseNumber(record?.lat ?? record?.latitud ?? record?.proy_ubicacionlatitud);
-  const lng = parseNumber(record?.lng ?? record?.longitud ?? record?.proy_ubicacionlongitud);
-  const clave = valueOf(record, 'clave', 'Clave_Proyecto', 'clave_proyecto');
-  const fechaPublicacion = valueOf(record, 'fechaPublicacion', 'Fecha_Publicacion', 'fecha_publicacion');
-  const fechaInicio = valueOf(record, 'fechaInicio', 'Fecha_Inicio', 'fecha_inicio');
-  const fechaTermino = valueOf(record, 'fechaTermino', 'Fecha_Terminacion', 'fecha_terminacion');
-
-  return {
-    id: valueOf(record, 'id', 'Id_Obra', 'ID_OBRA') || clave || `${lat}-${lng}-${index}`,
-    clave,
-    origen: getObraSource(record),
-    proyecto: valueOf(record, 'proyecto', 'Proyecto'),
-    region: valueOf(record, 'region', 'Region'),
-    estado: valueOf(record, 'estado', 'Estado_Proyecto'),
-    genero: valueOf(record, 'genero', 'Genero'),
-    subgenero: valueOf(record, 'subgenero', 'Subgenero'),
-    tipoObra: valueOf(record, 'tipoObra', 'Tipo_Obra', 'tipo_obra'),
-    tipoDesarrollo: valueOf(record, 'tipoDesarrollo', 'Tipo_Desarrollo', 'tipo_desarrollo'),
-    tipoProyecto: valueOf(record, 'tipoProyecto', 'Tipo_Proyecto', 'tipo_proyecto'),
-    etapa: valueOf(record, 'etapa', 'Etapa'),
-    sector: valueOf(record, 'sector', 'Sector'),
-    inversion: parseNumber(record?.inversion ?? record?.Inversion),
-    superficie: parseNumber(record?.superficie ?? record?.Sup_Construida ?? record?.sup_construida),
-    fechaPublicacion,
-    fechaInicio,
-    fechaTermino,
-    fechaTerminacion: fechaTermino,
-    fechaFin: fechaTermino,
-    lat,
-    lng,
-    hasValidCoordinates: Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0,
-  };
 }
 
 async function parseResponse(response) {
@@ -93,6 +41,7 @@ async function parseResponse(response) {
 
 async function requestMapPreview({ endpoint, userId, sessionId, signal }) {
   const span = startPerformanceSpan('map.light-request');
+  const networkSpan = startNetworkSpan('map.light-network');
   const controller = new AbortController();
   const abortFromCaller = () => controller.abort();
   signal?.addEventListener('abort', abortFromCaller, { once: true });
@@ -109,14 +58,19 @@ async function requestMapPreview({ endpoint, userId, sessionId, signal }) {
       }),
       signal: controller.signal,
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) {
+      networkSpan.end(response, { status: response.status });
+      throw new Error(`HTTP ${response.status}`);
+    }
 
     const records = (await parseResponse(response))
-      .map(normalizeMapRecord)
+      .map(normalizeMapProject)
       .filter((obra) => obra.hasValidCoordinates);
     span.end({ records: records.length, status: 'success' });
+    networkSpan.end(response, { status: response.status, records: records.length });
     return records;
   } catch (error) {
+    networkSpan.end(null, { error: true });
     span.end({ status: controller.signal.aborted ? 'timeout-or-aborted' : 'error' });
     throw error;
   } finally {

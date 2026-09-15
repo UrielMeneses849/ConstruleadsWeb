@@ -27,6 +27,48 @@ export async function obtenerObras() {
   return await response.text();
 }
 
+import { recordPerformanceMeasurement, startNetworkSpan, traceWsRequest } from '../utils/performanceMonitor';
+
+const OBRAS_REQUEST_TIMEOUT_MS = 180000;
+// La petición iniciada justo después del login se comparte con Mapa. Evita que
+// el cambio de ruta abra una segunda descarga idéntica para la misma sesión.
+const obrasPrefetches = new Map();
+
+function getPrefetchKey(userId, sessionId) {
+  return userId && sessionId ? `${userId}:${sessionId}` : null;
+}
+
+export function obtenerPrefetchObras({ userId, sessionId } = {}) {
+  const key = getPrefetchKey(userId, sessionId);
+  return key ? obrasPrefetches.get(key) || null : null;
+}
+
+export function precargarObras({ userId, sessionId } = {}) {
+  const key = getPrefetchKey(userId, sessionId);
+  if (!key) return null;
+
+  const existingRequest = obrasPrefetches.get(key);
+  if (existingRequest) return existingRequest;
+
+  // No se le asocia el AbortController de una vista: debe sobrevivir la
+  // navegación Login -> Construleads. La vista consumidora validará sesión y
+  // descartará cualquier resultado que ya no le corresponda.
+  const request = obtenerObrasProgresivas({
+    firstBatchSize: 1,
+    batchSize: 25,
+  });
+  obrasPrefetches.set(key, request);
+
+  // Conservamos el resultado un lapso breve para que la ruta lo consuma aun si
+  // terminó mientras se montaba React; no se persiste ni se comparte entre
+  // sesiones.
+  window.setTimeout(() => {
+    if (obrasPrefetches.get(key) === request) obrasPrefetches.delete(key);
+  }, OBRAS_REQUEST_TIMEOUT_MS);
+
+  return request;
+}
+
 export async function obtenerObrasProgresivas({
   onBatch,
   signal,
@@ -41,12 +83,16 @@ export async function obtenerObrasProgresivas({
   });
 
   const requestController = new AbortController();
+  const requestedAt = performance.now();
   const handleExternalAbort = () => requestController.abort();
   signal?.addEventListener("abort", handleExternalAbort, { once: true });
-  const requestTimeout = window.setTimeout(() => requestController.abort(), 60000);
+  const requestTimeout = window.setTimeout(() => requestController.abort(), OBRAS_REQUEST_TIMEOUT_MS);
 
   let response;
+  let responseHeadersMs = null;
+  const networkSpan = startNetworkSpan('obras.network');
   try {
+    traceWsRequest('ws_cl_obras', 'request', { caller: 'Construleads', reason: 'projects-load', cacheState: 'MISS' });
     response = await fetch(
       `${CONSTRULEADS_WS_BASE_URL}/ws_cl_obras`,
       {
@@ -55,7 +101,12 @@ export async function obtenerObrasProgresivas({
         signal: requestController.signal,
       }
     );
+    responseHeadersMs = performance.now() - requestedAt;
+    recordPerformanceMeasurement('obras.response-headers', responseHeadersMs, {
+      status: response.status,
+    });
   } catch (error) {
+    networkSpan.end(null, { error: true });
     window.clearTimeout(requestTimeout);
     signal?.removeEventListener("abort", handleExternalAbort);
     if (requestController.signal.aborted && !signal?.aborted) {
@@ -70,6 +121,7 @@ export async function obtenerObrasProgresivas({
   };
 
   if (!response.ok) {
+    networkSpan.end(response, { status: response.status });
     finishRequest();
     throw new Error(`No fue posible obtener las obras (HTTP ${response.status}).`);
   }
@@ -85,22 +137,28 @@ export async function obtenerObrasProgresivas({
     !/OPR\//i.test(userAgent);
   if (!isStableStreamingChrome) {
     const xml = await response.text();
+    networkSpan.end(response, { status: response.status, bytesRead: xml.length });
     finishRequest();
     return {
       streamed: false,
       xml,
       fragments: [],
+      responseHeadersMs,
+      responseStatus: response.status,
     };
   }
 
   const reader = response.body?.getReader?.();
   if (!reader) {
     const xml = await response.text();
+    networkSpan.end(response, { status: response.status, bytesRead: xml.length });
     finishRequest();
     return {
       streamed: false,
       xml,
       fragments: [],
+      responseHeadersMs,
+      responseStatus: response.status,
     };
   }
 
@@ -112,7 +170,10 @@ export async function obtenerObrasProgresivas({
 
   const publishBatch = () => {
     if (!pendingFragments.length) return;
-    onBatch?.(pendingFragments);
+    onBatch?.(pendingFragments, {
+      elapsedMs: performance.now() - requestedAt,
+      totalFragments: fragments.length,
+    });
     pendingFragments = [];
     hasPublishedFirstBatch = true;
   };
@@ -153,7 +214,14 @@ export async function obtenerObrasProgresivas({
   buffer += decoder.decode();
   extractCompleteRows();
   publishBatch();
+  networkSpan.end(response, { status: response.status, fragments: fragments.length });
   finishRequest();
 
-  return { streamed: true, xml: "", fragments };
+  return {
+    streamed: true,
+    xml: "",
+    fragments,
+    responseHeadersMs,
+    responseStatus: response.status,
+  };
 }

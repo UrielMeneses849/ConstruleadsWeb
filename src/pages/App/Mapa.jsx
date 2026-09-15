@@ -217,6 +217,7 @@ function Mapa({
   isDarkMode = false,
   onFilteredData,
   onViewFicha,
+  onVisualReady,
 }) {
   const [selectedProject, setSelectedProject] = useState(null);
   const [popupPosition, setPopupPosition] = useState(null);
@@ -290,9 +291,23 @@ function Mapa({
   const renderUnclusteredMarkersRef = useRef(null);
   const unclusteredRenderFrameRef = useRef(null);
   const onFilteredDataRef = useRef(onFilteredData);
+  const onVisualReadyRef = useRef(onVisualReady);
   const lastPublishedCount = useRef(-1);
   const didFitInitialBoundsRef = useRef(false);
+  const hasPublishedVisualReadyRef = useRef(false);
+  const isInitialMapRevealRef = useRef(true);
   const debugLog = () => {};
+
+  const notifyVisualReady = useCallback(() => {
+    if (hasPublishedVisualReadyRef.current) return;
+    hasPublishedVisualReadyRef.current = true;
+    // Dos frames permiten que Google termine de componer el último clúster
+    // antes de que la capa de bienvenida deje ver el mapa.
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      isInitialMapRevealRef.current = false;
+      onVisualReadyRef.current?.();
+    }));
+  }, []);
 
   const showMapLoader = isMapLoading || !isDataReady;
   const visibleMapLoadingMessage = !isDataReady
@@ -382,6 +397,10 @@ function Mapa({
   useEffect(() => {
     renderUnclusteredMarkersRef.current = renderUnclusteredMarkers;
   }, [renderUnclusteredMarkers]);
+
+  useEffect(() => {
+    onVisualReadyRef.current = onVisualReady;
+  }, [onVisualReady]);
 
   useEffect(() => {
     selectedObraKeysRef.current = new Set(selectedObraKeys);
@@ -1459,6 +1478,7 @@ debugLog(
 
     const createMap = async () => {
       if (mapInstanceRef.current) return;
+      const mapInitSpan = startPerformanceSpan('map.initialize');
       if (!globalThis.__construleadsGoogleMapsConfigured) {
         setOptions({ apiKey, version: 'weekly' });
         globalThis.__construleadsGoogleMapsConfigured = true;
@@ -1599,6 +1619,13 @@ debugLog(
 
         // El renderer crea los nuevos grupos al quedar estable el zoom. Esta
         // dirección le indica si deben "abrirse" o "concentrarse" primero.
+        // Durante el encuadre inicial el mapa emite varios zoom/idle. No
+        // animamos cada recomposición: se prepara detrás de la cubierta y se
+        // revela una vez, sin el parpadeo de clústeres intermedios.
+        if (isInitialMapRevealRef.current) {
+          lastClusterZoomRef.current = nextZoom;
+          return;
+        }
         clusterMotionRef.current = nextZoom > previousZoom ? 'split' : 'merge';
         lastClusterZoomRef.current = nextZoom;
 
@@ -1641,6 +1668,7 @@ debugLog(
         setSelectedProject(null);
         setPopupPosition(null);
       });
+      mapInitSpan.end();
     };
 
     const applyFitToPositions = async ({ positions, markerSetChanged, updateToken }) => {
@@ -1729,6 +1757,7 @@ debugLog(
 
     const updateMarkers = async () => {
       if (!mapInstanceRef.current || !mapReadyRef.current) return;
+      const markersSpan = startPerformanceSpan('map.markers', { records: filteredObras.length });
 
       setIsMapLoading(true);
       setMarkerProgress({ loaded: 0, total: filteredObras.length });
@@ -1755,11 +1784,13 @@ debugLog(
         if (!isDataReady) {
           setMapLoadingMessage('Obteniendo obras del servicio y preparando el mapa...');
           setIsMapLoading(true);
+          markersSpan.end({ status: 'waiting-data' });
           return;
         }
 
         setMapLoadingMessage('No hay obras para mostrar con los filtros actuales.');
         setIsMapLoading(false);
+        markersSpan.end({ status: 'empty' });
         return;
       }
 
@@ -1775,6 +1806,7 @@ debugLog(
         setMarkerProgress({ loaded: filteredObras.length, total: filteredObras.length });
         setIsMapLoading(false);
         scheduleClusterRender();
+        markersSpan.end({ status: 'reused' });
         return;
       }
 
@@ -1785,12 +1817,14 @@ debugLog(
       }
 
       const startedAt = DEBUG_MAPA ? performance.now() : 0;
+      const indexSpan = startPerformanceSpan('map.geo-index', { records: filteredObras.length });
       const spatialData = createMapSpatialIndex({
         obras: filteredObras,
         getCoordinates: getObraCoordinates,
         getMarkerKey: getObraMarkerKey,
         bounds: MEXICO_MAP_BOUNDS,
       });
+      indexSpan.end({ indexedPoints: spatialData.count });
 
       if (spatialData.count >= MAP_VIRTUALIZATION_THRESHOLD) {
         const markerSetChanged =
@@ -1816,6 +1850,7 @@ debugLog(
           markerSetChanged,
           updateToken,
         });
+        markersSpan.end({ status: 'virtual', mounted: virtualRenderedMarkersRef.current.size });
 
         debugLog('[Construleads][Mapa] índice virtual listo:', {
           obrasFiltradas: filteredObras.length,
@@ -1908,6 +1943,7 @@ debugLog(
         renderUnclusteredMarkersRef.current?.();
       }
       scheduleClusterRender();
+      markersSpan.end({ status: 'clustered', markers: markers.length, created: builtMarkers });
 
       const validPositions = markerSetChanged
         ? filteredObras.reduce((positions, obra) => {
@@ -1960,6 +1996,7 @@ debugLog(
           window.google.maps.event.trigger(mapInstanceRef.current, 'resize');
         }
         await updateMarkers();
+        if (!cancelled) notifyVisualReady();
       } catch {
         refreshStatus = 'error';
         setMapLoadingMessage('No se pudo cargar el mapa. Intenta recargar la página.');
@@ -2006,6 +2043,7 @@ debugLog(
     isDataReady,
     isDarkMode,
     mapRefreshEpoch,
+    notifyVisualReady,
     scheduleClusterRender,
     scheduleUnclusteredMarkers,
   ]);

@@ -206,6 +206,8 @@ export default function LicitacionesView({ user }) {
       userId: user.idUsuario,
       sessionId: user.idSession,
       signal: controller.signal,
+      caller: 'LicitacionesView',
+      reason: 'view-mount',
       onBatch: (batch) => {
         if (!isActive || !batch.length || hasPersistentCache) return;
         hasVisibleData = true;
