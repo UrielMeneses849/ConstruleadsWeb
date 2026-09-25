@@ -38,6 +38,10 @@ export function normalizeMapProject(record, index = 0) {
     fechaPublicacion, fechaInicio, fechaTermino, fechaTerminacion: fechaTermino, fechaFin: fechaTermino,
     fechaPublicacionTime: dateTime(fechaPublicacion), fechaInicioTime: dateTime(fechaInicio), fechaTerminoTime: dateTime(fechaTermino),
     lat, lng, hasValidCoordinates: lat !== 0 && lng !== 0,
+    municipio: text('municipio', 'Municipio', 'Municipio_Proyecto', 'muni_descripcion'),
+    codigoPostal: text('codigoPostal', 'Codigo_Postal', 'Código_Postal', 'CP', 'C_P'),
+    porcentajeAvance: text('porcentajeAvance', 'PorcentajeAvance', 'Porcentaje_Avance', 'Avance_Estimado', 'Avance'),
+    urlFicha: text('urlFicha', 'URL_Ficha', 'Url_Ficha', 'url_ficha', 'Ficha_URL'),
   };
 }
 

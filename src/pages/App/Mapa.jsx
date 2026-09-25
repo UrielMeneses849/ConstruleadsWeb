@@ -218,6 +218,7 @@ function Mapa({
   onFilteredData,
   onViewFicha,
   onVisualReady,
+  user = {},
 }) {
   const [selectedProject, setSelectedProject] = useState(null);
   const [popupPosition, setPopupPosition] = useState(null);
@@ -1257,6 +1258,10 @@ debugLog(
           const project = {
             clave: obra.clave,
             proyecto: obra.proyecto,
+            // El tooltip muestra una proyección ligera, pero la ficha necesita
+            // conservar la fuente para elegir el WS correcto (Explorer o CL).
+            origen: source,
+            source: obra,
             inversion: formatInvestment(obra.inversion),
             superficie: `${Number(obra.superficie || 0).toLocaleString()} m²`,
             genero: getSingleTaxonomyValue(obra.genero),
@@ -2304,11 +2309,11 @@ debugLog(
         .cl-project-marker--selected line,
         .cl-project-marker--selected svg circle:last-child { stroke: #B9471E; fill: #B9471E; }
         .cl-project-marker[data-source="explorer"].cl-project-marker--selected {
-          filter: drop-shadow(0 4px 9px rgba(72, 74, 78, .48)) !important;
+          filter: drop-shadow(0 4px 9px rgba(111, 116, 123, .42)) !important;
         }
-        .cl-project-marker[data-source="explorer"].cl-project-marker--selected .cl-project-marker__core { fill: #484A4E; }
+        .cl-project-marker[data-source="explorer"].cl-project-marker--selected .cl-project-marker__core { fill: #6F747B; }
         .cl-project-marker[data-source="explorer"].cl-project-marker--selected line,
-        .cl-project-marker[data-source="explorer"].cl-project-marker--selected svg circle:last-child { stroke: #484A4E; fill: #484A4E; }
+        .cl-project-marker[data-source="explorer"].cl-project-marker--selected svg circle:last-child { stroke: #6F747B; fill: #6F747B; }
         .cl-project-marker--selected::after {
           content: attr(data-route-order);
           position: absolute;
@@ -2839,6 +2844,7 @@ debugLog(
           {isSelectionModalOpen && (
             <MapSelectionModal
               obras={selectedObras}
+              user={user}
               onClose={() => setIsSelectionModalOpen(false)}
               onViewProject={(obra) => {
                 onViewFicha?.(obra);

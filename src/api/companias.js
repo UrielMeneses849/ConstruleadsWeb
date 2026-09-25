@@ -3,6 +3,7 @@ import { startPerformanceSpan, traceWsRequest } from '../utils/performanceMonito
 
 const companiesCache = new Map();
 const companiesRequests = new Map();
+const companiesSubscribers = new Map();
 
 function cleanText(value = '') {
   return String(value).trim();
@@ -381,34 +382,102 @@ function getSessionCredentials() {
   };
 }
 
-export async function obtenerCompanias({ timeoutMs = 90000, caller = 'unknown', reason = 'load' } = {}) {
+function publishCompanyBatch(cacheKey, batch) {
+  companiesSubscribers.get(cacheKey)?.forEach((subscriber) => subscriber(batch));
+}
+
+async function readCompaniesProgressively(response, cacheKey) {
+  const reader = response.body?.getReader?.();
+  if (!reader) return null;
+
+  const decoder = new TextDecoder();
+  const all = [];
+  let pending = [];
+  let buffer = '';
+  let hasPublished = false;
+  const publish = () => {
+    if (!pending.length) return;
+    const batch = pending;
+    pending = [];
+    hasPublished = true;
+    publishCompanyBatch(cacheKey, batch);
+  };
+  const extractProjects = () => {
+    while (true) {
+      const start = buffer.search(/<datos(?:\s[^>]*)?>/i);
+      if (start < 0) {
+        if (buffer.length > 4096) buffer = buffer.slice(-4096);
+        return;
+      }
+      const end = buffer.toLowerCase().indexOf('</datos>', start);
+      if (end < 0) {
+        if (start > 0) buffer = buffer.slice(start);
+        return;
+      }
+      const fragmentEnd = end + '</datos>'.length;
+      const relationships = parseCompaniasXml(`<bobras>${buffer.slice(start, fragmentEnd)}</bobras>`);
+      if (relationships.length) {
+        all.push(...relationships);
+        pending.push(...relationships);
+      }
+      buffer = buffer.slice(fragmentEnd);
+      if (pending.length >= (hasPublished ? 120 : 8)) publish();
+    }
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    extractProjects();
+  }
+  buffer += decoder.decode();
+  extractProjects();
+  publish();
+  return all;
+}
+
+export async function obtenerCompanias({ timeoutMs = 240000, caller = 'unknown', reason = 'load', onBatch } = {}) {
   const credentials = getSessionCredentials();
   const cacheKey = `${credentials.sId_usuario}:${credentials.sId_session}`;
   const cached = companiesCache.get(cacheKey);
-  if (cached) {
+  if (cached?.length) {
     traceWsRequest('ws_cl_companias', 'cache-hit', { caller, reason });
     return cached;
+  }
+  if (onBatch) {
+    const subscribers = companiesSubscribers.get(cacheKey) || new Set();
+    subscribers.add(onBatch);
+    companiesSubscribers.set(cacheKey, subscribers);
   }
   const pending = companiesRequests.get(cacheKey);
   if (pending) {
     traceWsRequest('ws_cl_companias', 'in-flight-reused', { caller, reason });
-    return pending;
+    try {
+      return await pending;
+    } finally {
+      companiesSubscribers.get(cacheKey)?.delete(onBatch);
+    }
   }
 
   // La solicitud pertenece al repositorio, no a un componente individual.
   // Un unmount no debe abortar una precarga que otra vista puede reutilizar.
-  const request = requestCompanias({ credentials, timeoutMs, caller, reason });
+  const request = requestCompanias({ credentials, cacheKey, timeoutMs, caller, reason });
   companiesRequests.set(cacheKey, request);
   try {
     const relationships = await request;
     companiesCache.set(cacheKey, relationships);
     return relationships;
   } finally {
-    if (companiesRequests.get(cacheKey) === request) companiesRequests.delete(cacheKey);
+    companiesSubscribers.get(cacheKey)?.delete(onBatch);
+    if (companiesRequests.get(cacheKey) === request) {
+      companiesRequests.delete(cacheKey);
+      companiesSubscribers.delete(cacheKey);
+    }
   }
 }
 
-async function requestCompanias({ credentials, timeoutMs, caller, reason }) {
+async function requestCompanias({ credentials, cacheKey, timeoutMs, caller, reason }) {
   const loadSpan = startPerformanceSpan('companies.request-and-parse');
   const requestController = new AbortController();
   // Este catálogo contiene los contactos y puede tardar bastante más que las
@@ -427,8 +496,19 @@ async function requestCompanias({ credentials, timeoutMs, caller, reason }) {
       throw new Error(`No fue posible obtener las compañías (HTTP ${response.status}).`);
     }
 
-    const relationships = parseCompaniasXml(await response.text());
-    loadSpan.end({ relationships: relationships.length });
+    // Este XML supera los 20 MB. Publicarlo por proyecto evita dejar la vista
+    // vacía hasta que termine la descarga y evita materializar un DOM gigante.
+    const documentResponse = response.clone();
+    let relationships = await readCompaniesProgressively(response, cacheKey);
+    let source = 'stream';
+    if (!relationships?.length) {
+      relationships = parseCompaniasXml(await documentResponse.text());
+      source = 'document';
+    }
+    if (!relationships.length) {
+      throw new Error('El servicio respondió sin relaciones de compañías.');
+    }
+    loadSpan.end({ relationships: relationships.length, source });
     return relationships;
   } catch (error) {
     loadSpan.end({ error: true, aborted: requestController.signal.aborted });

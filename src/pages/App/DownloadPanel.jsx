@@ -15,13 +15,13 @@ import {
   solicitarReporte,
 } from '../../api/reportes';
 import { addDownloadHistoryItem } from '../../utils/downloadHistory';
+import { getObraSource, OBRA_SOURCES } from '../../utils/obrasSources';
 import { clearScheduledReport, getScheduledReport, saveScheduledReport } from '../../utils/scheduledReports';
 import ScheduledReportModal from './ScheduledReportModal';
 
 const downloadOptions = [
   { value: 'pdf_obras', label: 'PDF - Obras' },
   { value: 'pdf_companias', label: 'PDF - Compañías' },
-  { value: 'pdf_graficas', label: 'PDF - Gráficas' },
   { value: 'excel_clasico', label: 'Excel - Clásico' },
   { value: 'excel_contactos', label: 'Excel - Contactos' },
   { value: 'excel_mapa', label: 'Excel - Mapa' },
@@ -45,7 +45,6 @@ function logScheduledReportSave(schedule) {
       recipient: maskScheduleRecipient(schedule.recipient),
       frequency: schedule.frequency,
       day: schedule.day,
-      time: schedule.time,
       filterMode: schedule.filterMode,
       resultCount: schedule.resultCount,
       updatedAt: schedule.updatedAt,
@@ -135,7 +134,7 @@ export default function DownloadPanel({
 
     const obrasParaDescargar = hasSelection ? selectedObras : filteredObras;
     const obrasKeys = buildObrasKeys(obrasParaDescargar);
-    const isChartsPdf = selectedOption.value === 'pdf_graficas';
+    const isLocalProspectingExcel = selectedOption.value === 'excel_prospeccion';
     const isExcel = !selectedOption.value.startsWith('pdf_');
     const selectedDateType =
       filtros.fechaConsulta ||
@@ -145,15 +144,19 @@ export default function DownloadPanel({
     const dateMin = formatDateForWs(filtros.fechaInicio || filtros.fechaRango?.desde);
     const dateMax = formatDateForWs(filtros.fechaFin || filtros.fechaRango?.hasta);
 
-    if (!obrasKeys) {
+    if (!obrasParaDescargar.length) {
       setNotification({ type: 'error', message: 'No hay obras válidas para descargar.' });
       return;
     }
-    if (!isChartsPdf && (!user.idUsuario || !user.idSession)) {
+    if (!isLocalProspectingExcel && !obrasKeys) {
+      setNotification({ type: 'error', message: 'Las obras seleccionadas no tienen una clave válida.' });
+      return;
+    }
+    if (!isLocalProspectingExcel && (!user.idUsuario || !user.idSession)) {
       setNotification({ type: 'error', message: 'La sesión del usuario no está disponible.' });
       return;
     }
-    if (isExcel && (!dateType || !dateMin || !dateMax)) {
+    if (isExcel && !isLocalProspectingExcel && (!dateType || !dateMin || !dateMax)) {
       setNotification({
         type: 'error',
         message: 'Selecciona un criterio y un rango de fechas válido para el reporte Excel.',
@@ -178,18 +181,15 @@ export default function DownloadPanel({
     }, 350);
 
     try {
-      if (isChartsPdf) {
-        setDownloadStage('Diseñando 6 páginas…');
-        const { generateChartsPdf } = await import('../../utils/chartReportPdf');
-        await generateChartsPdf({
-          obras: obrasParaDescargar,
-          filtros,
-          user,
-          signal: abortController.signal,
-          onProgress: (progress) => {
-            setDownloadProgress((current) => Math.max(current, progress));
-          },
-        });
+      if (isLocalProspectingExcel) {
+        setDownloadStage('Diseñando reporte de prospección…');
+        setDownloadProgress(48);
+        const [{ downloadProspectingWorkbook }, logoResponse] = await Promise.all([
+          import('../../utils/prospectingWorkbook'),
+          fetch(`${import.meta.env.BASE_URL}bimsa-logo.png`),
+        ]);
+        const logoBuffer = logoResponse.ok ? await logoResponse.arrayBuffer() : undefined;
+        await downloadProspectingWorkbook({ obras: obrasParaDescargar, logoBuffer });
         if (estimatedProgressTimer) window.clearInterval(estimatedProgressTimer);
         estimatedProgressTimer = null;
         const now = new Date();
@@ -199,30 +199,44 @@ export default function DownloadPanel({
             day: '2-digit', month: 'short', year: 'numeric',
             hour: '2-digit', minute: '2-digit',
           }).format(now),
-          type: 'PDF',
-          name: `PDF — Gráficas · ${obrasParaDescargar.length} obras`,
+          type: 'Excel',
+          name: `Excel — Prospección · ${obrasParaDescargar.length} obras`,
           url: '',
         });
         setDownloadProgress(100);
         setDownloadStage('Descarga lista');
-        setNotification({ type: 'success', message: 'PDF de gráficas generado correctamente.' });
+        setNotification({ type: 'success', message: 'Reporte de prospección generado correctamente.' });
         return;
       }
 
-      const reportBatches = ['pdf_obras', 'pdf_companias'].includes(selectedOption.value)
-        ? Array.from(
-            { length: Math.ceil(obrasParaDescargar.length / 900) },
-            (_, index) => obrasParaDescargar.slice(index * 900, (index + 1) * 900)
-          )
-        : [obrasParaDescargar];
+      const splitIntoBatches = (items, reportType) => Array.from(
+        { length: Math.ceil(items.length / 900) },
+        (_, index) => ({
+          obras: items.slice(index * 900, (index + 1) * 900),
+          reportType,
+        })
+      );
+      const reportBatches = selectedOption.value === 'pdf_obras'
+        ? [OBRA_SOURCES.CONSTRULEADS, OBRA_SOURCES.EXPLORER].flatMap((source) => {
+            const sourceObras = obrasParaDescargar.filter(
+              (obra) => getObraSource(obra?.source || obra) === source
+            );
+            return splitIntoBatches(
+              sourceObras,
+              source === OBRA_SOURCES.EXPLORER ? 'pdf_explorer' : 'pdf_obras'
+            );
+          })
+        : selectedOption.value === 'pdf_companias'
+          ? splitIntoBatches(obrasParaDescargar, selectedOption.value)
+          : [{ obras: obrasParaDescargar, reportType: selectedOption.value }];
       const reportResponses = [];
       for (let index = 0; index < reportBatches.length; index += 1) {
         const batch = reportBatches[index];
         reportResponses.push(await solicitarReporte({
-          reportType: selectedOption.value,
+          reportType: batch.reportType,
           userId: user.idUsuario,
           sessionId: user.idSession,
-          obrasKeys: buildObrasKeys(batch),
+          obrasKeys: buildObrasKeys(batch.obras),
           dateType,
           dateMin,
           dateMax,

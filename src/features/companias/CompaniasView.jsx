@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Flex, Spinner, Text } from '@chakra-ui/react';
 import {
-  Cell, Label, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip,
+  Cell, Label, Pie, PieChart, ResponsiveContainer, Tooltip,
 } from 'recharts';
 import {
-  FiArrowRight, FiBell, FiBookmark, FiBriefcase, FiDownload, FiExternalLink, FiFilter,
-  FiChevronRight, FiLinkedin, FiMail, FiMapPin, FiPhone, FiSearch, FiTrendingUp, FiX,
+  FiArrowRight, FiBarChart2, FiBriefcase, FiExternalLink, FiFilter, FiHome,
+  FiChevronRight, FiLinkedin, FiMail, FiMapPin, FiPhone, FiRefreshCw, FiSearch, FiShare2, FiX,
 } from 'react-icons/fi';
 import {
-  buildCompanyRows, companiesToCsv, formatCompactInvestment, formatNumber, getCompanyGenreColor, getCompanyProjects,
+  buildCompanyRows, formatCompactInvestment, formatNumber, getCompanyGenreColor, getCompanyProjects,
   getCompanyRelationshipEntriesByProjectId,
 } from './companyData';
-import { getCompanyActivityAlerts, toggleCompanyActivityAlert } from '../../utils/radarNotifications';
 import { filterObrasByFilters } from '../../utils/filterObras';
 import { measurePerformance } from '../../utils/performanceMonitor';
 
@@ -55,19 +54,6 @@ function stateData(company) {
   });
   return [...counts.entries()].map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value).slice(0, 5);
-}
-
-function trendData(company) {
-  const buckets = new Map();
-  company?.projects?.forEach((project, index) => {
-    const date = dateOf(project);
-    const key = date ? `${date.getFullYear()}-${date.getMonth()}` : `index-${index}`;
-    const current = buckets.get(key) || { label: date ? monthOf(project) : `${index + 1}`, value: 0 };
-    current.value += 1;
-    buckets.set(key, current);
-  });
-  const trend = [...buckets.values()].slice(-8);
-  return trend.length > 1 ? trend : [{ label: 'Inicio', value: 0 }, ...(trend.length ? trend : [{ label: 'Actual', value: 0 }])];
 }
 
 function recentActivity(company) {
@@ -125,6 +111,27 @@ function matchesFocusedProject(project, projectKey) {
 
 function Metric({ label, value, detail }) {
   return <Box className="company-metric"><Text>{label}</Text><Text>{value}</Text><Text>{detail}</Text></Box>;
+}
+
+const COMPANY_PROFILE_KPIS = [
+  { label: 'Rol principal', value: 'Contratista general', icon: FiBriefcase },
+  { label: 'Escala de actividad', value: 'Muy alta', icon: FiBarChart2 },
+  { label: 'Género constructivo', value: 'Vivienda', icon: FiHome },
+  { label: 'Cobertura geográfica', value: 'Noroeste', detail: 'Región principal', icon: FiMapPin },
+  { label: 'Presencia territorial', value: 'Diversificada', detail: '5 regiones BIMSA', icon: FiShare2 },
+];
+
+function CompanyProfileKpis() {
+  return <Box className="company-profile-kpis" aria-label="Perfil de la compañía">
+    <Text className="company-profile-kpis-title">Perfil</Text>
+    <Box className="company-profile-kpis-grid">
+      {COMPANY_PROFILE_KPIS.map(({ label, value, detail, icon: Icon }) => <Flex key={label} className="company-profile-kpi" align="center" gap={2.5}>
+        <Flex className="company-profile-kpi-icon" align="center" justify="center"><Icon size={18} /></Flex>
+        <Box flex="1" minW={0}><Text>{label}</Text><Text>{value}</Text>{detail && <Text>{detail}</Text>}</Box>
+        <FiChevronRight size={14} aria-hidden="true" />
+      </Flex>)}
+    </Box>
+  </Box>;
 }
 
 const QUICK_FILTERS = [
@@ -256,16 +263,12 @@ function CompanyFilters({ obras, filtros, onApplyFilters }) {
   </Box>;
 }
 
-function CompanyList({ companies, selected, onSelect, loading, companyProjects, filtros, onApplyFilters, savedKeys, savedOnly, onToggleSavedOnly }) {
+function CompanyList({ companies, selected, onSelect, loading, error, onRetry, companyProjects, filtros, onApplyFilters }) {
   const [query, setQuery] = useState('');
   const listRef = useRef(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [listHeight, setListHeight] = useState(560);
-  const savedCompanies = useMemo(
-    () => companies.filter((company) => savedKeys.has(company.key)),
-    [companies, savedKeys]
-  );
-  const directoryCompanies = savedOnly ? savedCompanies : companies;
+  const directoryCompanies = companies;
   const visible = useMemo(() => {
     const search = normal(query);
     return !search ? directoryCompanies : directoryCompanies.filter((company) => [company.name, company.rfc, company.clave, ...company.states].some((value) => normal(value).includes(search)));
@@ -292,12 +295,13 @@ function CompanyList({ companies, selected, onSelect, loading, companyProjects, 
   const visibleEnd = Math.min(visible.length, visibleStart + Math.ceil(listHeight / COMPANY_LIST_ROW_HEIGHT) + (COMPANY_LIST_OVERSCAN * 2));
   const virtualCompanies = visible.slice(visibleStart, visibleEnd);
   return <Box className="company-directory">
-    <Flex className="company-directory-title" align="center" justify="space-between"><Text>{savedOnly ? 'Guardadas' : 'Compañías'} <Text as="span">({formatNumber(directoryCompanies.length)})</Text></Text><Flex align="center" gap={1.5}><button type="button" className={`company-saved-filter${savedOnly ? ' active' : ''}`} onClick={onToggleSavedOnly} aria-pressed={savedOnly}><FiBookmark size={13} /><span>Guardadas</span>{savedKeys.size > 0 && <b>{formatNumber(savedKeys.size)}</b>}</button><CompanyFilters obras={companyProjects} filtros={filtros} onApplyFilters={onApplyFilters} /></Flex></Flex>
+    <Flex className="company-directory-title" align="center" justify="space-between"><Text>Compañías <Text as="span">({formatNumber(directoryCompanies.length)})</Text></Text><CompanyFilters obras={companyProjects} filtros={filtros} onApplyFilters={onApplyFilters} /></Flex>
     <Flex className="company-search" align="center" gap={2}><FiSearch size={14} /><input value={query} onChange={handleQueryChange} placeholder="Buscar compañía…" aria-label="Buscar compañía" /></Flex>
     <Flex className="company-directory-summary" align="center" gap={2}><Box><Text>{formatNumber(portfolio.projects)}</Text><Text>obras activas</Text></Box><Box><Text>{formatNumber(portfolio.reachable)}</Text><Text>con contacto</Text></Box></Flex>
     <Box ref={listRef} className="company-list" onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}>
       {loading && !companies.length && <Flex className="company-empty" direction="column" align="center" gap={2}><Spinner size="sm" color="#D95B27" /><Text>Preparando compañías…</Text></Flex>}
-      {!loading && !visible.length && <Flex className="company-empty" direction="column" align="center" gap={2}><FiBriefcase size={20} /><Text>No encontramos compañías.</Text></Flex>}
+      {!loading && error && !companies.length && <Flex className="company-empty company-load-error" direction="column" align="center" gap={2}><FiBriefcase size={20} /><Text>{error}</Text><button type="button" onClick={onRetry}><FiRefreshCw size={13} /> Reintentar</button></Flex>}
+      {!loading && !error && !visible.length && <Flex className="company-empty" direction="column" align="center" gap={2}><FiBriefcase size={20} /><Text>No encontramos compañías.</Text></Flex>}
       {!!visible.length && <Box className="company-list-virtual" style={{ height: `${visible.length * COMPANY_LIST_ROW_HEIGHT}px` }}><Box style={{ transform: `translateY(${visibleStart * COMPANY_LIST_ROW_HEIGHT}px)` }}>{virtualCompanies.map((company) => <button type="button" key={company.key} className={`company-list-item${selected === company.key ? ' selected' : ''}`} onClick={() => onSelect(company.key)} aria-pressed={selected === company.key}>
         <span className="company-list-avatar">{initials(company.name)}</span><span><strong>{company.name}</strong><small>{formatNumber(company.projectCount)} obras · {formatCompactInvestment(company.totalInvestment)}</small><small>{formatNumber(company.stateCount)} {company.stateCount === 1 ? 'estado' : 'estados'}</small></span>
       </button>)}</Box></Box>}
@@ -442,29 +446,8 @@ function CompanyDirectoryDialog({ mode, company, onClose, onViewFicha }) {
   </Box>;
 }
 
-function CompanyAlertDialog({ company, enabled, onClose, onConfirm }) {
-  useEffect(() => {
-    if (!company) return undefined;
-    const closeOnEscape = (event) => { if (event.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', closeOnEscape);
-    return () => document.removeEventListener('keydown', closeOnEscape);
-  }, [company, onClose]);
-  if (!company) return null;
-  return <Box className="company-dialog-backdrop company-alert-backdrop" role="presentation" onMouseDown={onClose}>
-    <Box className="company-alert-dialog" role="dialog" aria-modal="true" aria-labelledby="company-alert-title" onMouseDown={(event) => event.stopPropagation()}>
-      <Flex className="company-alert-dialog-icon" align="center" justify="center"><FiBell size={21} /></Flex>
-      <Text id="company-alert-title">{enabled ? 'Esta alerta ya está activa' : 'Alertar actividad de esta compañía'}</Text>
-      <Text>{enabled ? `Estás dando seguimiento a ${company.name}. Puedes mantenerla activa o detenerla cuando quieras.` : `Al activarla, ${company.name} queda marcada para seguimiento en esta sesión.`}</Text>
-      <Box className="company-alert-dialog-explainer"><Text>¿Qué se monitorea?</Text><Text>Nuevas obras, cambios en inversión y superficie, además de contactos identificados. Esta primera versión guarda el seguimiento localmente; no envía correos todavía.</Text></Box>
-      <Flex className="company-alert-dialog-actions" justify="end" gap={2}><button type="button" onClick={onClose}>Cancelar</button><button type="button" className={enabled ? 'is-disable' : ''} onClick={onConfirm}>{enabled ? 'Desactivar alerta' : 'Activar alerta'}</button></Flex>
-    </Box>
-  </Box>;
-}
-
-function Dashboard({ company, saved, alertEnabled, isLoadingCompanies, onSave, onOpenAlert, onDownload, onViewFicha, onShowProjects, onShowContacts, projectFocus }) {
+function Dashboard({ company, isLoadingCompanies, onViewFicha, onShowProjects, onShowContacts, projectFocus }) {
   if (!company) return <Flex className="company-dashboard-empty" direction="column" align="center" justify="center"><FiBriefcase size={28} /><Text>Selecciona una compañía para ver su actividad.</Text></Flex>;
-  const trend = trendData(company); const recent = recentActivity(company);
-  const linkedin = company.linkedinContacts?.find((contact) => contact.url)?.url || '';
   const location = company.states.join(' · ') || company.addresses?.[0]?.formatted || 'Ubicación por confirmar';
   const companyPhone = company.phones?.[0] || '';
   const companyEmail = company.emails?.[0] || '';
@@ -475,7 +458,6 @@ function Dashboard({ company, saved, alertEnabled, isLoadingCompanies, onSave, o
         <Text className="company-name" lineClamp={1}>{company.name}</Text>
         <Flex align="center" gap={2}>
           <Text className="company-role" lineClamp={1}>{company.roles[0] || 'Compañía constructora'}</Text>
-          {alertEnabled && <Text className="company-watch-status"><FiBell size={10} /> En seguimiento</Text>}
         </Flex>
         <Flex className="company-context-row" align="center" gap={3}>
           <Flex className="company-location" align="center" gap={1.5} minW={0}>
@@ -486,22 +468,17 @@ function Dashboard({ company, saved, alertEnabled, isLoadingCompanies, onSave, o
         </Flex>
         {companyEmail && <Flex className="company-contact-info" align="center"><a href={`mailto:${companyEmail}`}><FiMail size={12} /><Text lineClamp={1}>{companyEmail}</Text></a></Flex>}
       </Box>
-      <Flex className="company-actions" gap={2} align="center">{linkedin ? <a href={linkedin} target="_blank" rel="noreferrer" className="company-linkedin">LinkedIn <FiExternalLink size={13} /></a> : <span className="company-linkedin disabled">LinkedIn <FiLinkedin size={13} /></span>}<button type="button" className={`company-alert${alertEnabled ? ' active' : ''}`} onClick={onOpenAlert}><FiBell size={14} /> {alertEnabled ? 'Alerta activa' : 'Alertar actividad'}</button><button type="button" className={`company-save${saved ? ' saved' : ''}`} onClick={onSave}><FiBookmark size={14} /> {saved ? 'Guardada' : 'Guardar'}</button><button type="button" className="company-download" onClick={onDownload} title="Descargar CSV" aria-label="Descargar compañías en CSV"><FiDownload size={15} /></button></Flex>
     </Flex>
     <Box className="company-metrics"><Metric label="Obras" value={formatNumber(company.projectCount)} detail="Proyectos publicados" /><Metric label="Inversión total" value={formatCompactInvestment(company.totalInvestment)} detail="Monto identificado" /><Metric label="Estados" value={formatNumber(company.stateCount)} detail="Donde tiene presencia" /><Metric label="Superficie total" value={`${formatNumber(company.totalSurface)} m²`} detail="Construidos" /></Box>
-    <Flex className="company-signal" align="center" gap={3}><Flex align="center" justify="center"><FiTrendingUp size={18} /></Flex><Box flex="1" minW={0}><Text>Señal comercial</Text><Text>{recent.projects.value ? `${recent.projects.value} obras identificadas en la actividad más reciente.` : 'Actividad registrada en su portafolio.'} Mayor presencia en {company.states[0] || 'sus estados activos'}.</Text></Box><Box className="company-trend"><ResponsiveContainer width="100%" height="100%"><LineChart data={trend} margin={{ top: 5, right: 2, bottom: 0, left: 2 }}><Line type="monotone" dataKey="value" stroke="#D95B27" strokeWidth={2} dot={{ r: 2, fill: '#D95B27', strokeWidth: 0 }} activeDot={{ r: 4 }} /><Tooltip formatter={(value) => [`${value} obras`, 'Publicaciones']} /></LineChart></ResponsiveContainer></Box></Flex>
-    <Box className="company-insights"><Genres company={company} /><States company={company} /><Activity company={company} alertEnabled={alertEnabled} /></Box><Box className="company-bottom"><Projects company={company} onViewFicha={onViewFicha} onShowAll={onShowProjects} projectFocus={projectFocus} /><Contacts company={company} onShowAll={onShowContacts} isLoading={isLoadingCompanies} /></Box>
+    <CompanyProfileKpis />
+    <Box className="company-insights"><Genres company={company} /><States company={company} /><Activity company={company} alertEnabled={false} /></Box><Box className="company-bottom"><Projects company={company} onViewFicha={onViewFicha} onShowAll={onShowProjects} projectFocus={projectFocus} /><Contacts company={company} onShowAll={onShowContacts} isLoading={isLoadingCompanies} /></Box>
   </Box>;
 }
 
-export default function CompaniasView({ companyRelationships = [], isLoadingCompanies = false, isDarkMode = false, onViewFicha, companyDetailRequest = null }) {
+export default function CompaniasView({ companyRelationships = [], isLoadingCompanies = false, companiesError = '', onRetryCompanies, isDarkMode = false, onViewFicha, companyDetailRequest = null }) {
   const [selectedId, setSelectedId] = useState();
   const [projectFocus, setProjectFocus] = useState(null);
   const [openDirectory, setOpenDirectory] = useState(null);
-  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
-  const [savedOnly, setSavedOnly] = useState(false);
-  const [saved, setSaved] = useState(() => { try { return new Set(JSON.parse(localStorage.getItem('construleads-saved-companies') || '[]')); } catch { return new Set(); } });
-  const [alertKeys, setAlertKeys] = useState(() => new Set(getCompanyActivityAlerts().map((alert) => alert.key)));
   // Este explorador no hereda los filtros de Proyectos. Sus filtros viven
   // sólo aquí y trabajan sobre el catálogo completo disponible.
   const [companyFilters, setCompanyFilters] = useState({
@@ -572,9 +549,7 @@ export default function CompaniasView({ companyRelationships = [], isLoadingComp
     let clearProjectFocusTimer = null;
     const selectionTimer = window.setTimeout(() => {
       setSelectedId(requestedCompany.key);
-      setSavedOnly(false);
       setOpenDirectory(null);
-      setAlertDialogOpen(false);
       if (requestedProjectKey) {
         setProjectFocus({ id: companyDetailRequest.id, projectKey: requestedProjectKey });
         clearProjectFocusTimer = window.setTimeout(() => {
@@ -589,20 +564,11 @@ export default function CompaniasView({ companyRelationships = [], isLoadingComp
       if (clearProjectFocusTimer) window.clearTimeout(clearProjectFocusTimer);
     };
   }, [companies, companyDetailRequest]);
-  const activeId = savedOnly
-    ? (companies.some((item) => item.key === selectedId && saved.has(item.key)) ? selectedId : companies.find((item) => saved.has(item.key))?.key)
-    : (companies.some((item) => item.key === selectedId) ? selectedId : companies[0]?.key);
+  const activeId = companies.some((item) => item.key === selectedId) ? selectedId : companies[0]?.key;
   const company = companies.find((item) => item.key === activeId) || null;
-  const save = () => { if (!company) return; setSaved((current) => { const next = new Set(current); next.has(company.key) ? next.delete(company.key) : next.add(company.key); localStorage.setItem('construleads-saved-companies', JSON.stringify([...next])); return next; }); };
-  const toggleAlert = () => {
-    if (!company) return;
-    const { alerts } = toggleCompanyActivityAlert(company);
-    setAlertKeys(new Set(alerts.map((alert) => alert.key)));
-  };
-  const download = () => { const url = URL.createObjectURL(new Blob([`\ufeff${companiesToCsv(companies)}`], { type: 'text/csv;charset=utf-8' })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'companias-construleads.csv'; anchor.click(); URL.revokeObjectURL(url); };
   return <Box h="100%" minH="0" overflow="auto" className={`companias-view${isDarkMode ? ' company-dark' : ''}`}>
     <style>{`
-      .companias-view{color:#293548;scrollbar-color:#cbd1dc transparent}.company-workspace{display:grid;grid-template-columns:minmax(230px,270px) minmax(0,1fr);gap:10px;min-height:100%}.company-directory,.company-dashboard{background:var(--cl-surface,#fff);border:1px solid var(--cl-border,#e8ebef);border-radius:11px}.company-directory{display:flex;flex-direction:column;min-height:620px;overflow:hidden}.company-directory-title{color:#354054;font-size:13px;font-weight:800;padding:13px 13px 10px}.company-directory-title span{color:#758095;font-size:11px}.company-search{background:#fff;border:1px solid #e4e8ee;border-radius:8px;color:#6f7b8f;height:34px;margin:0 11px 9px;padding:0 9px}.company-search input{background:transparent;border:0;color:#354054;font-family:inherit;font-size:10px;min-width:0;outline:0;width:100%}.company-list{flex:1;min-height:0;overflow-y:auto;padding:0 4px 4px;scrollbar-width:thin}.company-list-item{align-items:center;background:transparent;border:0;border-left:3px solid transparent;color:#334054;cursor:pointer;display:flex;gap:9px;min-height:59px;padding:8px 10px;text-align:left;transition:.16s;width:100%}.company-list-item:hover{background:#FEF6F3}.company-list-item.selected{background:#FCEDE8;border-left-color:#D95B27}.company-list-avatar{align-items:center;background:#f4f6f8;border-radius:8px;color:#4b596c;display:inline-flex;flex:0 0 auto;font-size:10px;font-weight:800;height:31px;justify-content:center;width:31px}.selected .company-list-avatar{background:#D95B27;color:#fff}.company-list-item>span:last-child{display:flex;flex:1;flex-direction:column;min-width:0}.company-list-item strong{color:#344054;display:-webkit-box;font-size:10px;font-weight:800;line-height:1.22;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2}.company-list-item small{color:#748095;font-size:9px;line-height:1.25;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.company-more{align-items:center;background:#fff;border:1px solid #dce2e9;border-radius:7px;color:#475568;cursor:pointer;display:flex;font-family:inherit;font-size:10px;font-weight:700;gap:6px;justify-content:center;margin:9px 11px 11px;min-height:32px}.company-empty{color:#7b8695;font-size:11px;min-height:180px;padding:20px;text-align:center}.company-service-notice{align-items:center;background:#FDF4F0;border:1px solid #F5CCBD;border-radius:8px;color:#A43F1B;display:flex;font-size:11px;gap:8px;line-height:1.35;margin-bottom:8px;padding:8px 10px}.company-dashboard{min-width:0;overflow:hidden;padding:15px}.company-profile{min-height:60px}.company-mark{background:#D95B27;border-radius:10px;box-shadow:0 7px 15px rgba(217, 91, 39,.18);color:#fff;flex:0 0 auto;font-size:14px;font-weight:800;height:52px;width:52px}.company-name{color:#2f3b4e;font-size:15px;font-weight:800;letter-spacing:-.018em}.company-role{color:#5d6879;font-size:10px;font-weight:600;margin-top:1px}.company-location{color:#748094;font-size:9px;margin-top:3px}.company-location svg{color:#D95B27;flex:0 0 auto}.company-actions{flex:0 0 auto}.company-linkedin,.company-save,.company-download{align-items:center;background:#fff;border:1px solid #dde2e8;border-radius:7px;color:#475467;display:inline-flex;font-family:inherit;font-size:10px;font-weight:700;gap:5px;height:31px;justify-content:center;padding:0 10px;text-decoration:none;white-space:nowrap}.company-linkedin.disabled{color:#a0a8b5}.company-save{background:#D95B27;border-color:#D95B27;box-shadow:0 5px 12px rgba(217, 91, 39,.18);color:#fff;cursor:pointer}.company-save.saved{background:#354054;border-color:#354054}.company-download{cursor:pointer;padding:0;width:31px}.company-metrics{display:grid;gap:9px;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:15px}.company-metric{background:#fff;border:1px solid #e6eaf0;border-radius:9px;min-height:72px;padding:11px 13px}.company-metric p:first-child{color:#8490a1;font-size:9px;font-weight:600}.company-metric p:nth-child(2){color:#2f3b4e;font-size:16px;font-weight:800;line-height:1.2;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.company-metric p:last-child{color:#5d6a7c;font-size:9px;font-weight:600;margin-top:3px}.company-signal{background:#FEF6F3;border:1px solid #FCEAE4;border-radius:9px;margin-top:11px;min-height:63px;padding:9px 13px}.company-signal>div:first-child{color:#D95B27;flex:0 0 auto}.company-signal>div:nth-child(2)>p:first-child{color:#B9471E;font-size:10px;font-weight:800}.company-signal>div:nth-child(2)>p:last-child{color:#4f5a6b;font-size:9px;line-height:1.45;margin-top:2px}.company-trend{flex:0 0 130px;height:44px}.company-insights{display:grid;gap:9px;grid-template-columns:minmax(0,.96fr) minmax(0,1.08fr) minmax(0,.96fr);margin-top:11px}.company-card,.company-bottom-card{background:#fff;border:1px solid #e5e9ef;border-radius:9px;min-width:0}.company-card{min-height:164px;padding:12px}.company-card-title{color:#344054;font-size:10px;font-weight:800}.company-card-title span{color:#7d8899;font-size:8px}.company-card-empty{color:#7d8796;font-size:10px;padding:31px 0;text-align:center}.company-genre-body{height:123px}.company-pie{flex:0 0 96px;height:96px}.company-legend{flex:1;min-width:0}.company-legend>div{padding:2px 0}.company-legend span{border-radius:99px;flex:0 0 auto;height:7px;width:7px}.company-legend p:nth-child(2){color:#596579;flex:1;font-size:8px}.company-legend p:last-child{color:#4c586b;font-size:8px;font-weight:800}.company-activity{margin-top:10px}.company-activity>div{border-top:1px solid #eef0f4;min-height:35px}.company-activity>div:first-child{border-top:0}.company-activity p:first-child{color:#657185;flex:1;font-size:9px}.company-activity p:nth-child(2){color:#374356;font-size:9px;font-weight:800;text-align:right;white-space:nowrap}.company-activity p:last-child{color:#209369;font-size:8px;font-weight:800;margin-left:7px;min-width:30px;text-align:right}.company-activity p.negative{color:#d94c35}.company-bottom{display:grid;gap:9px;grid-template-columns:minmax(0,1.32fr) minmax(260px,.92fr);margin-top:11px}.company-bottom-card{min-height:188px;overflow:hidden;padding:12px 13px}.company-bottom-title{min-height:18px}.company-bottom-title p:first-child{color:#344054;font-size:10px;font-weight:800}.company-bottom-title p:last-child{color:#7b8798;font-size:9px;font-weight:600}.company-project-head,.company-project-row{display:grid;gap:10px;grid-template-columns:minmax(150px,1.7fr) minmax(96px,1fr) 74px 55px}.company-project-head{border-bottom:1px solid #e8ebef;color:#8b95a4;font-size:7px;font-weight:800;letter-spacing:.03em;padding:11px 0 6px;text-transform:uppercase}.company-project-head>:nth-child(n+3){text-align:right}.company-project-row{align-items:center;background:transparent;border:0;border-bottom:1px solid #edf0f3;color:#596579;cursor:pointer;font-family:inherit;font-size:8px;min-height:35px;padding:5px 0;text-align:left;width:100%}.company-project-row:hover{background:#FEF7F4;box-shadow:0 0 0 5px #FEF7F4}.company-project-row>span:first-child{display:flex;flex-direction:column;min-width:0}.company-project-row strong{color:#3f4a5b;font-size:8px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.company-project-row small{color:#929baa;font-size:7px;margin-top:1px}.company-project-row>span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.company-project-row>span:nth-child(3),.company-project-row>span:last-child{color:#465166;font-weight:800;text-align:right;white-space:nowrap}.company-bottom-link{align-items:center;color:#D95B27;display:flex;font-size:9px;font-weight:800;gap:6px;margin-top:11px}.company-contacts{margin-top:8px}.company-contacts>div{border-bottom:1px solid #eef0f3;min-height:35px;padding:4px 0}.company-contact-avatar{background:#eef0f3;border-radius:50%;color:#4e596a;flex:0 0 auto;font-size:8px;font-weight:800;height:25px;width:25px}.company-contacts>div>div:nth-child(2)>p:first-child{color:#414c5d;font-size:9px;font-weight:800}.company-contacts>div>div:nth-child(2)>p:last-child{color:#7c8797;font-size:8px;margin-top:1px}.company-contacts a{color:#0a66c2;display:flex;flex:0 0 auto}.company-link-muted{color:#b3bac4;flex:0 0 auto}.company-dashboard-empty{background:#fff;border:1px dashed #dbe1e8;border-radius:11px;color:#748094;font-size:12px;gap:10px;min-height:500px}.company-dark .company-directory,.company-dark .company-dashboard,.company-dark .company-metric,.company-dark .company-card,.company-dark .company-bottom-card,.company-dark .company-more{background:var(--cl-surface);border-color:var(--cl-border)}.company-dark .company-directory-title,.company-dark .company-list-item strong,.company-dark .company-name,.company-dark .company-metric p:nth-child(2),.company-dark .company-card-title,.company-dark .company-bottom-title p:first-child,.company-dark .company-contacts>div>div:nth-child(2)>p:first-child,.company-dark .company-project-row strong{color:var(--cl-text-strong)}.company-dark .company-search,.company-dark .company-linkedin,.company-dark .company-download{background:var(--cl-surface-muted);border-color:var(--cl-border)}.company-dark .company-search input{color:var(--cl-text)}.company-dark .company-list-item:hover,.company-dark .company-project-row:hover{background:rgba(217, 91, 39,.1);box-shadow:none}.company-dark .company-list-item.selected{background:rgba(217, 91, 39,.16)}.company-dark .company-list-avatar,.company-dark .company-contact-avatar{background:var(--cl-surface-muted);color:var(--cl-text)}.company-dark .company-signal{background:rgba(217, 91, 39,.1);border-color:rgba(240, 192, 174,.22)}.company-dark .company-role,.company-dark .company-location,.company-dark .company-metric p:first-child,.company-dark .company-metric p:last-child,.company-dark .company-card-empty,.company-dark .company-activity p:first-child,.company-dark .company-contacts>div>div:nth-child(2)>p:last-child,.company-dark .company-list-item small{color:var(--cl-text-muted)}.company-dark .company-project-head,.company-dark .company-project-row,.company-dark .company-contacts>div,.company-dark .company-activity>div{border-color:var(--cl-border)}@media(max-width:1080px){.company-workspace{grid-template-columns:230px minmax(0,1fr)}.company-insights{grid-template-columns:1fr 1fr}.company-insights>.company-card:last-child{grid-column:span 2}.company-linkedin{font-size:0;padding:0 8px}}@media(max-width:840px){.company-workspace{grid-template-columns:1fr}.company-directory{max-height:330px;min-height:0}.company-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.company-bottom{grid-template-columns:1fr}}@media(max-width:620px){.company-dashboard{padding:11px}.company-profile{align-items:flex-start;flex-wrap:wrap}.company-actions{margin-left:64px;width:calc(100% - 64px)}.company-save{flex:1}.company-metrics,.company-insights{grid-template-columns:1fr 1fr}.company-insights>.company-card:last-child{grid-column:auto}.company-trend{display:none}.company-project-head,.company-project-row{grid-template-columns:minmax(120px,1.6fr) minmax(88px,1fr) 65px}.company-project-head>:last-child,.company-project-row>:last-child{display:none}.company-list{grid-template-columns:1fr}}
+      .companias-view{color:#293548;scrollbar-color:#cbd1dc transparent}.company-workspace{display:grid;grid-template-columns:minmax(230px,270px) minmax(0,1fr);gap:10px;min-height:100%}.company-directory,.company-dashboard{background:var(--cl-surface,#fff);border:1px solid var(--cl-border,#e8ebef);border-radius:11px}.company-directory{display:flex;flex-direction:column;min-height:620px;overflow:hidden}.company-directory-title{color:#354054;font-size:13px;font-weight:800;padding:13px 13px 10px}.company-directory-title span{color:#758095;font-size:11px}.company-search{background:#fff;border:1px solid #e4e8ee;border-radius:8px;color:#6f7b8f;height:34px;margin:0 11px 9px;padding:0 9px}.company-search input{background:transparent;border:0;color:#354054;font-family:inherit;font-size:10px;min-width:0;outline:0;width:100%}.company-list{flex:1;min-height:0;overflow-y:auto;padding:0 4px 4px;scrollbar-width:thin}.company-list-item{align-items:center;background:transparent;border:0;border-left:3px solid transparent;color:#334054;cursor:pointer;display:flex;gap:9px;min-height:59px;padding:8px 10px;text-align:left;transition:.16s;width:100%}.company-list-item:hover{background:#FEF6F3}.company-list-item.selected{background:#FCEDE8;border-left-color:#D95B27}.company-list-avatar{align-items:center;background:#f4f6f8;border-radius:8px;color:#4b596c;display:inline-flex;flex:0 0 auto;font-size:10px;font-weight:800;height:31px;justify-content:center;width:31px}.selected .company-list-avatar{background:#D95B27;color:#fff}.company-list-item>span:last-child{display:flex;flex:1;flex-direction:column;min-width:0}.company-list-item strong{color:#344054;display:-webkit-box;font-size:10px;font-weight:800;line-height:1.22;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2}.company-list-item small{color:#748095;font-size:9px;line-height:1.25;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.company-more{align-items:center;background:#fff;border:1px solid #dce2e9;border-radius:7px;color:#475568;cursor:pointer;display:flex;font-family:inherit;font-size:10px;font-weight:700;gap:6px;justify-content:center;margin:9px 11px 11px;min-height:32px}.company-empty{color:#7b8695;font-size:11px;min-height:180px;padding:20px;text-align:center}.company-service-notice{align-items:center;background:#FDF4F0;border:1px solid #F5CCBD;border-radius:8px;color:#A43F1B;display:flex;font-size:11px;gap:8px;line-height:1.35;margin-bottom:8px;padding:8px 10px}.company-dashboard{min-width:0;overflow:hidden;padding:15px}.company-profile{min-height:60px}.company-mark{background:#D95B27;border-radius:10px;box-shadow:0 7px 15px rgba(217, 91, 39,.18);color:#fff;flex:0 0 auto;font-size:14px;font-weight:800;height:52px;width:52px}.company-name{color:#2f3b4e;font-size:15px;font-weight:800;letter-spacing:-.018em}.company-role{color:#5d6879;font-size:10px;font-weight:600;margin-top:1px}.company-location{color:#748094;font-size:9px;margin-top:3px}.company-location svg{color:#D95B27;flex:0 0 auto}.company-metrics,.company-generic-kpis{display:grid;gap:9px;margin-top:15px}.company-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}.company-generic-kpis{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:11px}.company-metric{background:#fff;border:1px solid #e6eaf0;border-radius:9px;min-height:72px;padding:11px 13px}.company-metric p:first-child{color:#8490a1;font-size:9px;font-weight:600}.company-metric p:nth-child(2){color:#2f3b4e;font-size:16px;font-weight:800;line-height:1.2;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.company-metric p:last-child{color:#5d6a7c;font-size:9px;font-weight:600;margin-top:3px}.company-insights{display:grid;gap:9px;grid-template-columns:minmax(0,.96fr) minmax(0,1.08fr) minmax(0,.96fr);margin-top:11px}.company-card,.company-bottom-card{background:#fff;border:1px solid #e5e9ef;border-radius:9px;min-width:0}.company-card{min-height:164px;padding:12px}.company-card-title{color:#344054;font-size:10px;font-weight:800}.company-card-title span{color:#7d8899;font-size:8px}.company-card-empty{color:#7d8796;font-size:10px;padding:31px 0;text-align:center}.company-genre-body{height:123px}.company-pie{flex:0 0 96px;height:96px}.company-legend{flex:1;min-width:0}.company-legend>div{padding:2px 0}.company-legend span{border-radius:99px;flex:0 0 auto;height:7px;width:7px}.company-legend p:nth-child(2){color:#596579;flex:1;font-size:8px}.company-legend p:last-child{color:#4c586b;font-size:8px;font-weight:800}.company-activity{margin-top:10px}.company-activity>div{border-top:1px solid #eef0f4;min-height:35px}.company-activity>div:first-child{border-top:0}.company-activity p:first-child{color:#657185;flex:1;font-size:9px}.company-activity p:nth-child(2){color:#374356;font-size:9px;font-weight:800;text-align:right;white-space:nowrap}.company-activity p:last-child{color:#209369;font-size:8px;font-weight:800;margin-left:7px;min-width:30px;text-align:right}.company-activity p.negative{color:#d94c35}.company-bottom{display:grid;gap:9px;grid-template-columns:minmax(0,1.32fr) minmax(260px,.92fr);margin-top:11px}.company-bottom-card{min-height:188px;overflow:hidden;padding:12px 13px}.company-bottom-title{min-height:18px}.company-bottom-title p:first-child{color:#344054;font-size:10px;font-weight:800}.company-bottom-title p:last-child{color:#7b8798;font-size:9px;font-weight:600}.company-project-head,.company-project-row{display:grid;gap:10px;grid-template-columns:minmax(150px,1.7fr) minmax(96px,1fr) 74px 55px}.company-project-head{border-bottom:1px solid #e8ebef;color:#8b95a4;font-size:7px;font-weight:800;letter-spacing:.03em;padding:11px 0 6px;text-transform:uppercase}.company-project-head>:nth-child(n+3){text-align:right}.company-project-row{align-items:center;background:transparent;border:0;border-bottom:1px solid #edf0f3;color:#596579;cursor:pointer;font-family:inherit;font-size:8px;min-height:35px;padding:5px 0;text-align:left;width:100%}.company-project-row:hover{background:#FEF7F4;box-shadow:0 0 0 5px #FEF7F4}.company-project-row>span:first-child{display:flex;flex-direction:column;min-width:0}.company-project-row strong{color:#3f4a5b;font-size:8px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.company-project-row small{color:#929baa;font-size:7px;margin-top:1px}.company-project-row>span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.company-project-row>span:nth-child(3),.company-project-row>span:last-child{color:#465166;font-weight:800;text-align:right;white-space:nowrap}.company-bottom-link{align-items:center;color:#D95B27;display:flex;font-size:9px;font-weight:800;gap:6px;margin-top:11px}.company-contacts{margin-top:8px}.company-contacts>div{border-bottom:1px solid #eef0f3;min-height:35px;padding:4px 0}.company-contact-avatar{background:#eef0f3;border-radius:50%;color:#4e596a;flex:0 0 auto;font-size:8px;font-weight:800;height:25px;width:25px}.company-contacts>div>div:nth-child(2)>p:first-child{color:#414c5d;font-size:9px;font-weight:800}.company-contacts>div>div:nth-child(2)>p:last-child{color:#7c8797;font-size:8px;margin-top:1px}.company-contacts a{color:#0a66c2;display:flex;flex:0 0 auto}.company-link-muted{color:#b3bac4;flex:0 0 auto}.company-dashboard-empty{background:#fff;border:1px dashed #dbe1e8;border-radius:11px;color:#748094;font-size:12px;gap:10px;min-height:500px}.company-dark .company-directory,.company-dark .company-dashboard,.company-dark .company-metric,.company-dark .company-card,.company-dark .company-bottom-card,.company-dark .company-more{background:var(--cl-surface);border-color:var(--cl-border)}.company-dark .company-directory-title,.company-dark .company-list-item strong,.company-dark .company-name,.company-dark .company-metric p:nth-child(2),.company-dark .company-card-title,.company-dark .company-bottom-title p:first-child,.company-dark .company-contacts>div>div:nth-child(2)>p:first-child,.company-dark .company-project-row strong{color:var(--cl-text-strong)}.company-dark .company-search{background:var(--cl-surface-muted);border-color:var(--cl-border)}.company-dark .company-search input{color:var(--cl-text)}.company-dark .company-list-item:hover,.company-dark .company-project-row:hover{background:rgba(217, 91, 39,.1);box-shadow:none}.company-dark .company-list-item.selected{background:rgba(217, 91, 39,.16)}.company-dark .company-list-avatar,.company-dark .company-contact-avatar{background:var(--cl-surface-muted);color:var(--cl-text)}.company-dark .company-role,.company-dark .company-location,.company-dark .company-metric p:first-child,.company-dark .company-metric p:last-child,.company-dark .company-card-empty,.company-dark .company-activity p:first-child,.company-dark .company-contacts>div>div:nth-child(2)>p:last-child,.company-dark .company-list-item small{color:var(--cl-text-muted)}.company-dark .company-project-head,.company-dark .company-project-row,.company-dark .company-contacts>div,.company-dark .company-activity>div{border-color:var(--cl-border)}@media(max-width:1080px){.company-workspace{grid-template-columns:230px minmax(0,1fr)}.company-insights{grid-template-columns:1fr 1fr}.company-insights>.company-card:last-child{grid-column:span 2}}@media(max-width:840px){.company-workspace{grid-template-columns:1fr}.company-directory{max-height:330px;min-height:0}.company-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.company-bottom{grid-template-columns:1fr}}@media(max-width:620px){.company-dashboard{padding:11px}.company-profile{align-items:flex-start;flex-wrap:wrap}.company-metrics,.company-generic-kpis,.company-insights{grid-template-columns:1fr 1fr}.company-generic-kpis>.company-metric:last-child,.company-insights>.company-card:last-child{grid-column:span 2}.company-project-head,.company-project-row{grid-template-columns:minmax(120px,1.6fr) minmax(88px,1fr) 65px}.company-project-head>:last-child,.company-project-row>:last-child{display:none}.company-list{grid-template-columns:1fr}}
     `}</style>
     <style>{`
       .companias-view .company-alert { align-items: center; background: #FDF5F2; border: 1px solid #F2C5B4; border-radius: 7px; color: #B9471E; cursor: pointer; display: inline-flex; font-family: inherit; font-size: 12px; font-weight: 700; gap: 5px; height: 38px; padding: 0 13px; white-space: nowrap; }
@@ -646,9 +612,10 @@ export default function CompaniasView({ companyRelationships = [], isLoadingComp
         .companias-view .company-directory, .companias-view .company-dashboard { height: 100%; min-height: 0; }
         .companias-view .company-directory { overflow: hidden; }
         .companias-view .company-dashboard { display: grid; gap: 10px; grid-template-rows: 58px 82px 66px minmax(168px, .85fr) minmax(216px, 1.15fr); padding: 14px; }
-        .companias-view .company-profile, .companias-view .company-metrics, .companias-view .company-signal, .companias-view .company-insights, .companias-view .company-bottom { height: 100%; margin: 0; min-height: 0; }
+        .companias-view .company-profile, .companias-view .company-metrics, .companias-view .company-generic-kpis, .companias-view .company-insights, .companias-view .company-bottom { height: 100%; margin: 0; min-height: 0; }
         .companias-view .company-metrics { gap: 10px; }
         .companias-view .company-metric { min-height: 0; padding: 11px 14px; }
+        .companias-view .company-generic-kpis .company-metric { min-height: 0; }
         .companias-view .company-metric p:nth-child(2) { font-size: 18px; }
         .companias-view .company-signal { min-height: 0; padding: 9px 14px; }
         .companias-view .company-signal > div:nth-child(2) > p:last-child { font-size: 11px; }
@@ -696,6 +663,7 @@ export default function CompaniasView({ companyRelationships = [], isLoadingComp
       .companias-view .company-list-item small { font-size: 11.5px; line-height: 1.35; margin-top: 3px; }
       .companias-view .company-more { font-size: 12px; margin: 12px 14px 14px; min-height: 40px; }
       .companias-view .company-empty { font-size: 13px; }
+      .companias-view .company-load-error button { align-items: center; background: #D95B27; border: 0; border-radius: 7px; color: #FFF; cursor: pointer; display: inline-flex; font-family: inherit; font-size: 11px; font-weight: 800; gap: 6px; margin-top: 4px; padding: 8px 12px; }
       .companias-view .company-dashboard { padding: 20px; }
       .companias-view .company-profile { min-height: 68px; }
       .companias-view .company-mark { border-radius: 12px; font-size: 16px; height: 58px; width: 58px; }
@@ -1028,8 +996,30 @@ export default function CompaniasView({ companyRelationships = [], isLoadingComp
       .companias-view.company-dark .company-alert-dialog-explainer p:last-child { color: #C4CEDA; }
       @media (max-width: 1180px) { .companias-view .company-pie { flex-basis: 154px; height: 154px; } .companias-view .company-legend { flex-basis: 126px; } }
     `}</style>
-    <Box className="company-workspace"><CompanyList companies={companies} selected={activeId} onSelect={(id) => { setSelectedId(id); setProjectFocus(null); setOpenDirectory(null); setAlertDialogOpen(false); }} loading={isLoadingCompanies} companyProjects={companyProjects} filtros={companyFilters} onApplyFilters={setCompanyFilters} savedKeys={saved} savedOnly={savedOnly} onToggleSavedOnly={() => setSavedOnly((current) => !current)} /><Dashboard company={company} saved={company ? saved.has(company.key) : false} alertEnabled={company ? alertKeys.has(company.key) : false} isLoadingCompanies={isLoadingCompanies} onSave={save} onOpenAlert={() => setAlertDialogOpen(true)} onDownload={download} onViewFicha={onViewFicha} onShowProjects={() => setOpenDirectory('projects')} onShowContacts={() => setOpenDirectory('contacts')} projectFocus={projectFocus} /></Box>
+    <style>{`
+      .companias-view .company-profile-kpis { min-width: 0; }
+      .companias-view .company-profile-kpis-title { color: var(--cl-text-strong, #344054); font-size: 12px; font-weight: 800; line-height: 1; margin-bottom: 7px; }
+      .companias-view .company-profile-kpis-grid { display: grid; gap: 8px; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+      .companias-view .company-profile-kpi { background: var(--cl-surface-muted, #F8FAFC); border: 1px solid var(--cl-border, #E7ECF1); border-radius: 9px; min-height: 72px; padding: 8px 9px; }
+      .companias-view .company-profile-kpi-icon { background: #FFF1EA; border-radius: 8px; color: #D95B27; flex: 0 0 auto; height: 34px; width: 34px; }
+      .companias-view .company-profile-kpi > div:nth-child(2) > p:first-child { color: var(--cl-text-muted, #7B8798); font-size: 8.5px; line-height: 1.15; }
+      .companias-view .company-profile-kpi > div:nth-child(2) > p:nth-child(2) { color: var(--cl-text-strong, #344054); font-size: 10px; font-weight: 800; line-height: 1.2; margin-top: 3px; text-transform: uppercase; }
+      .companias-view .company-profile-kpi > div:nth-child(2) > p:nth-child(3) { color: var(--cl-text-muted, #7B8798); font-size: 7.5px; line-height: 1.15; margin-top: 2px; }
+      .companias-view .company-profile-kpi > svg { color: #A4ADBA; flex: 0 0 auto; }
+      .companias-view.company-dark .company-profile-kpi-icon { background: rgba(217, 91, 39, .17); }
+      @media (min-width: 841px) {
+        .companias-view .company-dashboard { grid-template-rows: 58px 82px 96px 242px minmax(0, 1fr); }
+        .companias-view .company-profile-kpis { height: 100%; margin: 0; min-height: 0; }
+      }
+      @media (max-width: 1260px) {
+        .companias-view .company-profile-kpis-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .companias-view .company-profile-kpis { overflow-y: auto; }
+      }
+      @media (max-width: 620px) {
+        .companias-view .company-profile-kpis-grid { grid-template-columns: 1fr; }
+      }
+    `}</style>
+    <Box className="company-workspace"><CompanyList companies={companies} selected={activeId} onSelect={(id) => { setSelectedId(id); setProjectFocus(null); setOpenDirectory(null); }} loading={isLoadingCompanies} error={companiesError} onRetry={onRetryCompanies} companyProjects={companyProjects} filtros={companyFilters} onApplyFilters={setCompanyFilters} /><Dashboard company={company} isLoadingCompanies={isLoadingCompanies} onViewFicha={onViewFicha} onShowProjects={() => setOpenDirectory('projects')} onShowContacts={() => setOpenDirectory('contacts')} projectFocus={projectFocus} /></Box>
     <CompanyDirectoryDialog mode={openDirectory} company={company} onClose={() => setOpenDirectory(null)} onViewFicha={onViewFicha} />
-    {alertDialogOpen && <CompanyAlertDialog company={company} enabled={company ? alertKeys.has(company.key) : false} onClose={() => setAlertDialogOpen(false)} onConfirm={() => { toggleAlert(); setAlertDialogOpen(false); }} />}
   </Box>;
 }

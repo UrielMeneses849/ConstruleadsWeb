@@ -11,8 +11,8 @@ export const OBRA_SOURCE_META = Object.freeze({
   }),
   [OBRA_SOURCES.EXPLORER]: Object.freeze({
     label: 'Explorer',
-    color: '#484A4E',
-    selectedColor: '#484A4E',
+    color: '#92979E',
+    selectedColor: '#6F747B',
   }),
 });
 

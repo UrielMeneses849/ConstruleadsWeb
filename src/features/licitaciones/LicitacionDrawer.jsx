@@ -1,6 +1,6 @@
 import { Box, Button, Flex, Heading, Stack, Text } from '@chakra-ui/react';
 import { FiExternalLink, FiStar, FiX } from 'react-icons/fi';
-import { formatLicitacionAmount, formatLicitacionDate, LICITACION_EMPTY_VALUE } from './licitacionesUtils';
+import { formatLicitacionAmount, formatLicitacionDate, isLicitacionAvailable, LICITACION_EMPTY_VALUE } from './licitacionesUtils';
 
 function DetailGroup({ title, items }) {
   const visible = items.filter((item) => item.value && item.value !== LICITACION_EMPTY_VALUE);
@@ -12,6 +12,7 @@ function DetailGroup({ title, items }) {
 
 export default function LicitacionDrawer({ item, followed, onToggleFollow, onClose }) {
   if (!item) return null;
+  const isAvailable = isLicitacionAvailable(item);
   const timeline = [
     ['Publicación', item.fecha_de_publicacion], ['Apertura', item.fecha_de_apertura], ['Fallo', item.fecha_de_fallo],
     ['Inicio del contrato', item.fecha_de_inicio_del_contrato], ['Fin del contrato', item.fecha_de_fin_del_contrato],
@@ -27,12 +28,19 @@ export default function LicitacionDrawer({ item, followed, onToggleFollow, onClo
       <Stack p={6} gap={7}>
         <Flex gap={2} wrap="wrap">
           <Button size="sm" bg={followed ? '#FFF4D6' : 'var(--cl-surface-muted)'} color={followed ? '#9A6700' : 'var(--cl-text)'} onClick={onToggleFollow}><FiStar /> {followed ? 'Siguiendo' : 'Seguir'}</Button>
-          {item.direccion_del_anuncio && item.direccion_del_anuncio !== LICITACION_EMPTY_VALUE && <Button as="a" href={item.direccion_del_anuncio} target="_blank" rel="noopener noreferrer" size="sm" variant="outline"><FiExternalLink /> Abrir expediente</Button>}
+          {isAvailable && <Button as="a" href={item.direccion_del_anuncio} target="_blank" rel="noopener noreferrer" size="sm" variant="outline"><FiExternalLink /> Abrir expediente</Button>}
         </Flex>
+        {!isAvailable && <Box p={4} border="1px solid #F1D58A" borderRadius="10px" bg="#FFF9E8">
+          <Text fontSize="11px" fontWeight="800" color="#7A5700">La licitación ya no está disponible en la fuente.</Text>
+          <Text mt={1} fontSize="11px" color="#7A5700">Clave conservada para seguimiento: <strong>{item.clave}</strong></Text>
+        </Box>}
         <DetailGroup title="Identificación" items={[
           { label: 'Clave', value: item.clave }, { label: 'Código expediente', value: item.codigo_del_expediente },
           { label: 'Número procedimiento', value: item.numero_de_procedimiento }, { label: 'Código contrato', value: item.codigo_del_contrato },
           { label: 'Fuente del registro', value: item.fuente_del_registro },
+          { label: 'Tipo de contratación', value: item.tipo_de_contratacion },
+          { label: 'Desarrollo', value: item.desarrollo },
+          { label: 'Sector', value: item.sector },
         ]} />
         <DetailGroup title="Descripción" items={[{ label: 'Descripción', value: item.descripcion }, { label: 'Fuente', value: item.fuente_de_la_descripcion }]} />
         <Box><Text fontSize="10px" color="#D95B27" fontWeight="800" letterSpacing=".12em" mb={4}>LÍNEA DE TIEMPO</Text>

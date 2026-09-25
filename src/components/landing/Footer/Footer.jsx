@@ -2,13 +2,13 @@
 
 import {
   Box,
-  Button,
   Flex,
   Heading,
   Image,
   Stack,
   Text,
 } from '@chakra-ui/react';
+import { FiInstagram, FiLinkedin, FiMail } from 'react-icons/fi';
 
 import {
   footerWrapper,
@@ -39,6 +39,18 @@ export default function Footer() {
               Encuentra proyectos, identifica clientes potenciales y toma
               decisiones estratégicas con información actualizada.
             </Text>
+
+            <Flex gap="12px" mt="24px">
+              <Box as="a" href="https://www.linkedin.com/company/bimsa-reports/posts/?feedView=all" target="_blank" rel="noopener noreferrer" aria-label="Visitar LinkedIn de Bimsa Reports">
+                <FiLinkedin color="white" size="20" />
+              </Box>
+              <Box as="a" href="https://www.instagram.com/bimsareportsmx/" target="_blank" rel="noopener noreferrer" aria-label="Visitar Instagram de Bimsa Reports">
+                <FiInstagram color="white" size="20" />
+              </Box>
+              <Box as="a" href="mailto:correo@bimsa.com.mx" aria-label="Enviar correo a Bimsa Reports">
+                <FiMail color="white" size="20" />
+              </Box>
+            </Flex>
           </Box>
 
           <Box>
@@ -48,18 +60,6 @@ export default function Footer() {
               <Text fontSize="12px">📞 Tel. 55 5627908412</Text>
               <Text fontSize="12px">✉️ correo@bimsa.com.mx</Text>
               <Text fontSize="12px">🌐 bimsareports.com</Text>
-              <Text fontSize="12px">🕒 Lunes a Viernes 9:00 - 18:00 hrs.</Text>
-            </Stack>
-          </Box>
-
-          <Box>
-            <Heading {...sectionTitle}>EMPRESA</Heading>
-
-            <Stack gap="20px" fontSize="12px">
-              <Text {...footerLink} fontSize="12px">¿Qué es Bimsa Reports?</Text>
-              <Text {...footerLink} fontSize="12px">Beneficios</Text>
-              <Text {...footerLink} fontSize="12px">Quienes somos</Text>
-              <Text {...footerLink} fontSize="12px">Preguntas frecuentes</Text>
             </Stack>
           </Box>
 
@@ -69,19 +69,7 @@ export default function Footer() {
             <Stack gap="20px" mb="40px">
               <Text {...footerLink} fontSize="12px">Términos y condiciones</Text>
               <Text {...footerLink} fontSize="12px">Aviso de privacidad</Text>
-              <Text {...footerLink} fontSize="12px">Políticas de uso</Text>
-              <Text {...footerLink} fontSize="12px">Políticas de cookies</Text>
             </Stack>
-
-            <Button
-              bg="#E9C2B2"
-              color="#091E5A"
-              borderRadius="16px"
-              size="md"
-              _hover={{ opacity: 0.9 }}
-            >
-              Hablar con un asesor
-            </Button>
           </Box>
         </Box>
 <Box

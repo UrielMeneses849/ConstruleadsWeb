@@ -2,6 +2,36 @@ import { Box, Flex, Grid, Image, SimpleGrid, Text } from '@chakra-ui/react';
 
 const valueOrUnknown = (value) => String(value || '').trim() || 'Desconocido';
 
+const dateFormatter = new Intl.DateTimeFormat('es-MX', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+const formatProjectDate = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return 'Desconocido';
+
+  const isoMatch = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  const localMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  const parts = isoMatch
+    ? [Number(isoMatch[1]), Number(isoMatch[2]), Number(isoMatch[3])]
+    : localMatch
+      ? [Number(localMatch[3]), Number(localMatch[2]), Number(localMatch[1])]
+      : null;
+
+  if (!parts) return raw;
+
+  const [year, month, day] = parts;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const isValid = date.getUTCFullYear() === year
+    && date.getUTCMonth() === month - 1
+    && date.getUTCDate() === day;
+
+  return isValid ? dateFormatter.format(date).replace('.', '') : raw;
+};
+
 const cleanDisplayValue = (value) => {
   const cleaned = String(value || '')
     .trim()
@@ -10,10 +40,38 @@ const cleanDisplayValue = (value) => {
   return cleaned || 'Desconocido';
 };
 
+const formatProjectLocation = (obra) => {
+  const values = [obra.esta_descripcion, obra.muni_descripcion, obra.proy_localizacion]
+    .map((value) => String(value || '').trim())
+    .filter((value) => value && value.toLowerCase() !== 'desconocido');
+
+  return [...new Set(values)].join(', ') || 'Desconocido';
+};
+
 const formatNumber = (value) => {
   const number = Number(String(value ?? '').replace(/,/g, ''));
   return Number.isFinite(number) ? new Intl.NumberFormat('es-MX').format(number) : '0';
 };
+
+const getProgress = (value) => {
+  const match = String(value ?? '').replace(',', '.').match(/-?\d+(?:\.\d+)?/);
+  if (!match) return null;
+  return Math.max(0, Math.min(100, Number(match[0])));
+};
+
+function ProgressSummary({ value }) {
+  const progress = getProgress(value);
+  return (
+    <Box>
+      <SummaryRow label="Avance de obra" emphasis>
+        {progress === null ? 'Desconocido' : `${progress.toLocaleString('es-MX')} %`}
+      </SummaryRow>
+      <Box mt={2} h="7px" overflow="hidden" bg="var(--ft-border)" borderRadius="full" aria-hidden="true">
+        <Box h="100%" w={`${progress ?? 0}%`} bg="#D95B27" borderRadius="full" transition="width .25s ease" />
+      </Box>
+    </Box>
+  );
+}
 
 function DetailCard({ label, children }) {
   return (
@@ -48,9 +106,9 @@ function DateCard({ startDate, endDate }) {
     <Box bg="var(--ft-surface-muted)" borderRadius="12px" p={4} minW="0">
       <Grid templateColumns="minmax(130px, 1fr) auto" gap="8px 16px" alignItems="center">
         <Text color="var(--ft-text-muted)" fontSize="12px" whiteSpace="nowrap">Fecha inicio probable</Text>
-        <Text fontSize="13px" fontWeight="500" textAlign="right">{valueOrUnknown(startDate)}</Text>
+        <Text fontSize="13px" fontWeight="500" textAlign="right">{formatProjectDate(startDate)}</Text>
         <Text color="var(--ft-text-muted)" fontSize="12px" whiteSpace="nowrap">Fecha término probable</Text>
-        <Text fontSize="13px" fontWeight="500" textAlign="right">{valueOrUnknown(endDate)}</Text>
+        <Text fontSize="13px" fontWeight="500" textAlign="right">{formatProjectDate(endDate)}</Text>
       </Grid>
     </Box>
   );
@@ -133,7 +191,7 @@ export default function FichaTecnicaContent({ obra, isDarkMode = false }) {
           filter={isDarkMode ? 'brightness(0) invert(1)' : undefined} />
         <Box textAlign="right">
           <Text fontSize={{ base: '18px', md: '21px' }} fontWeight="500">Ficha Técnica del Proyecto</Text>
-          <Text fontSize="13px" color="var(--ft-text-muted)">Fecha de publicación: {valueOrUnknown(obra.proy_fechacierre)}</Text>
+          <Text fontSize="13px" color="var(--ft-text-muted)">Fecha de publicación: {formatProjectDate(obra.proy_fechacierre)}</Text>
           <Flex justify="flex-end" gap={2} mt={3} wrap="wrap">
             <Box bg="#D95B27" color="white" px={3} py={2} borderRadius="8px" fontSize="12px" fontWeight="600">
               {cleanDisplayValue(obra.proy_tipoproyectodescripcion)}
@@ -162,8 +220,8 @@ export default function FichaTecnicaContent({ obra, isDarkMode = false }) {
               <CenteredTagCard label="Género">{obra.genero}</CenteredTagCard>
               <CenteredTagCard label="Subgénero">{obra.subgenero}</CenteredTagCard>
             </Grid>
-            <Box mt={3}><DetailCard label={`Ubicación · ${valueOrUnknown(obra.esta_descripcion)}, ${valueOrUnknown(obra.muni_descripcion)}`}>
-              {valueOrUnknown(obra.proy_localizacion)}
+            <Box mt={3}><DetailCard label="Ubicación">
+              {formatProjectLocation(obra)}
             </DetailCard></Box>
           </Box>
           <Box
@@ -179,6 +237,7 @@ export default function FichaTecnicaContent({ obra, isDarkMode = false }) {
             <SummaryRow label="Superficie construida">
               {Number(obra.superficie) ? `${formatNumber(obra.superficie)} m²` : 'Desconocido'}
             </SummaryRow>
+            <ProgressSummary value={obra.porcentaje_avance ?? obra.PorcentajeAvance ?? obra.porcentajeAvance} />
             <SummaryRow label="Sector">{valueOrUnknown(obra.sector)}</SummaryRow>
             <SummaryRow label="Tipo de obra">{valueOrUnknown(obra.tipo_obra)}</SummaryRow>
             <SummaryRow label="Tipo de desarrollo">{valueOrUnknown(obra.desa_descripcion)}</SummaryRow>

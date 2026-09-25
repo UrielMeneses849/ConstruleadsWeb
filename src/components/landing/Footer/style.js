@@ -18,7 +18,7 @@ export const footerGrid = {
   display: 'grid',
   gridTemplateColumns: {
     base: '1fr',
-    lg: '1.4fr 1fr 1fr 1fr',
+    lg: '1.4fr 1fr 1fr',
   },
   gap: '48px',
 };

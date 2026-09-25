@@ -25,9 +25,11 @@ export default function AppRoutes() {
         element={<Audiencia />}
       />
 
-      <Route path="/construleads/*" element={<PersistentConstruleads />} />
-
       <Route path="/laboratorio-obras" element={<MapPerformanceLab />} />
+
+      <Route path="/construleads/laboratorio-obras" element={<MapPerformanceLab />} />
+
+      <Route path="/construleads/*" element={<PersistentConstruleads />} />
 
       <Route
         path="/perfil"

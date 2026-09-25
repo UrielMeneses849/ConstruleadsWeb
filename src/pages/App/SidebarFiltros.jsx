@@ -2601,19 +2601,6 @@ export default function SidebarFiltros({ obras = [], onApplyFilters, isGraphView
           <Text fontSize="11px" fontWeight="700" color={TEXT_STRONG}>
             Fuente
           </Text>
-          <Text
-            px={1.5}
-            py="1px"
-            borderRadius="full"
-            bg="var(--cl-surface-muted)"
-            border="1px solid var(--cl-border)"
-            color={TEXT_SECONDARY}
-            fontSize="7px"
-            fontWeight="700"
-            letterSpacing=".04em"
-          >
-            BETA
-          </Text>
         </Flex>
 
         <VStack align="stretch" spacing={0.5}>

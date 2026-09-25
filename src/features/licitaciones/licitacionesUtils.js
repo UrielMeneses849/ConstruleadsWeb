@@ -139,7 +139,10 @@ export function normalizeLicitacion(node) {
     estado: formatLicitacionState(readOptional('estado', 'entidad_federativa', 'entidad')),
     region: read('region', 'región'),
     estatus: read('estatus'),
-    estatus_original_fuente: read('estatus_original_fuente'),
+    tipo_de_contratacion: readOptional('tipo_de_contratacion'),
+    desarrollo: readOptional('desarrollo'),
+    activo: readOptional('activo'),
+    sector: readOptional('sector'),
     fecha_de_publicacion: readOptional('fecha_de_publicacion'),
     fecha_de_apertura: readOptional('fecha_de_apertura'),
     fecha_de_fallo: readOptional('fecha_de_fallo'),
@@ -152,6 +155,12 @@ export function normalizeLicitacion(node) {
     fuente_del_registro: read('fuente_del_registro'),
     direccion_del_anuncio: readOptional('direccion_del_anuncio'),
   };
+}
+
+export function isLicitacionAvailable(item) {
+  const active = normalizeSearchText(item?.activo);
+  const explicitlyInactive = ['0', 'false', 'no', 'inactivo', 'inactiva'].includes(active);
+  return !explicitlyInactive && Boolean(String(item?.direccion_del_anuncio || '').trim());
 }
 
 export function getUniqueOptions(data, key) {

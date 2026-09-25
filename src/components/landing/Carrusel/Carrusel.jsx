@@ -13,7 +13,7 @@ const logos = [
   `${import.meta.env.BASE_URL}logos/urrea.svg`,
 
   `${import.meta.env.BASE_URL}logos/berel.png`,
-  `${import.meta.env.BASE_URL}logos/castel.webp`,
+  `${import.meta.env.BASE_URL}logos/castel.png`,
   `${import.meta.env.BASE_URL}logos/ae.svg`,
   `${import.meta.env.BASE_URL}logos/cemposa.png`,
 

@@ -17,10 +17,16 @@ import { filterObrasByFilters } from '../../utils/filterObras';
 
 const DATE_OPTIONS = ['Fecha de publicación', 'Fecha de inicio probable', 'Fecha de término probable'];
 const PERIOD_OPTIONS = [
-  { value: -1, label: 'Todo el periodo' }, { value: 0, label: 'Hoy' }, { value: 1, label: '1 día' },
+  { value: 0, label: 'Hoy' }, { value: 1, label: '1 día' },
   { value: 2, label: '7 días' }, { value: 3, label: '1 mes' }, { value: 4, label: '3 meses' }, { value: 5, label: '6 meses' },
 ];
-const WEEK_DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+const DEFAULT_PERIOD_INDEX = 3;
+const FREQUENCY_OPTIONS = {
+  daily: { label: 'Diario', day: 'Todos los días', helper: 'Se ejecuta todos los días.' },
+  weekly: { label: 'Semanal', day: 'Sábado', helper: 'El envío se genera los sábados.' },
+  biweekly: { label: 'Quincenal', day: 'Días 1 y 16', helper: 'El envío se genera los días 1 y 16 de cada mes.' },
+  monthly: { label: 'Mensual', day: 'Día 1', helper: 'El envío se genera el día 1 de cada mes.' },
+};
 const ESTADOS_POR_REGION_CATALOG = {
   Oeste: ['Jalisco', 'Colima', 'Michoacán', 'Nayarit', 'Aguascalientes'],
   Noroeste: ['Baja California', 'Baja California Sur', 'Sonora', 'Sinaloa', 'Chihuahua', 'Durango'],
@@ -50,8 +56,20 @@ function cloneFilters(filters = {}) {
 function createEmptyFilters() {
   return {
     regiones: [], estados: [], generos: [], subgeneros: [], tipoObra: [], tiposProyecto: [], etapas: [], sectores: [], desarrollos: [],
-    fuentes: ['construleads'], fechaConsulta: 'Fecha de publicación', periodoIndex: -1,
+    fuentes: ['construleads'], fechaConsulta: 'Fecha de publicación', periodoIndex: DEFAULT_PERIOD_INDEX,
     fechaInicio: '', fechaFin: '', fechaRango: { desde: '', hasta: '' }, investmentMin: null, investmentMax: null, surfaceMin: null, surfaceMax: null,
+  };
+}
+
+function normalizeScheduleFilters(filters = {}) {
+  const cloned = cloneFilters(filters);
+  const hasValidPeriod = PERIOD_OPTIONS.some((option) => option.value === Number(cloned.periodoIndex));
+  return {
+    ...cloned,
+    periodoIndex: hasValidPeriod ? Number(cloned.periodoIndex) : DEFAULT_PERIOD_INDEX,
+    fechaInicio: '',
+    fechaFin: '',
+    fechaRango: { desde: '', hasta: '' },
   };
 }
 
@@ -241,12 +259,10 @@ function DualRange({ id, label, hint, bounds, range, onChange, step = 1, scale =
 export default function ScheduledReportModal({ isOpen, onClose, onSave, onClear, scheduledReport = null, downloadOptions = [], selectedOption, filtros = {}, obras = [], user = {} }) {
   const initialSchedule = scheduledReport || {};
   const [usesCurrentFilters, setUsesCurrentFilters] = useState(() => initialSchedule.filterMode !== 'custom');
-  const [draftFilters, setDraftFilters] = useState(() => cloneFilters(initialSchedule.filters || filtros));
-  const [recipient, setRecipient] = useState(() => initialSchedule.recipient || user.correo || user.email || '');
+  const [draftFilters, setDraftFilters] = useState(() => normalizeScheduleFilters(initialSchedule.filters || filtros));
+  const [recipient] = useState(() => initialSchedule.recipient || user.correo || user.email || '');
   const [reportType, setReportType] = useState(() => initialSchedule.reportType || selectedOption?.value || 'pdf_obras');
   const [frequency, setFrequency] = useState(() => initialSchedule.frequency || 'weekly');
-  const [day, setDay] = useState(() => initialSchedule.day || 'Lunes');
-  const [time, setTime] = useState(() => initialSchedule.time || '08:00');
   const [openDropdown, setOpenDropdown] = useState(null);
   const [error, setError] = useState('');
 
@@ -289,7 +305,7 @@ export default function ScheduledReportModal({ isOpen, onClose, onSave, onClear,
   const resultCount = useMemo(() => filterObrasByFilters(obras, activeFilters).length, [activeFilters, obras]);
   const filterSummary = useMemo(() => getFilterSummary(activeFilters), [activeFilters]);
   const reportLabel = downloadOptions.find((option) => option.value === reportType)?.label || 'Reporte';
-  const isMonthly = frequency === 'monthly';
+  const frequencyMeta = FREQUENCY_OPTIONS[frequency] || FREQUENCY_OPTIONS.weekly;
 
   if (!isOpen) return null;
 
@@ -299,22 +315,22 @@ export default function ScheduledReportModal({ isOpen, onClose, onSave, onClear,
   const selectSource = (source) => updateFilters({ fuentes: draftFilters.fuentes.includes(source) ? draftFilters.fuentes.filter((value) => value !== source) : [...draftFilters.fuentes, source] });
   const saveSchedule = () => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.trim())) { setError('Indica un correo válido para guardar la programación.'); return; }
-    onSave({ id: scheduledReport?.id, reportType, recipient: recipient.trim(), frequency, day, time, filterMode: usesCurrentFilters ? 'current' : 'custom', filters: cloneFilters(activeFilters), reportLabel, resultCount });
+    onSave({ id: scheduledReport?.id, reportType, recipient: recipient.trim(), frequency, day: frequencyMeta.day, filterMode: usesCurrentFilters ? 'current' : 'custom', filters: cloneFilters(activeFilters), reportLabel, resultCount });
   };
 
   return <Box position="fixed" inset={0} zIndex={1200} bg="rgba(24, 33, 47, .52)" p={{ base: 2, md: 5 }} display="flex" alignItems="center" justifyContent="center" onMouseDown={onClose}>
     <Box role="dialog" aria-modal="true" aria-labelledby="scheduled-report-title" w="min(94vw, 900px)" maxH="min(880px, calc(100dvh - 28px))" overflowY="auto" bg="var(--cl-surface)" border="1px solid var(--cl-border)" borderRadius="16px" boxShadow="0 24px 64px rgba(20, 30, 46, .30)" onMouseDown={(event) => event.stopPropagation()}>
       <Flex px={{ base: 4, md: 6 }} py={4} align="center" gap={3} borderBottom="1px solid var(--cl-border)"><Flex w="42px" h="42px" align="center" justify="center" flexShrink={0} borderRadius="11px" bg="rgba(217, 91, 39, .12)" color="#C64B1D"><FiClock size={20} /></Flex><Box flex="1" minW={0}><Text id="scheduled-report-title" color="var(--cl-text-strong)" fontSize="16px" fontWeight="800">Programa un reporte</Text><Text mt={.5} color="var(--cl-text-muted)" fontSize="11px">Define la frecuencia y conserva la búsqueda exacta que debe usar.</Text></Box><Button variant="outline" minW="34px" h="34px" p={0} borderColor="var(--cl-border)" color="var(--cl-text-muted)" aria-label="Cerrar programación" onClick={onClose}><FiX size={18} /></Button></Flex>
       <Box p={{ base: 4, md: 6 }}>
-        {scheduledReport && <Flex mb={5} p={3} align="center" gap={2.5} border="1px solid rgba(217, 91, 39, .22)" borderRadius="10px" bg="rgba(217, 91, 39, .07)"><Flex w="26px" h="26px" flexShrink={0} align="center" justify="center" borderRadius="full" bg="#D95B27" color="white"><FiCheck size={14} /></Flex><Box minW={0}><Text color="#A9431C" fontSize="11px" fontWeight="800">Ya tienes una programación guardada</Text><Text mt={.5} color="var(--cl-text-muted)" fontSize="10px" lineClamp={1}>{scheduledReport.reportLabel} · {scheduledReport.frequency === 'monthly' ? `día ${scheduledReport.day}` : `cada ${scheduledReport.day}`} · {scheduledReport.time}</Text></Box></Flex>}
+        {scheduledReport && <Flex mb={5} p={3} align="center" gap={2.5} border="1px solid rgba(217, 91, 39, .22)" borderRadius="10px" bg="rgba(217, 91, 39, .07)"><Flex w="26px" h="26px" flexShrink={0} align="center" justify="center" borderRadius="full" bg="#D95B27" color="white"><FiCheck size={14} /></Flex><Box minW={0}><Text color="#A9431C" fontSize="11px" fontWeight="800">Ya tienes una programación guardada</Text><Text mt={.5} color="var(--cl-text-muted)" fontSize="10px" lineClamp={1}>{scheduledReport.reportLabel} · {FREQUENCY_OPTIONS[scheduledReport.frequency]?.label || 'Semanal'} · {FREQUENCY_OPTIONS[scheduledReport.frequency]?.day || scheduledReport.day || 'Sábado'}</Text></Box></Flex>}
         <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
           <Box><Text mb={1} color="var(--cl-text-muted)" fontSize="10px" fontWeight="800">Formato</Text><Box as="select" value={reportType} onChange={(event) => setReportType(event.target.value)} {...inputStyle}>{downloadOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</Box></Box>
-          <Box><Text mb={1} color="var(--cl-text-muted)" fontSize="10px" fontWeight="800">Destinatario</Text><Flex align="center" gap={2} px={3} h="38px" bg="var(--cl-input-bg)" border="1px solid var(--cl-border)" borderRadius="8px" color="var(--cl-text-muted)"><FiMail size={15} /><Box as="input" value={recipient} onChange={(event) => { setRecipient(event.target.value); setError(''); }} placeholder="correo@empresa.com" flex="1" minW={0} bg="transparent" border={0} color="var(--cl-text)" fontSize="12px" outline="none" /></Flex></Box>
-          <Box><Text mb={1} color="var(--cl-text-muted)" fontSize="10px" fontWeight="800">Frecuencia</Text><Box as="select" value={frequency} onChange={(event) => { const value = event.target.value; setFrequency(value); setDay(value === 'monthly' ? '1' : 'Lunes'); }} {...inputStyle}><option value="weekly">Semanal</option><option value="monthly">Mensual</option></Box></Box>
-          <SimpleGrid columns="2" gap={3}><Box><Text mb={1} color="var(--cl-text-muted)" fontSize="10px" fontWeight="800">{isMonthly ? 'Día del mes' : 'Día de envío'}</Text><Box as="select" value={day} onChange={(event) => setDay(event.target.value)} {...inputStyle}>{isMonthly ? Array.from({ length: 28 }, (_, index) => <option key={index + 1} value={String(index + 1)}>Día {index + 1}</option>) : WEEK_DAYS.map((weekDay) => <option key={weekDay} value={weekDay}>{weekDay}</option>)}</Box></Box><Box><Text mb={1} color="var(--cl-text-muted)" fontSize="10px" fontWeight="800">Hora</Text><Box as="input" type="time" value={time} onChange={(event) => setTime(event.target.value)} {...inputStyle} /></Box></SimpleGrid>
+          <Box><Text mb={1} color="var(--cl-text-muted)" fontSize="10px" fontWeight="800">Destinatario</Text><Flex align="center" gap={2} px={3} h="38px" bg="var(--cl-surface-muted)" border="1px solid var(--cl-border)" borderRadius="8px" color="var(--cl-text-muted)"><FiMail size={15} /><Box as="input" value={recipient} readOnly aria-readonly="true" placeholder="correo@empresa.com" flex="1" minW={0} bg="transparent" border={0} color="var(--cl-text)" fontSize="12px" outline="none" /></Flex></Box>
+          <Box><Text mb={1} color="var(--cl-text-muted)" fontSize="10px" fontWeight="800">Frecuencia</Text><Box as="select" value={frequency} onChange={(event) => setFrequency(event.target.value)} {...inputStyle}>{Object.entries(FREQUENCY_OPTIONS).map(([value, option]) => <option key={value} value={value}>{option.label}</option>)}</Box></Box>
+          <Box><Text mb={1} color="var(--cl-text-muted)" fontSize="10px" fontWeight="800">Día de envío</Text><Box minH="38px" px={3} py={2} bg="var(--cl-surface-muted)" border="1px solid var(--cl-border)" borderRadius="8px"><Text color="var(--cl-text)" fontSize="12px" fontWeight="700">{frequencyMeta.day}</Text><Text mt={.5} color="var(--cl-text-muted)" fontSize="9px">{frequencyMeta.helper}</Text></Box></Box>
         </SimpleGrid>
         <Box mt={6} pt={5} borderTop="1px solid var(--cl-border)"><Flex align={{ base: 'start', md: 'center' }} justify="space-between" gap={3} direction={{ base: 'column', md: 'row' }}><Box><Flex align="center" gap={2}><FiSliders size={15} color="#D95B27" /><Text color="var(--cl-text-strong)" fontSize="13px" fontWeight="800">Criterios de búsqueda</Text></Flex><Text mt={.5} color="var(--cl-text-muted)" fontSize="11px">La programación guarda una instantánea; el sidebar puede seguir cambiando sin alterarla.</Text></Box><Text px={2.5} py={1} borderRadius="full" bg="var(--cl-surface-muted)" color="var(--cl-text-muted)" fontSize="10px" fontWeight="800">{resultCount.toLocaleString('es-MX')} obras</Text></Flex>
-          <Flex mt={4} gap={2} wrap="wrap"><Button size="sm" h="33px" borderRadius="8px" bg={usesCurrentFilters ? '#D95B27' : 'var(--cl-surface)'} color={usesCurrentFilters ? 'white' : 'var(--cl-text)'} border="1px solid" borderColor={usesCurrentFilters ? '#D95B27' : 'var(--cl-border)'} leftIcon={<FiCheck size={14} />} onClick={() => { setOpenDropdown(null); setUsesCurrentFilters(true); setDraftFilters(cloneFilters(filtros)); }}>Usar selección actual</Button><Button size="sm" h="33px" borderRadius="8px" variant="outline" borderColor={!usesCurrentFilters ? '#D95B27' : 'var(--cl-border)'} color={!usesCurrentFilters ? '#B9471E' : 'var(--cl-text)'} leftIcon={<FiSliders size={14} />} onClick={() => { setOpenDropdown(null); setUsesCurrentFilters(false); }}>Configurar parámetros</Button></Flex>
+          <Flex mt={4} gap={2} wrap="wrap"><Button size="sm" h="33px" borderRadius="8px" bg={usesCurrentFilters ? '#D95B27' : 'var(--cl-surface)'} color={usesCurrentFilters ? 'white' : 'var(--cl-text)'} border="1px solid" borderColor={usesCurrentFilters ? '#D95B27' : 'var(--cl-border)'} leftIcon={<FiCheck size={14} />} onClick={() => { setOpenDropdown(null); setUsesCurrentFilters(true); setDraftFilters(normalizeScheduleFilters(filtros)); }}>Usar selección actual</Button><Button size="sm" h="33px" borderRadius="8px" variant="outline" borderColor={!usesCurrentFilters ? '#D95B27' : 'var(--cl-border)'} color={!usesCurrentFilters ? '#B9471E' : 'var(--cl-text)'} leftIcon={<FiSliders size={14} />} onClick={() => { setOpenDropdown(null); setUsesCurrentFilters(false); setDraftFilters((current) => normalizeScheduleFilters(current)); }}>Configurar parámetros</Button></Flex>
           {usesCurrentFilters ? <Box mt={3} p={3} border="1px solid var(--cl-border)" borderRadius="10px" bg="var(--cl-surface-muted)"><Flex align="center" gap={2}><FiCalendar size={14} color="#718096" /><Text color="var(--cl-text)" fontSize="11px" fontWeight="700">Selección actual</Text></Flex><Flex mt={2} gap={1.5} wrap="wrap">{filterSummary.length ? filterSummary.slice(0, 5).map((item) => <Text key={item} px={2} py={.5} borderRadius="full" bg="var(--cl-surface)" border="1px solid var(--cl-border)" color="var(--cl-text-muted)" fontSize="10px">{item}</Text>) : <Text color="var(--cl-text-muted)" fontSize="11px">Sin filtros activos: se incluirá el catálogo disponible.</Text>}{filterSummary.length > 5 && <Text px={2} py={.5} borderRadius="full" bg="var(--cl-surface)" border="1px solid var(--cl-border)" color="var(--cl-text-muted)" fontSize="10px">+{filterSummary.length - 5} criterios</Text>}</Flex></Box> : <Box mt={4} p={{ base: 3, md: 4 }} border="1px solid var(--cl-border)" borderRadius="12px" bg="var(--cl-surface-muted)">
             <Flex mb={4} align="center" justify="space-between" gap={3}><Flex align="center" gap={2}><Flex w="27px" h="27px" align="center" justify="center" borderRadius="8px" bg="rgba(217, 91, 39, .10)" color="#C64B1D"><FiLayers size={14} /></Flex><Box><Text color="var(--cl-text)" fontSize="11px" fontWeight="800">Parámetros del reporte</Text><Text color="var(--cl-text-muted)" fontSize="10px">Árboles conectados, como en el sidebar de filtros.</Text></Box></Flex><Button size="xs" variant="ghost" color="#B9471E" onClick={() => { setOpenDropdown(null); setDraftFilters(createEmptyFilters()); }}>Limpiar</Button></Flex>
             <Box mb={4} p={3} border="1px solid var(--cl-border)" borderRadius="10px" bg="var(--cl-surface)"><Flex align="center" justify="space-between" gap={3} wrap="wrap"><Box><Text color="var(--cl-text)" fontSize="11px" fontWeight="800">Fuentes</Text><Text mt={.5} color="var(--cl-text-muted)" fontSize="10px">Elige los catálogos que alimentan esta programación.</Text></Box><Flex gap={1.5} wrap="wrap">{[['construleads', 'Construleads'], ['explorer', 'Explorer']].map(([value, label]) => { const selected = draftFilters.fuentes.includes(value); return <Button key={value} size="xs" h="29px" borderRadius="full" bg={selected ? 'rgba(217, 91, 39, .13)' : 'var(--cl-input-bg)'} color={selected ? '#B9471E' : 'var(--cl-text-muted)'} border="1px solid" borderColor={selected ? '#EAA98F' : 'var(--cl-border)'} onClick={() => selectSource(value)}>{selected && <FiCheck size={12} style={{ marginRight: 4 }} />}{label}</Button>; })}</Flex></Flex></Box>
@@ -325,7 +341,7 @@ export default function ScheduledReportModal({ isOpen, onClose, onSave, onClear,
               <DropdownShell id="schedule-sector" label="Sector" value={selectedLabel(draftFilters.sectores)} isOpen={openDropdown === 'sector'} onToggle={() => toggleDropdown('sector')} disabled={!sectors.length}><FlatOptionsMenu label="Sector" options={sectors} values={draftFilters.sectores} onChange={(values) => updateFilter('sectores', values)} /></DropdownShell>
               <DropdownShell id="schedule-development" label="Tipo de desarrollo" value={selectedLabel(draftFilters.desarrollos)} isOpen={openDropdown === 'development'} onToggle={() => toggleDropdown('development')} disabled={!developments.length}><FlatOptionsMenu label="Tipo de desarrollo" options={developments} values={draftFilters.desarrollos} onChange={(values) => updateFilter('desarrollos', values)} /></DropdownShell>
             </SimpleGrid>
-            <Box mt={3} p={3} border="1px solid var(--cl-border)" borderRadius="10px" bg="var(--cl-surface)"><SimpleGrid columns={{ base: 1, md: 3 }} gap={3}><Box><Text mb={1} color="var(--cl-text-muted)" fontSize="10px" fontWeight="800">Criterio de fecha</Text><Box as="select" value={draftFilters.fechaConsulta || DATE_OPTIONS[0]} onChange={(event) => updateFilter('fechaConsulta', event.target.value)} {...inputStyle}>{DATE_OPTIONS.map((option) => <option key={option}>{option}</option>)}</Box></Box><Box><Text mb={1} color="var(--cl-text-muted)" fontSize="10px" fontWeight="800">Periodo</Text><Box as="select" value={String(draftFilters.periodoIndex ?? -1)} onChange={(event) => updateFilter('periodoIndex', Number(event.target.value))} {...inputStyle}>{PERIOD_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</Box></Box><Box><Text mb={1} color="var(--cl-text-muted)" fontSize="10px" fontWeight="800">Rango de fecha</Text><Flex gap={1.5}><Box as="input" type="date" value={draftFilters.fechaInicio || ''} onChange={(event) => updateFilter('fechaInicio', event.target.value)} {...inputStyle} minW={0} px={2} /><Box as="input" type="date" value={draftFilters.fechaFin || ''} onChange={(event) => updateFilter('fechaFin', event.target.value)} {...inputStyle} minW={0} px={2} /></Flex></Box></SimpleGrid></Box>
+            <Box mt={3} p={3} border="1px solid var(--cl-border)" borderRadius="10px" bg="var(--cl-surface)"><SimpleGrid columns={{ base: 1, md: 2 }} gap={3}><Box><Text mb={1} color="var(--cl-text-muted)" fontSize="10px" fontWeight="800">Criterio de fecha</Text><Box as="select" value={draftFilters.fechaConsulta || DATE_OPTIONS[0]} onChange={(event) => updateFilter('fechaConsulta', event.target.value)} {...inputStyle}>{DATE_OPTIONS.map((option) => <option key={option}>{option}</option>)}</Box></Box><Box><Text mb={1} color="var(--cl-text-muted)" fontSize="10px" fontWeight="800">Periodo de consulta</Text><Box as="select" value={String(draftFilters.periodoIndex ?? DEFAULT_PERIOD_INDEX)} onChange={(event) => updateFilter('periodoIndex', Number(event.target.value))} {...inputStyle}>{PERIOD_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</Box></Box></SimpleGrid></Box>
             <SimpleGrid mt={3} columns={{ base: 1, md: 2 }} gap={3}><DualRange id="schedule-investment" label="Inversión (MXN)" hint="Límites calculados con la búsqueda disponible." bounds={investmentBounds} range={investmentRange} step={1000000} scale={1000000} suffix="M" onChange={(min, max) => updateFilters({ investmentMin: min, investmentMax: max })} /><DualRange id="schedule-surface" label="Superficie (m²)" hint="Límites calculados con la búsqueda disponible." bounds={surfaceBounds} range={surfaceRange} suffix="m²" onChange={(min, max) => updateFilters({ surfaceMin: min, surfaceMax: max })} /></SimpleGrid>
           </Box>}
         </Box>

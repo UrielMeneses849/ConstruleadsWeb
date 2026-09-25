@@ -1,30 +1,21 @@
-# Landing redesign — visual QA
+# BIMSA profile, analytics and route refinements — visual QA
 
-- Source visual truth: reference screenshot supplied in the conversation (Bimsa Construleads landing redesign).
-- Implementation: `src/pages/Landing/Landing.jsx` and `src/pages/Landing/landing-redesign.css`.
-- Intended viewport: desktop reference, 768 × 2048 image; responsive breakpoints included for mobile.
-- State: default landing page, closed navigation menu, untouched contact form.
+- Source visual truth: the two annotated screenshots supplied by the user in this conversation.
+- Implementation surfaces: `src/features/companias/CompaniasView.jsx`, `src/pages/App/ConstruleadsNavbar.jsx`, `src/pages/App/MapSelectionModal.jsx`, `src/pages/App/Mapa.jsx`, and `src/utils/obrasSources.js`.
+- Browser evidence: Chrome local render at `http://localhost:5173/ConstruleadsWeb/`, reviewed in this turn at the desktop viewport.
+- States reviewed: Projects map, selected company dashboard, Analytics STD workspace, and route summary with one selected project.
 
 ## Findings
 
-- [P1] Browser-rendered comparison is unavailable in this environment.
-  - Evidence: no in-app browser control surface is exposed to capture the local implementation.
-  - Impact: visual fidelity cannot be certified against the source image from code inspection or a successful build alone.
-  - Fix: open the local landing in the available browser, capture desktop and mobile screenshots, compare to the reference, and iterate on visible differences.
+- No P0, P1, or P2 visual or interaction issues found in the reviewed states.
+- Company profile: five profile KPI cards render in one row, with the intended icon, label, value, optional detail, and compact density.
+- Navbar: the supplied Bimsa Analytics logo is legible, aligned with the right-side controls, and its button navigates to the Analytics STD workspace.
+- Route summary: the removed labels are absent; the suggested-route card shows only its title and the destination count.
+- Explorer pins: the configured base gray is lighter (`#92979E`) and its selected gray remains distinct (`#6F747B`).
 
-## Implemented scope
+## Automated checks
 
-- Rebuilt hero, social proof, testimonials, value proposition, solution cards, market segments, research/contact form, and footer.
-- Preserved the existing `Carrusel` component as requested.
-- Preserved login modal access; CTA buttons scroll to the contact form; the form has a success state.
-- Added responsive layouts for tablet and mobile.
+- ESLint passed for all changed source files.
+- Production build passed.
 
-## Required fidelity surfaces pending visual capture
-
-- Fonts and typography: Poppins hierarchy is implemented; wrapping needs rendered comparison.
-- Spacing and layout rhythm: desktop section rhythm and mobile stacking need rendered comparison.
-- Colors and visual tokens: navy/orange/white palette implemented from the source.
-- Image quality and asset fidelity: existing Bimsa logo and visual assets reused; the Mexico-map illustration is approximated with an existing Bimsa construction data asset and should be reviewed.
-- Copy and content: aligned to the supplied reference.
-
-final result: blocked
+final result: passed

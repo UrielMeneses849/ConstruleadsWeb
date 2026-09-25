@@ -8,6 +8,7 @@ import {
   LICITACION_MISSING_FALLO_LABEL,
   LICITACION_MISSING_FALLO_VALUE,
   LICITACION_UNASSIGNED_LABEL,
+  isLicitacionAvailable,
   normalizeSearchText,
   parseLicitacionAmount,
 } from './licitacionesUtils';
@@ -15,6 +16,7 @@ import {
 const columns = [
   ['clave', 'Clave', 180], ['expediente', 'Expediente', 150], ['descripcion', 'Descripción', 210],
   ['institucion_convocante', 'Institución convocante', 190], ['tipo_de_procedimiento', 'Tipo de procedimiento', 170],
+  ['tipo_de_contratacion', 'Tipo de contratación', 155], ['desarrollo', 'Desarrollo', 135], ['sector', 'Sector', 145],
   ['estado', 'Estado', 105], ['monto', 'Monto del contrato (MXN)', 185], ['estatus', 'Estatus', 115],
   ['proveedor_adjudicado', 'Proveedor adjudicado', 195], ['fecha_de_publicacion', 'Fecha de publicación', 145],
   ['fecha_de_fallo', 'Fecha de fallo', 135],
@@ -266,20 +268,24 @@ export default function LicitacionesTable({
       <Box as="tbody">
         {!pageData.length && <Box as="tr"><Box as="td" colSpan={columns.length + 3} p={8} textAlign="center" color="var(--cl-text-muted)">No hay licitaciones que coincidan con los filtros de la tabla.</Box></Box>}
         {pageData.map((item) => {
-          const favorite = favorites.has(item.id);
+          const favorite = favorites.has(item.clave);
+          const available = isLicitacionAvailable(item);
           const rowBg = favorite ? 'color-mix(in srgb, var(--cl-surface) 86%, #D9A514 14%)' : 'var(--cl-surface)';
           return <Box as="tr" key={item.id} bg={rowBg} color="var(--cl-text)"
             outline={favorite ? '1px solid #D9A514' : 'none'} outlineOffset="-1px" transition="background .18s ease">
-            <Box as="td" p={2} textAlign="center" borderBottom="1px solid var(--cl-border)"><input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => setSelectedIds((current) => {
+            <Box as="td" p={2} textAlign="center" borderBottom="1px solid var(--cl-border)"><input type="checkbox" disabled={item.isUnavailable} checked={selectedIds.has(item.id)} onChange={() => setSelectedIds((current) => {
               const next = new Set(current); if (next.has(item.id)) next.delete(item.id); else next.add(item.id); return next;
             })} /></Box>
             <Box as="td" p={2} textAlign="center" borderBottom="1px solid var(--cl-border)" borderLeft={favorite ? '2px solid #D9A514' : '2px solid transparent'}>
-              <Button size="xs" variant="ghost" color={favorite ? '#C58A00' : 'var(--cl-text-muted)'} onClick={() => toggleFavorite(item.id)} aria-label={favorite ? 'Dejar de seguir' : 'Seguir'}><FiStar fill={favorite ? 'currentColor' : 'none'} /></Button></Box>
+              <Button size="xs" variant="ghost" color={favorite ? '#C58A00' : 'var(--cl-text-muted)'} onClick={() => toggleFavorite(item)} aria-label={favorite ? 'Dejar de seguir' : 'Seguir'}><FiStar fill={favorite ? 'currentColor' : 'none'} /></Button></Box>
             <Box as="td" p={2} fontWeight="700" borderBottom="1px solid var(--cl-border)" title={item.clave}><Text whiteSpace="nowrap">{item.clave}</Text></Box>
             <Box as="td" p={2} borderBottom="1px solid var(--cl-border)" title={item.expediente}><Text lineClamp={2}>{item.expediente}</Text></Box>
             <Box as="td" p={2} borderBottom="1px solid var(--cl-border)" title={item.descripcion}><Text lineClamp={2}>{item.descripcion}</Text></Box>
             <Box as="td" p={2} borderBottom="1px solid var(--cl-border)" title={item.institucion_convocante}><Text lineClamp={2}>{item.institucion_convocante}</Text></Box>
             <Box as="td" p={2} borderBottom="1px solid var(--cl-border)">{item.tipo_de_procedimiento}</Box>
+            <Box as="td" p={2} borderBottom="1px solid var(--cl-border)">{item.tipo_de_contratacion || '—'}</Box>
+            <Box as="td" p={2} borderBottom="1px solid var(--cl-border)">{item.desarrollo || '—'}</Box>
+            <Box as="td" p={2} borderBottom="1px solid var(--cl-border)">{item.sector || '—'}</Box>
             <Box as="td" p={2} borderBottom="1px solid var(--cl-border)">{item.estado}</Box>
             <Box as="td" p={2} fontWeight="700" borderBottom="1px solid var(--cl-border)">{formatLicitacionAmount(item.monto_del_contrato_MXN)}</Box>
             <Box as="td" p={2} borderBottom="1px solid var(--cl-border)"><Text display="inline-block" px={2} py={1} borderRadius="full" {...statusStyle(item.estatus)}>{item.estatus}</Text></Box>
@@ -289,7 +295,7 @@ export default function LicitacionesTable({
             <Box as="td" p={0} textAlign="center" borderBottom="1px solid var(--cl-border)" bg={rowBg}>
               <Flex minH="52px" align="center" justify="center">
                 <Button size="xs" variant="outline" w="32px" h="32px" minW="32px" p={0} borderColor="var(--cl-border)" color="var(--cl-text-strong)" borderRadius="8px" bg={rowBg}
-                  _hover={{ bg: 'var(--cl-surface-muted)', borderColor: '#D95B27', color: '#D95B27' }} onClick={() => onOpenDetail(item)} aria-label="Ver licitación" title="Ver licitación"><FiEye size={15} /></Button>
+                  _hover={{ bg: 'var(--cl-surface-muted)', borderColor: '#D95B27', color: '#D95B27' }} onClick={() => onOpenDetail(item)} aria-label="Ver licitación" title={available ? 'Ver licitación' : `La licitación ${item.clave} ya no está disponible`}><FiEye size={15} /></Button>
               </Flex>
             </Box>
           </Box>;

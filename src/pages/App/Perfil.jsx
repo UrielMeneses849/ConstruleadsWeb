@@ -688,6 +688,7 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
             onProjects={() => navigate('/construleads/proyectos/mapa')}
             onCompanies={() => navigate('/construleads/companias')}
             onLicitaciones={() => navigate('/construleads/licitaciones')}
+            onAnalytics={() => navigate('/construleads/analytics-std')}
             onProfile={() => undefined}
             onPreferences={() => setActive('preferencias')}
             onToggleTheme={toggleColorMode}

@@ -21,6 +21,7 @@ import Mapa from './Mapa';
 import DownloadPanel from './DownloadPanel';
 import FichaTecnicaModal from './FichaTecnicaModal';
 import ConstruleadsNavbar from './ConstruleadsNavbar';
+import AnalyticsWorkspace from './AnalyticsWorkspace';
 import Perfil from './Perfil';
 import WelcomeExperience from './WelcomeExperience';
 import PerformanceAuditOverlay from '../../components/PerformanceAuditOverlay';
@@ -61,6 +62,7 @@ const TOP_LEVEL_MODULE_ORDER = {
   proyectos: 0,
   companias: 1,
   licitaciones: 2,
+  analytics: 3,
 };
 const PROJECT_VIEWS = new Set(['mapa', 'resultados', 'graficas']);
 const COMPANY_PROFILE_DATA_VERSION = 4;
@@ -247,10 +249,13 @@ export default function Construleads() {
   const isProfileModule = location.pathname.includes('/perfil');
   const isLicitacionesModule = location.pathname.includes('/licitaciones');
   const isCompaniesModule = location.pathname.includes('/companias');
+  const isAnalyticsModule = location.pathname.includes('/analytics-std');
   const topLevelModule = isProfileModule
     ? 'perfil'
     : isLicitacionesModule
       ? 'licitaciones'
+      : isAnalyticsModule
+        ? 'analytics'
       : isCompaniesModule
         ? 'companias'
         : 'proyectos';
@@ -313,6 +318,7 @@ export default function Construleads() {
   const [loadingCompanies, setLoadingCompanies] = useState(false);
   const [companiesError, setCompaniesError] = useState('');
   const [companiesSessionKey, setCompaniesSessionKey] = useState('');
+  const [companiesRetryToken, setCompaniesRetryToken] = useState(0);
   const filteredObras = useMemo(
     () => measurePerformance(
       'filters.obras',
@@ -476,7 +482,7 @@ export default function Construleads() {
   useEffect(() => {
     // Compañías y Licitaciones tienen sus propios WS. Descargar Obras al
     // entrar directamente a uno de esos módulos sólo les roba red y CPU.
-    if (isLicitacionesModule || isCompaniesModule) return undefined;
+    if (isLicitacionesModule || isCompaniesModule || isAnalyticsModule) return undefined;
 
     let isActive = true;
     const abortController = new AbortController();
@@ -670,7 +676,7 @@ export default function Construleads() {
       window.clearTimeout(startTimer);
       abortController.abort();
     };
-  }, [fullCatalogRequested, isCompaniesModule, isLicitacionesModule, user.idSession, user.idUsuario]);
+  }, [fullCatalogRequested, isAnalyticsModule, isCompaniesModule, isLicitacionesModule, user.idSession, user.idUsuario]);
 
   useEffect(() => {
     if (activeView !== 'mapa') setFullCatalogRequested(true);
@@ -690,6 +696,8 @@ export default function Construleads() {
       const userId = user.idUsuario;
       let relationshipCount = 0;
       let loadStatus = 'error';
+      let hasCachedRelationships = false;
+      const streamedRelationships = [];
       const loadSpan = startPerformanceSpan('companies.load', { userId: Boolean(userId) });
       try {
         setLoadingCompanies(true);
@@ -701,12 +709,25 @@ export default function Construleads() {
         const relationshipsPromise = obtenerCompanias({
           caller: 'Construleads',
           reason: 'companies-view',
+          onBatch: (batch) => {
+            if (!isActive || !batch?.length) return;
+            streamedRelationships.push(...batch);
+            relationshipCount = streamedRelationships.length;
+            // Si no existe una instantánea local, mostramos la primera tanda
+            // apenas llega. Las siguientes reemplazan esa instantánea fresca.
+            if (!hasCachedRelationships) {
+              setCompanyRelationships([...streamedRelationships]);
+              setLoadingCompanies(false);
+            }
+          },
         });
         const cachedRelationships = await cachedRelationshipsPromise;
         if (isActive && cachedRelationships?.length) {
+          hasCachedRelationships = true;
           // Se pintan los perfiles de la última respuesta antes de esperar la
           // red. La respuesta nueva sólo enriquece/actualiza el mismo listado.
           setCompanyRelationships(cachedRelationships);
+          setLoadingCompanies(false);
         }
         const relationships = await relationshipsPromise;
         if (isActive) {
@@ -735,7 +756,7 @@ export default function Construleads() {
     return () => {
       isActive = false;
     };
-  }, [companiesSessionKey, isCompaniesModule, isLicitacionesModule, isProfileModule, user.idSession, user.idUsuario]);
+  }, [companiesRetryToken, companiesSessionKey, isCompaniesModule, isLicitacionesModule, isProfileModule, user.idSession, user.idUsuario]);
 
   const changeView = useCallback((nextView, { animateProjectView = false } = {}) => {
     if (PROJECT_VIEWS.has(nextView)) lastProjectView.current = nextView;
@@ -838,19 +859,21 @@ export default function Construleads() {
   const handleViewFicha = useCallback(async (obra) => {
     const obraKey = obra?.clave || obra?.Clave_Proyecto || obra?.source?.clave;
     const title = obra?.proyecto || obra?.Proyecto || obra?.source?.proyecto || 'Ficha técnica';
+    const origin = getObraSource(obra?.source || obra);
     setFichaTecnica({
       isOpen: true, isLoading: true, isDownloading: false,
-      data: null, title, obraKey, error: '', downloadError: '',
+      data: null, title, obraKey, origin, error: '', downloadError: '',
     });
     try {
       const data = await getProjectDetail({
         userId: user.idUsuario,
         sessionId: user.idSession,
         obraKey,
+        origin,
       });
       setFichaTecnica({
         isOpen: true, isLoading: false, isDownloading: false,
-        data, title, obraKey, error: '', downloadError: '',
+        data, title, obraKey, origin, error: '', downloadError: '',
       });
     } catch (error) {
       setFichaTecnica({
@@ -860,6 +883,7 @@ export default function Construleads() {
         data: null,
         title,
         obraKey,
+        origin,
         error: error instanceof Error ? error.message : 'No fue posible consultar la ficha.',
         downloadError: '',
       });
@@ -878,8 +902,18 @@ export default function Construleads() {
       ...current, isDownloading: true, downloadError: '',
     }));
     try {
+      if (
+        fichaTecnica.origin !== OBRA_SOURCES.EXPLORER &&
+        fichaTecnica.data?.urlFicha
+      ) {
+        await iniciarDescargaReporte(fichaTecnica.data.urlFicha, `ficha-${obraKey}`);
+        setFichaTecnica((current) => ({ ...current, isDownloading: false }));
+        return;
+      }
       const { fileUrl } = await solicitarReporte({
-        reportType: 'pdf_obras',
+        reportType: fichaTecnica.origin === OBRA_SOURCES.EXPLORER
+          ? 'pdf_explorer'
+          : 'pdf_obras',
         userId: user.idUsuario,
         sessionId: user.idSession,
         obrasKeys: obraKey,
@@ -898,6 +932,8 @@ export default function Construleads() {
   }, [
     fichaTecnica.isDownloading,
     fichaTecnica.obraKey,
+    fichaTecnica.origin,
+    fichaTecnica.data?.urlFicha,
     user.idSession,
     user.idUsuario,
   ]);
@@ -946,12 +982,13 @@ export default function Construleads() {
       }}
     >
       <ConstruleadsNavbar
-        activeModule={isProfileModule ? 'perfil' : isLicitacionesModule ? 'licitaciones' : isCompaniesModule ? 'companias' : 'proyectos'}
+        activeModule={isProfileModule ? 'perfil' : isAnalyticsModule ? 'analytics' : isLicitacionesModule ? 'licitaciones' : isCompaniesModule ? 'companias' : 'proyectos'}
         isDarkMode={isDarkMode}
         userName={user.nombreUsuario}
         onProjects={() => openProjectView(lastProjectView.current)}
         onCompanies={openCompaniesView}
         onLicitaciones={openLicitacionesView}
+        onAnalytics={() => navigate('/construleads/analytics-std')}
         onProfile={() => navigate('/construleads/perfil')}
         onPreferences={() => navigate('/construleads/perfil', { state: { activeTab: 'preferencias' } })}
         onToggleTheme={() => setColorMode((current) => (current === 'dark' ? 'light' : 'dark'))}
@@ -1016,6 +1053,10 @@ export default function Construleads() {
       {isProfileModule ? (
         <Box className="cl-view-enter" flex="1" minW="0" minH="0" h="100%" position="relative">
           <Perfil key={location.key} embedded isDarkMode={isDarkMode} />
+        </Box>
+      ) : isAnalyticsModule ? (
+        <Box className={moduleEnterClass} flex="1" minW="0" minH="0" h="100%" display="flex">
+          <AnalyticsWorkspace />
         </Box>
       ) : (
       <Flex
@@ -1138,6 +1179,7 @@ export default function Construleads() {
                 onVisualReady={handleMapVisualReady}
                 fitRequestKey={mapFitRequestKey}
                 isDarkMode={isDarkMode}
+                user={user}
                 onViewFicha={handleViewFicha}
               />
             </Box>
@@ -1201,6 +1243,7 @@ export default function Construleads() {
                       companyRelationships={companyRelationships}
                       isLoadingCompanies={loadingCompanies}
                       companiesError={companiesError}
+                      onRetryCompanies={() => setCompaniesRetryToken((value) => value + 1)}
                       isDarkMode={isDarkMode}
                       onViewFicha={handleViewFicha}
                       companyDetailRequest={companyDetailRequest}

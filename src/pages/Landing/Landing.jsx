@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Box, Button, Flex, Grid, Heading, Image, Input, SimpleGrid, Stack, Text, Textarea } from '@chakra-ui/react';
-import { FiArrowRight, FiBarChart2, FiBriefcase, FiCheckCircle, FiChevronLeft, FiChevronRight, FiFileText, FiHome, FiInstagram, FiLinkedin, FiMail, FiMapPin, FiMenu, FiPhone, FiTool, FiUsers, FiX } from 'react-icons/fi';
+import { FiAlertCircle, FiArrowRight, FiBarChart2, FiBriefcase, FiCheckCircle, FiFileText, FiHome, FiInstagram, FiLinkedin, FiMail, FiMapPin, FiMenu, FiPhone, FiTool, FiUsers, FiX } from 'react-icons/fi';
 import Carrusel from '../../components/landing/Carrusel/Carrusel';
 import LoginModal from '../../components/Login/LoginModal';
+import { enviarContacto } from '../../api/contacto';
 import './landing-redesign.css';
 
 const base = import.meta.env.BASE_URL;
@@ -30,7 +31,32 @@ export default function Landing() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const scrollToContact = () => { document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth' }); setIsMenuOpen(false); };
+  const handleContactSubmit = async (event) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setSubmitError('');
+
+    const formData = new FormData(event.currentTarget);
+    try {
+      await enviarContacto({
+        nombre: String(formData.get('nombre') || ''),
+        empresa: String(formData.get('empresa') || ''),
+        correo: String(formData.get('correo') || ''),
+        telefono: String(formData.get('telefono') || ''),
+        interes: String(formData.get('interes') || ''),
+        comentarios: String(formData.get('comentarios') || ''),
+      });
+      setSubmitted(true);
+    } catch (error) {
+      console.error('No fue posible enviar el formulario de contacto.', error);
+      setSubmitError('No pudimos enviar tu solicitud en este momento. Conservamos tus datos para que puedas intentarlo nuevamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   useEffect(() => {
     const nodes = document.querySelectorAll('[data-landing-reveal]');
     const observer = new IntersectionObserver((entries) => entries.forEach((entry) => { if (entry.isIntersecting) { entry.target.classList.add('is-visible'); observer.unobserve(entry.target); } }), { threshold: 0.12 });
@@ -50,7 +76,7 @@ export default function Landing() {
         <Text className="landing-hero-copy">Descubre dónde se está construyendo, quién está detrás de cada proyecto<br className="desktop-only" /> e identifica nuevas oportunidades en la industria de la construcción.</Text><OrangeButton onClick={scrollToContact}>Solicita información</OrangeButton><Text className="landing-trust-label">EMPRESAS LÍDERES YA CONFÍAN EN NOSOTROS</Text>
       </Box><Carrusel /></Box>
 
-      <Box className="landing-section landing-testimonials" data-landing-reveal><SectionTitle>LÍDERES DE LA INDUSTRIA<br /><Text as="span" color="#ef4d22">ya trabajan con Bimsa Reports.</Text></SectionTitle><Grid className="landing-testimonial-grid">{testimonials.map(([quote, logo, logoAlt, role]) => <Box className="landing-testimonial-card" key={logo}><Text className="landing-quote-mark">“</Text><Text className="landing-testimonial-copy">{quote}</Text><Box mt="auto"><Box className="landing-customer-logo-wrap"><Image className={`landing-customer-logo-image logo-${logoAlt.toLowerCase().replace(/[^a-z]/g, '')}`} src={`${base}${logo}`} alt={logoAlt} /></Box><Text className="landing-customer-role">{role}</Text></Box></Box>)}</Grid><Flex justify="center" gap={3} mt={7}><Button className="landing-circle-button"><FiChevronLeft /></Button><Button className="landing-circle-button landing-circle-orange"><FiChevronRight /></Button></Flex></Box>
+      <Box id="testimonios" className="landing-section landing-testimonials" data-landing-reveal><SectionTitle>LÍDERES DE LA INDUSTRIA<br /><Text as="span" color="#ef4d22">ya trabajan con Bimsa Reports.</Text></SectionTitle><Grid className="landing-testimonial-grid">{testimonials.map(([quote, logo, logoAlt, role]) => <Box className="landing-testimonial-card" key={logo}><Text className="landing-quote-mark">“</Text><Text className="landing-testimonial-copy">{quote}</Text><Box mt="auto"><Box className="landing-customer-logo-wrap"><Image className={`landing-customer-logo-image logo-${logoAlt.toLowerCase().replace(/[^a-z]/g, '')}`} src={`${base}${logo}`} alt={logoAlt} /></Box><Text className="landing-customer-role">{role}</Text></Box></Box>)}</Grid></Box>
 
       <Box className="landing-section landing-advantage" data-landing-reveal><Grid className="landing-advantage-grid" alignItems="center"><Box><SectionTitle center={false}>Tu ventaja competitiva<br /><Text as="span" color="#ef4d22">es nuestra información.</Text></SectionTitle><Text className="landing-body-copy">Construleads reúne información actualizada y estructurada sobre nuevos proyectos de construcción en México para ayudarte a entender el mercado, identificar oportunidades y tomar mejores decisiones comerciales.</Text><OrangeButton onClick={scrollToContact}>Solicita información</OrangeButton></Box><Box className="landing-map-scene"><Image src={`${base}mexico-project-map.png`} alt="Mapa de México con proyectos de construcción" />{mapDots.map(([left, top], index) => <Box key={index} className="landing-map-live-dot" style={{ left: `${left}%`, top: `${top}%`, '--delay': `${index * -.38}s` }} />)}<Box className="landing-location-card location-one"><FiMapPin /> Desarrollo residencial<br /><Text>Monterrey, NL.</Text></Box><Box className="landing-location-card location-two"><FiMapPin /> Parque industrial<br /><Text>Querétaro, Qro.</Text></Box><Box className="landing-location-card location-three"><FiMapPin /> Obra de infraestructura<br /><Text>Mérida, Yuc.</Text></Box></Box></Grid></Box>
 
@@ -58,9 +84,51 @@ export default function Landing() {
 
       <Box className="landing-section landing-sectors" data-landing-reveal><SectionTitle>Más de <Text as="span" color="#ef4d22">15,000</Text><br />oportunidades reales detectadas<br />en el último año.</SectionTitle><Text className="landing-section-copy">Construleads te da acceso a proyectos en todo el país, en los principales segmentos<br className="desktop-only" /> de la industria de la construcción.</Text><SimpleGrid className="landing-sector-grid" columns={{ base: 1, sm: 2, lg: 4 }} gap={4}>{sectors.map(([Icon, title, text]) => <Box className="landing-sector-card" key={title}><Icon /><Heading>{title}</Heading><Text>{text}</Text></Box>)}</SimpleGrid></Box>
 
-      <Box id="contacto" className="landing-research" data-landing-reveal><Grid className="landing-research-grid" alignItems="start"><Box><Text className="landing-eyebrow">BIMSA RESEARCH</Text><SectionTitle center={false}>Inteligencia de mercado<br />para tomar <Text as="span" color="#ef4d22">mejores decisiones.</Text></SectionTitle><Text className="landing-body-copy">Estudios especializados para la industria de la construcción, basados en información propia de proyectos, análisis de mercado e investigación directa con profesionales del sector.</Text><Stack className="landing-research-list">{research.map((item, index) => <Flex key={item} gap={5}><Text>{index + 1}</Text><Box><Heading>{item}</Heading><Text>{researchCopy[index]}</Text></Box></Flex>)}</Stack></Box><Box className="landing-form-card"><Text className="landing-eyebrow">HABLEMOS</Text><Heading>Cuéntanos qué necesitas</Heading><Text>Uno de nuestros expertos te contactará para entender tus necesidades y compartirte más información.</Text>{submitted ? <Box className="landing-form-success"><FiCheckCircle /><Text>¡Gracias! Recibimos tu solicitud y te contactaremos pronto.</Text></Box> : <Box as="form" onSubmit={(event) => { event.preventDefault(); setSubmitted(true); }}><SimpleGrid columns={{ base: 1, sm: 2 }} gap={3}><Input required placeholder="Nombre *" /><Input required placeholder="Empresa *" /></SimpleGrid><Input required type="email" placeholder="Correo electrónico *" /><Input placeholder="Teléfono *" /><Box as="select" className="landing-native-select" required defaultValue=""><option value="" disabled>¿En qué estás interesado? *</option><option>Proyectos</option><option>Compañías</option><option>Licitaciones</option><option>Bimsa Research</option></Box><Textarea placeholder="Cuéntanos más sobre tus necesidades..." rows={4} /><OrangeButton type="submit" w="100%">Enviar solicitud</OrangeButton></Box>}<Text className="landing-form-legal">Al enviar este formulario aceptas que Bimsa Reports se ponga en contacto contigo.</Text></Box></Grid></Box>
+      <Box id="contacto" className="landing-research" data-landing-reveal><Grid className="landing-research-grid" alignItems="start"><Box><Text className="landing-eyebrow">BIMSA RESEARCH</Text><SectionTitle center={false}>Inteligencia de mercado<br />para tomar <Text as="span" color="#ef4d22">mejores decisiones.</Text></SectionTitle><Text className="landing-body-copy">Estudios especializados para la industria de la construcción, basados en información propia de proyectos, análisis de mercado e investigación directa con profesionales del sector.</Text><Stack className="landing-research-list">{research.map((item, index) => <Flex key={item} gap={5}><Text>{index + 1}</Text><Box><Heading>{item}</Heading><Text>{researchCopy[index]}</Text></Box></Flex>)}</Stack></Box><Box className="landing-form-card"><Text className="landing-eyebrow">HABLEMOS</Text><Heading>Cuéntanos qué necesitas</Heading><Text>Uno de nuestros expertos te contactará para entender tus necesidades y compartirte más información.</Text>{submitted ? <Box className="landing-form-success" role="status"><FiCheckCircle /><Box><Heading>¡Solicitud enviada exitosamente!</Heading><Text>Gracias por contactarnos. Uno de nuestros expertos se pondrá en contacto contigo muy pronto.</Text></Box></Box> : <Box as="form" onSubmit={handleContactSubmit}><SimpleGrid columns={{ base: 1, sm: 2 }} gap={3}><Input name="nombre" required placeholder="Nombre *" /><Input name="empresa" required placeholder="Empresa *" /></SimpleGrid><Input name="correo" required type="email" placeholder="Correo electrónico *" /><Input name="telefono" required type="tel" placeholder="Teléfono *" /><Box as="select" name="interes" className="landing-native-select" required defaultValue=""><option value="" disabled>¿En qué estás interesado? *</option><option>Proyectos</option><option>Compañías</option><option>Licitaciones</option><option>Bimsa Research</option></Box><Textarea name="comentarios" placeholder="Cuéntanos más sobre tus necesidades..." rows={4} />{submitError && <Flex className="landing-form-error" role="alert"><FiAlertCircle /><Text>{submitError}</Text></Flex>}<OrangeButton type="submit" w="100%" disabled={isSubmitting}>{isSubmitting ? 'Enviando solicitud…' : 'Enviar solicitud'}</OrangeButton></Box>}<Text className="landing-form-legal">Al enviar este formulario aceptas que Bimsa Reports se ponga en contacto contigo.</Text></Box></Grid></Box>
     </Box>
-    <Box as="footer" className="landing-footer"><Grid className="landing-footer-grid"><Box><Image src={`${base}bimsa-logo.png`} alt="Bimsa Reports" maxW="190px" /><Text>Información estratégica<br />para hacer crecer tu negocio.</Text><Flex gap={3} mt={5}><FiLinkedin /><FiInstagram /><FiMail /></Flex></Box><Box><Heading>CONTACTO</Heading><Text><FiPhone /> Tel. 55 5627908412</Text><Text><FiMail /> correo@bimsa.com.mx</Text><Text>bimsareports.com</Text><Text>Lunes a Viernes 9:00 - 18:00 hrs.</Text></Box><Box><Heading>EMPRESA</Heading><Text>¿Qué es Bimsa Reports?</Text><Text>Beneficios</Text><Text>Quiénes somos</Text><Text>Preguntas frecuentes</Text></Box><Box><Heading>LEGAL</Heading><Text>Términos y condiciones</Text><Text>Aviso de privacidad</Text><Text>Políticas de uso</Text><Text>Políticas de cookies</Text></Box></Grid><Text className="landing-copyright">© 2026 Bimsa Reports. Todos los derechos reservados.</Text></Box>
+    <Box as="footer" id="pie-de-pagina" className="landing-footer">
+      <Grid className="landing-footer-grid">
+        <Box>
+          <Image src={`${base}bimsa-logo.png`} alt="Bimsa Reports" maxW="190px" />
+          <Text>Información estratégica<br />para hacer crecer tu negocio.</Text>
+          <Flex className="landing-social-links" gap={3} mt={5}>
+            <Box
+              as="a"
+              href="https://www.linkedin.com/company/bimsa-reports/posts/?feedView=all"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Visitar LinkedIn de Bimsa Reports"
+            >
+              <FiLinkedin />
+            </Box>
+            <Box
+              as="a"
+              href="https://www.instagram.com/bimsareportsmx/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Visitar Instagram de Bimsa Reports"
+            >
+              <FiInstagram />
+            </Box>
+            <Box as="a" href="mailto:correo@bimsa.com.mx" aria-label="Enviar correo a Bimsa Reports">
+              <FiMail />
+            </Box>
+          </Flex>
+        </Box>
+        <Box>
+          <Heading>CONTACTO</Heading>
+          <Text><FiPhone /> Tel. 55 5627908412</Text>
+          <Text><FiMail /> correo@bimsa.com.mx</Text>
+          <Text>bimsareports.com</Text>
+        </Box>
+        <Box>
+          <Heading>LEGAL</Heading>
+          <Text>Términos y condiciones</Text>
+          <Text>Aviso de privacidad</Text>
+        </Box>
+      </Grid>
+      <Text className="landing-copyright">© 2026 Bimsa Reports. Todos los derechos reservados.</Text>
+    </Box>
     <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
   </Box>;
 }

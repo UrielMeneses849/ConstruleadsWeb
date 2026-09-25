@@ -140,6 +140,16 @@ function parseObras(xml = '') {
       hasValidCoordinates:
         Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0,
       localizacion: get('Localizacion1'),
+      municipio: cleanText(get('Municipio', 'Municipio_Proyecto', 'muni_descripcion')),
+      codigoPostal: cleanText(get('Codigo_Postal', 'Código_Postal', 'CP', 'C_P')),
+      porcentajeAvance: get(
+        'PorcentajeAvance',
+        'Porcentaje_Avance',
+        'Avance_Estimado',
+        'Porcentaje_Avance_Estimado',
+        'Avance',
+      ),
+      urlFicha: get('URL_Ficha', 'Url_Ficha', 'url_ficha', 'Ficha_URL'),
       descripcion: get('Descripcion'),
       compania,
       rfcCompania,

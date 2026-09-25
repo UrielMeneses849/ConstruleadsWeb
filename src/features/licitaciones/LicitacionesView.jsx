@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Button, Flex, Heading, Spinner, Text } from '@chakra-ui/react';
 import { FiChevronLeft, FiChevronRight, FiRefreshCw, FiStar } from 'react-icons/fi';
-import { leerLicitacionesCache, obtenerLicitaciones } from './licitacionesApi';
+import {
+  guardarSeguimientoLicitacion,
+  leerLicitacionesCache,
+  obtenerLicitaciones,
+  obtenerLicitacionesSeguidas,
+} from './licitacionesApi';
 import LicitacionesSidebar from './LicitacionesSidebar';
 import LicitacionesTable from './LicitacionesTable';
 import LicitacionDrawer from './LicitacionDrawer';
@@ -140,6 +145,25 @@ function matchesLookup(values, value) {
   return !values.size || values.has(normalizeSearchText(value));
 }
 
+function migrateFavoriteKeys(current, items = [], pruneLegacyIds = false) {
+  const legacyToKey = new Map(items.map((item) => [String(item.id), String(item.clave)]));
+  const next = new Set();
+  let changed = false;
+  current.forEach((value) => {
+    const normalized = String(value);
+    const migrated = legacyToKey.get(normalized);
+    if (migrated) {
+      next.add(migrated);
+      changed ||= migrated !== normalized;
+    } else if (!pruneLegacyIds || !/^\d+$/.test(normalized)) {
+      next.add(normalized);
+    } else {
+      changed = true;
+    }
+  });
+  return changed ? next : current;
+}
+
 export default function LicitacionesView({ user }) {
   const [initialCache] = useState(() => {
     const rawInitialCache = leerLicitacionesCache(user.idUsuario, user.idSession);
@@ -148,6 +172,7 @@ export default function LicitacionesView({ user }) {
   const [data, setData] = useState(() => initialCache || []);
   const [loading, setLoading] = useState(() => !initialCache);
   const [error, setError] = useState('');
+  const [followError, setFollowError] = useState('');
   const [retryToken, setRetryToken] = useState(0);
   const [filters, setFilters] = useState(initialSidebarFilters);
   const [tableFilters, setTableFilters] = useState({});
@@ -161,8 +186,42 @@ export default function LicitacionesView({ user }) {
   const progressiveFrameRef = useRef(null);
   const favoritesKey = `construleads-licitaciones-favoritos-${user.idUsuario}`;
   const [favorites, setFavorites] = useState(() => {
-    try { return new Set(JSON.parse(localStorage.getItem(favoritesKey) || '[]')); } catch { return new Set(); }
+    try {
+      const stored = new Set(JSON.parse(localStorage.getItem(favoritesKey) || '[]'));
+      return initialCache ? migrateFavoriteKeys(stored, initialCache) : stored;
+    } catch {
+      return new Set();
+    }
   });
+  const favoritesRef = useRef(favorites);
+
+  useEffect(() => {
+    favoritesRef.current = favorites;
+  }, [favorites]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let isActive = true;
+
+    obtenerLicitacionesSeguidas({ userId: user.idUsuario, signal: controller.signal })
+      .then(({ claves }) => {
+        if (!isActive) return;
+        const synchronized = new Set(claves.map((clave) => String(clave).trim()).filter(Boolean));
+        favoritesRef.current = synchronized;
+        setFavorites(synchronized);
+        setFollowError('');
+      })
+      .catch((requestError) => {
+        if (!isActive || requestError?.name === 'AbortError') return;
+        console.warn('[BIMSA] No se pudieron consultar las licitaciones seguidas.', requestError);
+        setFollowError('No se pudo sincronizar el seguimiento; se muestran los datos guardados en este navegador.');
+      });
+
+    return () => {
+      isActive = false;
+      controller.abort();
+    };
+  }, [user.idUsuario]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -197,6 +256,7 @@ export default function LicitacionesView({ user }) {
       cancelProgressiveCommit();
       progressiveDataRef.current = [];
       setData(normalizeLoadedLicitaciones(cached));
+      setFavorites((current) => migrateFavoriteKeys(current, cached));
       setError('');
       setLoading(false);
       return cached;
@@ -208,6 +268,7 @@ export default function LicitacionesView({ user }) {
       signal: controller.signal,
       caller: 'LicitacionesView',
       reason: 'view-mount',
+      forceRefresh: true,
       onBatch: (batch) => {
         if (!isActive || !batch.length || hasPersistentCache) return;
         hasVisibleData = true;
@@ -236,6 +297,7 @@ export default function LicitacionesView({ user }) {
         const normalizedItems = normalizeLoadedLicitaciones(items);
         progressiveDataRef.current = normalizedItems;
         setData(normalizedItems);
+        setFavorites((current) => migrateFavoriteKeys(current, items, true));
         setError('');
         if (items?.length) void writeCachedLicitaciones(user.idUsuario, items);
       })
@@ -259,9 +321,34 @@ export default function LicitacionesView({ user }) {
     localStorage.setItem(favoritesKey, JSON.stringify([...favorites]));
   }, [favorites, favoritesKey]);
 
-  const toggleFavorite = useCallback((id) => setFavorites((current) => {
-    const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next;
-  }), []);
+  const toggleFavorite = useCallback((item) => {
+    const clave = String(item?.clave || '').trim();
+    if (!clave) return;
+    const previous = favoritesRef.current;
+    const shouldFollow = !previous.has(clave);
+    const next = new Set(previous);
+    if (shouldFollow) next.add(clave); else next.delete(clave);
+    favoritesRef.current = next;
+    setFavorites(next);
+    setFollowError('');
+
+    void guardarSeguimientoLicitacion({
+      userId: user.idUsuario,
+      clave,
+      followed: shouldFollow,
+    }).catch((requestError) => {
+      console.warn('[BIMSA] No se pudo sincronizar el seguimiento de licitación.', requestError);
+      // Solo revierte si el usuario no volvió a cambiar esta licitación
+      // mientras la petición estaba en curso.
+      if (favoritesRef.current.has(clave) === shouldFollow) {
+        const rollback = new Set(favoritesRef.current);
+        if (shouldFollow) rollback.delete(clave); else rollback.add(clave);
+        favoritesRef.current = rollback;
+        setFavorites(rollback);
+      }
+      setFollowError(requestError?.message || 'No fue posible actualizar el seguimiento.');
+    });
+  }, [user.idUsuario]);
 
   const updateSidebarFilters = useCallback((nextFilters) => {
     setFilters(nextFilters);
@@ -297,7 +384,7 @@ export default function LicitacionesView({ user }) {
     [filters],
   );
   const matchesSidebarFilters = useCallback((item, { ignoreStates = false } = {}) => {
-    if (onlyFollowed) return favorites.has(item.id);
+    if (onlyFollowed) return favorites.has(item.clave);
     if (!ignoreStates && !matchesLookup(sidebarFilterLookup.states, item.estado)) return false;
     if (!matchesLookup(sidebarFilterLookup.orders, item.orden_de_gobierno)) return false;
     if (!matchesLookup(sidebarFilterLookup.procedures, item.tipo_de_procedimiento)) return false;
@@ -314,13 +401,44 @@ export default function LicitacionesView({ user }) {
     return true;
   }, [favorites, onlyFollowed, sidebarFilterLookup]);
 
+  const dataWithUnavailableFollowed = useMemo(() => {
+    if (!onlyFollowed || !favorites.size) return data;
+    const availableKeys = new Set(data.map((item) => String(item.clave)));
+    const missing = [...favorites]
+      .map(String)
+      .filter((clave) => clave && !/^\d+$/.test(clave) && !availableKeys.has(clave))
+      .map((clave) => ({
+        id: `unavailable:${clave}`,
+        clave,
+        expediente: 'Folio no disponible',
+        descripcion: 'Esta licitación seguida ya no forma parte de la información entregada por la fuente.',
+        institucion_convocante: 'Sin información',
+        tipo_de_procedimiento: 'Sin información',
+        tipo_de_contratacion: '',
+        desarrollo: '',
+        sector: '',
+        estado: 'Sin asignación',
+        monto_del_contrato_MXN: null,
+        estatus: 'No disponible',
+        proveedor_adjudicado: 'Sin asignación',
+        fecha_de_publicacion: '',
+        fecha_de_fallo: '',
+        direccion_del_anuncio: '',
+        activo: '0',
+        isUnavailable: true,
+        __fechaPublicacionTimestamp: null,
+        __fechaFalloTimestamp: null,
+      }));
+    return missing.length ? [...data, ...missing] : data;
+  }, [data, favorites, onlyFollowed]);
+
   const sidebarContext = useMemo(
     () => measurePerformance(
       'licitaciones.sidebar-filters',
-      { records: data.length },
-      () => data.filter((item) => matchesSidebarFilters(item))
+      { records: dataWithUnavailableFollowed.length },
+      () => dataWithUnavailableFollowed.filter((item) => matchesSidebarFilters(item))
     ),
-    [data, matchesSidebarFilters],
+    [dataWithUnavailableFollowed, matchesSidebarFilters],
   );
 
   const sidebarAmountBounds = useMemo(() => {
@@ -425,6 +543,7 @@ export default function LicitacionesView({ user }) {
       <Flex justify="space-between" align="center" mb={3} gap={4} wrap="wrap">
         <Box><Heading fontSize="22px" color="var(--cl-text-strong)">Licitaciones</Heading><Text fontSize="11px" color="var(--cl-text-muted)">{filtered.length.toLocaleString('es-MX')} registros · {metrics.verified.toLocaleString('es-MX')} contratos verificados</Text></Box>
         <Flex align="center" gap={2}>
+          {followError && <Text role="alert" maxW="360px" fontSize="10px" color="#B9471E">{followError}</Text>}
           <Button size="sm" variant={onlyFollowed ? 'solid' : 'outline'} bg={onlyFollowed ? '#FFF4D6' : 'var(--cl-surface)'} color={onlyFollowed ? '#946200' : 'var(--cl-text)'} onClick={toggleOnlyFollowed}><FiStar /> Ver solo seguidas ({favorites.size})</Button>
         </Flex>
       </Flex>
@@ -443,7 +562,7 @@ export default function LicitacionesView({ user }) {
       {!sidebarFiltered.length ? <Flex flex="1" border="1px solid var(--cl-border)" borderRadius="12px" align="center" justify="center" direction="column" color="var(--cl-text-muted)">
         <FiStar size={25} /><Text mt={3} fontWeight="700" color="var(--cl-text-strong)">{onlyFollowed ? 'Aún no sigues ninguna licitación.' : 'No encontramos licitaciones con los filtros seleccionados.'}</Text>
         {onlyFollowed && <Text fontSize="11px">Marca la estrella de una fila para darle seguimiento.</Text>}
-      </Flex> : <LicitacionesTable allData={data} amountData={sidebarContext} pageData={pageData} filteredIds={filtered.map((item) => item.id)} {...{
+      </Flex> : <LicitacionesTable allData={dataWithUnavailableFollowed} amountData={sidebarContext} pageData={pageData} filteredIds={filtered.filter((item) => !item.isUnavailable).map((item) => item.id)} {...{
         selectedIds, setSelectedIds, favorites, toggleFavorite, tableFilters,
       }} setTableFilters={updateTableFilters} sortConfig={sortConfig} setSortConfig={setSortConfig} onOpenDetail={setDetail} />}
       <Flex flexShrink={0} justify="space-between" align="center" px={3} py={2.5} bg="var(--cl-surface)" borderX="1px solid var(--cl-border)" borderBottom="1px solid var(--cl-border)" borderRadius="0 0 10px 10px">
@@ -458,6 +577,6 @@ export default function LicitacionesView({ user }) {
         <Text color="var(--cl-text-muted)" fontSize="11px">{selectedIds.size.toLocaleString('es-MX')} seleccionados</Text>
       </Flex>
     </Flex>
-    <LicitacionDrawer item={detail} followed={detail ? favorites.has(detail.id) : false} onToggleFollow={() => detail && toggleFavorite(detail.id)} onClose={() => setDetail(null)} />
+    <LicitacionDrawer item={detail} followed={detail ? favorites.has(detail.clave) : false} onToggleFollow={() => detail && toggleFavorite(detail)} onClose={() => setDetail(null)} />
   </Flex>;
 }

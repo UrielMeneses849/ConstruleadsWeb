@@ -1,50 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
-import { Box, Button, Flex, HStack, Image, Stack, Text } from '@chakra-ui/react';
-import {
-  FiActivity,
-  FiBell,
-  FiDownload,
-  FiFileText,
-  FiLogOut,
-  FiMoon,
-  FiSliders,
-  FiSun,
-  FiTrendingUp,
-  FiUsers,
-} from 'react-icons/fi';
-import {
-  getActiveRadarNotifications,
-  RADAR_PREFERENCES_UPDATED_EVENT,
-} from '../../utils/radarNotifications';
-import { getDownloadHistory } from '../../utils/downloadHistory';
+import { Box, Flex, HStack, Image } from '@chakra-ui/react';
+import { FiLogOut, FiMoon, FiSun } from 'react-icons/fi';
 
 function getInitials(name = '') {
   const parts = String(name).trim().split(/\s+/).filter(Boolean);
   const first = parts[0]?.[0] || 'U';
   const second = parts[1]?.[0] || parts[0]?.[1] || 'M';
   return `${first}${second}`.toUpperCase();
-}
-
-function getCurrentMonthDownloads() {
-  const now = new Date();
-  return getDownloadHistory().filter((item) => {
-    const date = new Date(item?.createdAt || item?.date || '');
-    return !Number.isNaN(date.getTime())
-      && date.getMonth() === now.getMonth()
-      && date.getFullYear() === now.getFullYear();
-  }).length;
-}
-
-function notificationIcon(kind) {
-  const icons = {
-    projects: FiTrendingUp,
-    tenders: FiFileText,
-    radar: FiSliders,
-    changes: FiActivity,
-    companies: FiUsers,
-    usage: FiDownload,
-  };
-  return icons[kind] || FiBell;
 }
 
 function NavbarItem({ active, children, onClick }) {
@@ -71,129 +32,6 @@ function NavbarItem({ active, children, onClick }) {
   );
 }
 
-function NotificationsMenu({ onPreferences }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState(() => (
-    getActiveRadarNotifications({ monthlyDownloads: getCurrentMonthDownloads() })
-  ));
-  const menuRef = useRef(null);
-
-  useEffect(() => {
-    const refresh = () => {
-      setNotifications(getActiveRadarNotifications({ monthlyDownloads: getCurrentMonthDownloads() }));
-    };
-    const closeOnOutsideClick = (event) => {
-      if (!menuRef.current?.contains(event.target)) setIsOpen(false);
-    };
-
-    window.addEventListener(RADAR_PREFERENCES_UPDATED_EVENT, refresh);
-    window.addEventListener('construleads-download-history-updated', refresh);
-    window.addEventListener('storage', refresh);
-    document.addEventListener('mousedown', closeOnOutsideClick);
-    return () => {
-      window.removeEventListener(RADAR_PREFERENCES_UPDATED_EVENT, refresh);
-      window.removeEventListener('construleads-download-history-updated', refresh);
-      window.removeEventListener('storage', refresh);
-      document.removeEventListener('mousedown', closeOnOutsideClick);
-    };
-  }, []);
-
-  return (
-    <Box ref={menuRef} position="relative">
-      <Box
-        as="button"
-        type="button"
-        position="relative"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        w="32px"
-        h="32px"
-        color="white"
-        borderRadius="9px"
-        transition="all 180ms ease"
-        _hover={{ bg: 'rgba(255,255,255,.18)' }}
-        onClick={() => setIsOpen((current) => !current)}
-        aria-label="Abrir notificaciones"
-        aria-expanded={isOpen}
-        title="Notificaciones"
-      >
-        <FiBell size={20} />
-        {notifications.length > 0 && (
-          <Flex
-            position="absolute"
-            top="1px"
-            right="1px"
-            minW="15px"
-            h="15px"
-            px="3px"
-            borderRadius="full"
-            bg="white"
-            color="#B9471E"
-            fontSize="9px"
-            lineHeight="1"
-            fontWeight="800"
-            border="1px solid #B9471E"
-            align="center"
-            justify="center"
-          >
-            {notifications.length > 9 ? '9+' : notifications.length}
-          </Flex>
-        )}
-      </Box>
-
-      {isOpen && (
-        <Box
-          position="absolute"
-          zIndex="200"
-          right="0"
-          top="calc(100% + 12px)"
-          w="370px"
-          maxW="calc(100vw - 32px)"
-          bg="var(--cl-surface, #FFFFFF)"
-          color="var(--cl-text, #252525)"
-          border="1px solid var(--cl-border, #E5E3DF)"
-          borderRadius="16px"
-          boxShadow="0 18px 42px rgba(20,20,20,.22)"
-          overflow="hidden"
-        >
-          <Flex px={4} py={3.5} align="center" justify="space-between" borderBottom="1px solid var(--cl-border, #E5E3DF)">
-            <Box>
-              <Text fontSize="13px" fontWeight="800">Notificaciones</Text>
-              <Text mt={.5} fontSize="10px" color="var(--cl-text-muted, #777777)">Según tus preferencias activas</Text>
-            </Box>
-            <Box px={2} py={.5} borderRadius="full" bg="rgba(217, 91, 39,.12)" color="#B9471E" fontSize="10px" fontWeight="700">
-              {notifications.length} activas
-            </Box>
-          </Flex>
-          <Stack p={2} gap={1} maxH="360px" overflowY="auto">
-            {notifications.length ? notifications.map((notification) => {
-              const Icon = notificationIcon(notification.kind);
-              return (
-                <Flex key={notification.id} gap={3} p={3} borderRadius="11px" align="flex-start" _hover={{ bg: 'rgba(217, 91, 39,.06)' }}>
-                  <Flex w="30px" h="30px" borderRadius="9px" bg="rgba(217, 91, 39,.12)" color="#B9471E" align="center" justify="center" flexShrink="0"><Icon size={15} /></Flex>
-                  <Box minW="0">
-                    <Text fontSize="12px" fontWeight="700">{notification.title}</Text>
-                    <Text mt={.5} fontSize="10px" color="var(--cl-text-muted, #777777)" lineClamp={2}>{notification.detail}</Text>
-                  </Box>
-                </Flex>
-              );
-            }) : (
-              <Text px={3} py={6} textAlign="center" fontSize="11px" color="var(--cl-text-muted, #777777)">No tienes notificaciones activas.</Text>
-            )}
-          </Stack>
-          <Box p={3} borderTop="1px solid var(--cl-border, #E5E3DF)">
-            <Button w="100%" size="sm" variant="outline" borderColor="rgba(217, 91, 39,.45)" color="#B9471E" _hover={{ bg: 'rgba(217, 91, 39,.08)' }}
-              onClick={() => { setIsOpen(false); onPreferences?.(); }}>
-              <FiSliders /> Configurar preferencias
-            </Button>
-          </Box>
-        </Box>
-      )}
-    </Box>
-  );
-}
-
 export default function ConstruleadsNavbar({
   activeModule = 'proyectos',
   isDarkMode,
@@ -201,8 +39,8 @@ export default function ConstruleadsNavbar({
   onProjects,
   onCompanies,
   onLicitaciones,
+  onAnalytics,
   onProfile,
-  onPreferences,
   onToggleTheme,
   onLogout,
 }) {
@@ -240,6 +78,25 @@ export default function ConstruleadsNavbar({
 
       <HStack spacing={3} flexShrink={0}>
         <Box
+          as="button"
+          type="button"
+          h="36px"
+          px={2.5}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          borderRadius="9px"
+          border="1px solid rgba(255,255,255,.42)"
+          bg={activeModule === 'analytics' ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.1)'}
+          transition="background 180ms ease, transform 180ms ease"
+          _hover={{ bg: 'rgba(255,255,255,.2)', transform: 'translateY(-1px)' }}
+          onClick={onAnalytics}
+          aria-label="Abrir Bimsa Analytics"
+          title="Bimsa Analytics"
+        >
+          <Image src={`${import.meta.env.BASE_URL}bimsa-analytics-white.svg`} alt="Bimsa Analytics" w="118px" h="25px" objectFit="contain" />
+        </Box>
+        <Box
           as={isDarkMode ? FiSun : FiMoon}
           boxSize="20px"
           color="white"
@@ -255,7 +112,6 @@ export default function ConstruleadsNavbar({
             if (event.key === 'Enter' || event.key === ' ') onToggleTheme?.();
           }}
         />
-        <NotificationsMenu onPreferences={onPreferences} />
         <Box
           as={FiLogOut}
           boxSize="20px"

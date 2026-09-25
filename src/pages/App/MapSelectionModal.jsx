@@ -8,6 +8,7 @@ import {
   FiTrash2,
   FiX,
 } from 'react-icons/fi';
+import { downloadRoutePackage } from '../../utils/routeDownloadPackage';
 
 const MAX_ROUTE_STOPS_PER_SEGMENT = 10;
 
@@ -31,28 +32,6 @@ function getProjectKey(obra) {
 
 function getProjectType(obra) {
   return getFirstValue(obra?.tipoObra, obra?.tipo_obra, obra?.tipoDeObra, '');
-}
-
-function getProjectAddress(obra) {
-  const directAddress = getFirstValue(
-    obra?.direccion,
-    obra?.Direccion,
-    obra?.ubicacion,
-    obra?.Ubicacion,
-    obra?.localizacion,
-    obra?.Localizacion1,
-  );
-
-  if (directAddress) return directAddress;
-
-  const municipality = getFirstValue(
-    obra?.municipio,
-    obra?.muni_descripcion,
-    obra?.Municipio,
-    obra?.municipio_descripcion,
-  );
-  const state = getFirstValue(obra?.estado, obra?.esta_descripcion, obra?.Estado);
-  return [municipality, state].filter(Boolean).join(', ') || 'Ubicación por confirmar';
 }
 
 function formatMdp(value) {
@@ -150,93 +129,10 @@ function openSuggestedRoute(route) {
   window.open(`https://www.google.com/maps/dir/?${params.toString()}`, '_blank', 'noopener,noreferrer');
 }
 
-function buildSelectionRows(obras) {
-  return obras.map((obra, index) => {
-    const coordinate = getCoordinate(obra);
-    return {
-      'Orden de selección': index + 1,
-      Clave: getProjectKey(obra),
-      Proyecto: getProjectName(obra),
-      Género: getFirstValue(obra?.genero, obra?.género),
-      Subgénero: getFirstValue(obra?.subgenero, obra?.subgénero),
-      'Tipo de obra': getProjectType(obra),
-      Estado: getFirstValue(obra?.estado, obra?.estadoNombre),
-      Dirección: getProjectAddress(obra),
-      'Inversión (MXN)': Number(obra?.inversion) || 0,
-      'Superficie (m²)': Number(obra?.superficie) || 0,
-      Latitud: coordinate?.lat ?? '',
-      Longitud: coordinate?.lng ?? '',
-    };
-  });
-}
-
-function buildRouteRows(route, routeSegments) {
-  if (!route.length) {
-    return [{ Nota: 'No hay suficientes proyectos con coordenadas para sugerir una ruta.' }];
-  }
-
-  return route.map(({ obra, coordinate }, index) => {
-    const segment = routeSegments.find(({ startStop, endStop }) => (
-      index + 1 >= startStop && index + 1 <= endStop
-    ));
-    return {
-    'Parada global': index + 1,
-    Tramo: segment?.number || 1,
-    Proyecto: getProjectName(obra),
-    Clave: getProjectKey(obra),
-    Estado: getFirstValue(obra?.estado, obra?.estadoNombre),
-    Dirección: getProjectAddress(obra),
-    'Tipo de obra': getProjectType(obra),
-    Latitud: coordinate.lat,
-    Longitud: coordinate.lng,
-    };
-  });
-}
-
-function setSheetPresentation(sheet, columnWidths, numericColumns = []) {
-  sheet['!cols'] = columnWidths.map((width) => ({ wch: width }));
-  const range = sheet['!ref'];
-  if (range) sheet['!autofilter'] = { ref: range };
-
-  numericColumns.forEach(({ column, format }) => {
-    for (let row = 1; ; row += 1) {
-      const cell = sheet[`${column}${row + 1}`];
-      if (!cell) break;
-      cell.z = format;
-    }
-  });
-}
-
-async function exportSelectionToExcel(obras, route, routeSegments) {
-  // Carga diferida: la librería de Excel sólo se descarga cuando hace falta.
-  const XLSX = await import('xlsx');
-  const workbook = XLSX.utils.book_new();
-  const selectionSheet = XLSX.utils.json_to_sheet(buildSelectionRows(obras));
-  setSheetPresentation(
-    selectionSheet,
-    [18, 18, 54, 18, 18, 34, 20, 34, 19, 19, 14, 14],
-    [
-      { column: 'I', format: '#,##0' },
-      { column: 'J', format: '#,##0' },
-      { column: 'K', format: '0.000000' },
-      { column: 'L', format: '0.000000' },
-    ]
-  );
-  XLSX.utils.book_append_sheet(workbook, selectionSheet, 'Proyectos seleccionados');
-
-  const routeSheet = XLSX.utils.json_to_sheet(buildRouteRows(route, routeSegments));
-  setSheetPresentation(routeSheet, [14, 10, 54, 18, 20, 34, 14, 14, 14], [
-    { column: 'H', format: '0.000000' },
-    { column: 'I', format: '0.000000' },
-  ]);
-  XLSX.utils.book_append_sheet(workbook, routeSheet, 'Ruta sugerida');
-
-  const date = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(workbook, `construleads-ruta-${date}.xlsx`, { compression: true });
-}
-
-export default function MapSelectionModal({ obras = [], onClose, onViewProject, onRemoveProject }) {
+export default function MapSelectionModal({ obras = [], user = {}, onClose, onViewProject, onRemoveProject }) {
   const [isExporting, setIsExporting] = useState(false);
+  const [exportStatus, setExportStatus] = useState('');
+  const [exportError, setExportError] = useState('');
   const states = new Set(obras.map((obra) => obra?.estado).filter(Boolean));
   const investment = obras.reduce((total, obra) => total + (Number(obra?.inversion) || 0), 0);
   const surface = obras.reduce((total, obra) => total + (Number(obra?.superficie) || 0), 0);
@@ -246,12 +142,27 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject, 
     () => obras.filter((obra) => Boolean(getCoordinate(obra))).length,
     [obras],
   );
-  const routeStart = route[0]?.obra;
 
-  const handleExcelExport = async () => {
+  const handlePackageExport = async () => {
     setIsExporting(true);
+    setExportError('');
+    setExportStatus('Preparando archivos…');
     try {
-      await exportSelectionToExcel(obras, route, routeSegments);
+      const logoResponse = await fetch(`${import.meta.env.BASE_URL}bimsa-logo.png`);
+      const logoBuffer = logoResponse.ok ? await logoResponse.arrayBuffer() : undefined;
+      const result = await downloadRoutePackage({
+        obras,
+        logoBuffer,
+        userId: user.idUsuario,
+        sessionId: user.idSession,
+        onStage: setExportStatus,
+      });
+      setExportStatus(result.mode === 'separate'
+        ? 'Listo: Excel y fichas PDF descargados.'
+        : 'Archivos descargados.');
+    } catch (error) {
+      setExportStatus('');
+      setExportError(error instanceof Error ? error.message : 'No fue posible preparar la descarga.');
     } finally {
       setIsExporting(false);
     }
@@ -348,7 +259,7 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject, 
               ))}
             </Box>
 
-            {routeStart && (
+            {!!route.length && (
               <Flex
                 align={{ base: 'flex-start', md: 'center' }}
                 justify="space-between"
@@ -368,37 +279,17 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject, 
                     <FiNavigation size={18} />
                   </Flex>
                   <Box minW={0}>
-                    <Flex align="center" gap={2}>
-                      <Text fontSize="13px" fontWeight="800" color="var(--cl-text-strong)">Ruta sugerida</Text>
-                      <Text px={2} py={0.5} borderRadius="full" bg="rgba(217, 91, 39, .16)" color="#B9471E" fontSize="9px" fontWeight="800">POR CERCANÍA</Text>
-                    </Flex>
-                    <Text mt={0.5} fontSize="12px" fontWeight="600" color="var(--cl-text-strong)" lineClamp={1}>
-                      Inicio: {getProjectAddress(routeStart)}
-                    </Text>
-                    <Text mt={0.5} fontSize="10px" color="var(--cl-text-muted)" lineClamp={1}>
-                      {routeSegments.length > 1
-                        ? `${routeSegments.length} tramos consecutivos: cada uno retoma el destino final del anterior.`
-                        : 'Ordenada para minimizar el recorrido entre destinos.'}
-                    </Text>
+                    <Text fontSize="13px" fontWeight="800" color="var(--cl-text-strong)">Ruta sugerida</Text>
                   </Box>
                 </Flex>
                 <Box px={3} py={1.5} borderRadius="10px" bg="var(--cl-surface)" border="1px solid var(--cl-border)" textAlign={{ base: 'left', md: 'right' }}>
                   <Text fontSize="18px" lineHeight="1" fontWeight="800" color="#D95B27">{route.length}</Text>
-                  <Text mt={1} fontSize="9px" fontWeight="700" color="var(--cl-text-muted)" whiteSpace="nowrap">de {geoLocatedCount} destinos</Text>
-                  {routeSegments.length > 1 && (
-                    <Text mt={0.5} fontSize="9px" fontWeight="700" color="#B9471E" whiteSpace="nowrap">
-                      {routeSegments.length} tramos
-                    </Text>
-                  )}
                 </Box>
               </Flex>
             )}
 
             <Flex align="center" justify="space-between" gap={3} mb={2.5}>
-              <Box>
-                <Text fontSize="13px" fontWeight="600" color="var(--cl-text-strong)">Proyectos seleccionados</Text>
-              <Text mt={0.5} fontSize="11px" color="var(--cl-text-muted)">Consulta rápida antes de exportar o abrir el recorrido.</Text>
-              </Box>
+              <Text fontSize="13px" fontWeight="600" color="var(--cl-text-strong)">Proyectos seleccionados</Text>
               <Text fontSize="11px" fontWeight="600" color="#D95B27" whiteSpace="nowrap">{obras.length} registros</Text>
             </Flex>
 
@@ -482,10 +373,11 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject, 
           </Box>
 
           <Flex flexShrink={0} align="center" justify="space-between" gap={3} flexWrap="wrap" px={5} py={3.5} borderTop="1px solid var(--cl-border)" bg="var(--cl-surface-muted)">
-            <Text fontSize="10px" color="var(--cl-text-muted)">
-              Excel incluye los {obras.length} proyectos{geoLocatedCount ? ` y los ${route.length} destinos ordenados` : ''}
-              {routeSegments.length > 1 ? ` en ${routeSegments.length} tramos consecutivos.` : '.'}
-            </Text>
+            <Box flex="1" minW="220px">
+              <Text fontSize="10px" color={exportError ? '#B42318' : 'var(--cl-text-muted)'}>
+                {exportError || exportStatus || <>Se descargarán dos archivos: el Excel con los {obras.length} proyectos{geoLocatedCount ? ` y los ${route.length} destinos ordenados` : ''}{routeSegments.length > 1 ? ` en ${routeSegments.length} tramos consecutivos` : ''} y el PDF con sus fichas técnicas.</>}
+              </Text>
+            </Box>
             <Flex gap={2} flexWrap="wrap">
               {routeSegments.length ? routeSegments.map((segment) => (
                 <Button
@@ -540,10 +432,10 @@ export default function MapSelectionModal({ obras = [], onClose, onViewProject, 
                 fontWeight="600"
                 leftIcon={<FiDownload size={15} />}
                 loading={isExporting}
-                loadingText="Preparando Excel"
-                onClick={handleExcelExport}
+                loadingText={exportStatus || 'Preparando archivos'}
+                onClick={handlePackageExport}
               >
-                Descargar Excel
+                Descargar Excel + PDF
               </Button>
             </Flex>
           </Flex>

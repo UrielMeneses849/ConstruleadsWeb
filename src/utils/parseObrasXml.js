@@ -105,6 +105,16 @@ export function parseObrasXml(xmlText) {
     const latRaw = getValue('proy_ubicacionlatitud');
     const lngRaw = getValue('proy_ubicacionlongitud');
     const localizacion = getValue('Localizacion1');
+    const municipio = getValue('Municipio', 'Municipio_Proyecto', 'muni_descripcion');
+    const codigoPostal = getValue('Codigo_Postal', 'Código_Postal', 'CP', 'C_P');
+    const porcentajeAvance = getValue(
+      'PorcentajeAvance',
+      'Porcentaje_Avance',
+      'Avance_Estimado',
+      'Porcentaje_Avance_Estimado',
+      'Avance',
+    );
+    const urlFicha = getValue('URL_Ficha', 'Url_Ficha', 'url_ficha', 'Ficha_URL');
     const descripcion = getValue('Descripcion');
     const compania = getValue('Compania');
     const rfcCompania = getValue('RFC_Compania', 'RFC_Proveedor', 'RFC');
@@ -196,6 +206,10 @@ export function parseObrasXml(xmlText) {
         lat !== 0 &&
         lng !== 0,
       localizacion,
+      municipio: cleanText(municipio),
+      codigoPostal: cleanText(codigoPostal),
+      porcentajeAvance: cleanText(porcentajeAvance),
+      urlFicha: cleanText(urlFicha),
       descripcion,
       compania,
       rfcCompania: cleanText(rfcCompania),

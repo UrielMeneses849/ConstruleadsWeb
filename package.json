@@ -6,14 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "postbuild": "cp dist/index.html dist/404.html",
+    "postbuild": "node scripts/prepare-spa-build.mjs dist",
     "build:test": "vite build --mode test --outDir dist-test",
-    "postbuild:test": "cp dist-test/index.html dist-test/404.html",
+    "postbuild:test": "node scripts/prepare-spa-build.mjs dist-test",
     "preview:test": "vite preview --outDir dist-test",
     "lint": "eslint .",
     "preview": "vite preview",
     "deploy": "npm run build && gh-pages -d dist",
-    "deploy:test": "npm run build:test && gh-pages -d dist-test -b gh-pages -r https://github.com/UrielMeneses849/ConstruleadsTest.git"
+    "deploy:test": "npm run build:test && gh-pages -d dist-test -b gh-pages -r https://github.com/UrielMeneses849/ConstruleadsTest.git",
+    "package:test:iis": "node scripts/package-iis-build.mjs"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.2.4",
@@ -25,6 +26,7 @@
     "@pdf-lib/fontkit": "^1.1.1",
     "@tanstack/react-query": "^5.100.14",
     "axios": "^1.16.1",
+    "exceljs": "^4.4.0",
     "lucide-react": "^1.16.0",
     "pdf-lib": "^1.17.1",
     "react": "^19.2.6",
