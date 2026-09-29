@@ -115,6 +115,7 @@ export function parseObrasXml(xmlText) {
       'Avance',
     );
     const urlFicha = getValue('URL_Ficha', 'Url_Ficha', 'url_ficha', 'Ficha_URL');
+    const imagenExplorer = getValue('impo_image_url', 'Impo_Image_Url', 'Imagen_URL', 'Image_URL');
     const descripcion = getValue('Descripcion');
     const compania = getValue('Compania');
     const rfcCompania = getValue('RFC_Compania', 'RFC_Proveedor', 'RFC');
@@ -210,6 +211,7 @@ export function parseObrasXml(xmlText) {
       codigoPostal: cleanText(codigoPostal),
       porcentajeAvance: cleanText(porcentajeAvance),
       urlFicha: cleanText(urlFicha),
+      imagenExplorer: cleanText(imagenExplorer),
       descripcion,
       compania,
       rfcCompania: cleanText(rfcCompania),

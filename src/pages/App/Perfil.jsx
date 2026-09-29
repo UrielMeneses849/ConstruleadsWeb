@@ -534,6 +534,13 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
   if (!authenticated) return <Navigate to="/" replace />;
 
   const name = sessionUser.nombreUsuario || 'Adriana Osorio';
+  const company = sessionUser.empresa
+    || sessionUser.Empresa
+    || sessionUser.nombreEmpresa
+    || sessionUser.nombre_empresa
+    || sessionUser.compania
+    || sessionUser.Compania
+    || 'Empresa no disponible';
   const subscription = {
     plan: sessionUser.plan || sessionUser.planContratado || '',
     startedAt: sessionUser.fechaInicioSuscripcion || sessionUser.fechaInicio || '',
@@ -548,11 +555,6 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
       .toLowerCase().includes(query.toLowerCase()));
   const tabs = [
     { id: 'cuenta', label: 'Mi perfil', icon: FiUser },
-    { id: 'suscripcion', label: 'Suscripción y consumo', icon: FiCreditCard },
-    { id: 'seguridad', label: 'Seguridad y sesión', icon: FiShield },
-    { id: 'actividad', label: 'Actividad y auditoría', icon: FiActivity },
-    { id: 'preferencias', label: 'Preferencias', icon: FiSliders },
-    { id: 'insights', label: 'BIMSA Pulse', icon: FiZap },
     ...(isAdmin ? [{ id: 'usuarios', label: 'Usuarios y permisos', icon: FiUsers }] : []),
     { id: 'descargas', label: 'Historial de descargas', icon: FiDownload },
   ];
@@ -824,12 +826,7 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
                   </Flex>
                   <Box position="relative">
                     <Heading fontSize={{ base: '18px', md: '23px' }} letterSpacing="-.025em">{name}</Heading>
-                    <HStack mt={1.5} gap={2}>
-                      <Box w="7px" h="7px" borderRadius="full" bg={isAdmin === null ? '#A3A39F' : ACCENT} />
-                      <Text color="var(--pf-text-muted)" fontSize="12px">
-                        {isAdmin === null ? 'Validando acceso…' : isAdmin ? 'Administrador BIMSA' : 'Cliente Construleads'}
-                      </Text>
-                    </HStack>
+                    <Text color="var(--pf-text-muted)" fontSize="12px" mt={1.5}>{company}</Text>
                   </Box>
                   <Button ml="auto" variant="outline" bg="var(--pf-surface)" borderColor="var(--pf-accent-border)" color={ACCENT}
                     _hover={{ bg: 'var(--pf-accent-soft)', borderColor: ACCENT }} display={{ base: 'none', md: 'flex' }} position="relative">
@@ -848,18 +845,6 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
                       <Text fontWeight="600" fontSize="13px" mt={1}>{value}</Text>
                     </Box>
                   ))}
-                </SimpleGrid>
-                <SimpleGrid columns={{ base: 1, lg: 2 }} gap={4} mt={4}>
-                  <Flex p={5} border="1px solid var(--pf-border)" borderRadius="16px" bg="var(--pf-surface-subtle)" gap={4} align="center">
-                    <Flex w="39px" h="39px" borderRadius="12px" bg="var(--pf-accent-soft)" color={ACCENT} align="center" justify="center" flexShrink="0"><FiCreditCard size={18} /></Flex>
-                    <Box flex="1"><Text fontSize="12px" fontWeight="700">Suscripción y consumo</Text><Text fontSize="11px" color="var(--pf-text-muted)" mt={1}>{hasSubscriptionServiceData ? subscription.plan : 'A la espera de Web Service.'}</Text></Box>
-                    <Button size="sm" variant="ghost" color={ACCENT} onClick={() => setActive('suscripcion')}>Ver</Button>
-                  </Flex>
-                  <Flex p={5} border="1px solid var(--pf-border)" borderRadius="16px" bg="var(--pf-surface-subtle)" gap={4} align="center">
-                    <Flex w="39px" h="39px" borderRadius="12px" bg="var(--pf-success-soft)" color="var(--pf-success-text)" align="center" justify="center" flexShrink="0"><FiShield size={18} /></Flex>
-                    <Box flex="1"><Text fontSize="12px" fontWeight="700">Seguridad de cuenta</Text><Text fontSize="11px" color="var(--pf-text-muted)" mt={1}>Sesión local activa · {formatDateTime(lastAccess)}</Text></Box>
-                    <Button size="sm" variant="ghost" color={ACCENT} onClick={() => setActive('seguridad')}>Revisar</Button>
-                  </Flex>
                 </SimpleGrid>
               </>
             )}

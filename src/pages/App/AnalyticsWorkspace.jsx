@@ -1,7 +1,12 @@
 import { Box, Flex, Spinner, Text } from '@chakra-ui/react';
 import { useState } from 'react';
 
-const ANALYTICS_URL = '/ws_pbi_new/pbi.aspx';
+const ANALYTICS_URL = String(
+  import.meta.env.VITE_ANALYTICS_URL
+  || (import.meta.env.DEV
+    ? '/ws_pbi_new/pbi.aspx'
+    : 'https://www.construleads.com/ws_pbi_new/pbi.aspx')
+).trim();
 
 export default function AnalyticsWorkspace() {
   const [isLoading, setIsLoading] = useState(true);

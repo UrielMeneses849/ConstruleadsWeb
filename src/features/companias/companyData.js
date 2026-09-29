@@ -77,6 +77,7 @@ function buildRelationshipEntriesByProjectId(relationships = []) {
 
   relationships.forEach((relationship, relationshipIndex) => {
     const projectId = relationship?.project?.id;
+    if (!projectId) return;
     const entries = index.get(projectId) || [];
     entries.push({ relationship, relationshipIndex });
     index.set(projectId, entries);
@@ -127,12 +128,23 @@ function createCompany(identity) {
     emails: new Set(),
     datasetContacts: new Map(),
     linkedinContacts: new Map(),
+    profile: {},
+    summary: {},
   };
 }
 
 function appendCompanyDetails(company, details = {}) {
   if (cleanText(details.role)) company.roles.add(cleanText(details.role));
   if (cleanText(details.website)) company.websites.add(cleanText(details.website));
+
+  Object.entries(details.profile || {}).forEach(([key, value]) => {
+    if (cleanText(value)) company.profile[key] = cleanText(value);
+  });
+  Object.entries(details.summary || {}).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && Number.isFinite(Number(value))) {
+      company.summary[key] = Number(value);
+    }
+  });
 
   const address = details.address;
   if (address?.formatted) company.addresses.set(address.formatted, address);
@@ -193,14 +205,14 @@ export function buildCompanyRows(relationships = []) {
   relationships.forEach((relationship, index) => {
     const identity = getRelationshipIdentity(relationship?.company);
     const project = relationship?.project;
-    const projectKey = normalizeProjectKey(
-      relationship?.projectKey || project?.clave || project?.id || `${index}`
-    );
-    if (!identity || !project || !projectKey) return;
+    const projectKey = project
+      ? normalizeProjectKey(relationship?.projectKey || project?.clave || project?.id || `${index}`)
+      : '';
+    if (!identity) return;
 
     if (!companies.has(identity.key)) companies.set(identity.key, createCompany(identity));
     const company = companies.get(identity.key);
-    appendProject(company, project, projectKey);
+    if (project && projectKey) appendProject(company, project, projectKey);
     appendCompanyDetails(company, relationship.company || {});
   });
 
@@ -213,15 +225,15 @@ export function buildCompanyRows(relationships = []) {
         appendCompanyDetails(company, details);
       });
       const projects = [...company.projectByKey.values()];
-      const totalInvestment = projects.reduce((total, obra) => total + (Number(obra?.inversion) || 0), 0);
-      const totalSurface = projects.reduce((total, obra) => total + (Number(obra?.superficie) || 0), 0);
+      const projectInvestment = projects.reduce((total, obra) => total + (Number(obra?.inversion) || 0), 0);
+      const projectSurface = projects.reduce((total, obra) => total + (Number(obra?.superficie) || 0), 0);
       return {
         ...company,
-        projectCount: projects.length,
-        totalInvestment,
-        totalSurface,
+        projectCount: company.summary.projectCount ?? projects.length,
+        totalInvestment: company.summary.totalInvestment ?? projectInvestment,
+        totalSurface: company.summary.totalSurface ?? projectSurface,
         projects,
-        stateCount: company.states.size,
+        stateCount: company.summary.stateCount ?? company.states.size,
         states: [...company.states].sort((first, second) => first.localeCompare(second, 'es-MX')),
         roles: [...company.roles].sort((first, second) => first.localeCompare(second, 'es-MX')),
         websites: [...company.websites],

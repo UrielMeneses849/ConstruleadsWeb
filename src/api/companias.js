@@ -139,7 +139,8 @@ function buildContacts(companyNode) {
         'cont_telefono2', 'telefono2_contacto', 'contacto_telefono2', 'cont_telefono_2',
       ]);
       const extension = directTextFrom(contactNode, ['cont_extension', 'extension_contacto', 'contacto_extension']);
-      if (!name && !role && !email && !phone && !phone2 && !extension) return null;
+      const normalizedExtension = extension || directTextFrom(contactNode, ['extension']);
+      if (!name && !role && !email && !phone && !phone2 && !normalizedExtension) return null;
 
       return {
         name: name || 'Contacto registrado',
@@ -147,8 +148,8 @@ function buildContacts(companyNode) {
         email,
         phone,
         phone2,
-        extension,
-        key: email || `${normalizeTagName(name)}:${normalizeTagName(role)}:${phone}:${phone2}:${extension}`,
+        extension: normalizedExtension,
+        key: email || `${normalizeTagName(name)}:${normalizeTagName(role)}:${phone}:${phone2}:${normalizedExtension}`,
       };
     })
     .filter(Boolean);
@@ -193,6 +194,59 @@ function parseWsNumber(value = '') {
     .replace(/[^0-9.eE+-]/g, '');
   const numberValue = Number(normalized);
   return Number.isFinite(numberValue) ? numberValue : 0;
+}
+
+function optionalWsNumber(node, tagNames) {
+  const value = directTextFrom(node, tagNames);
+  return value === '' ? null : parseWsNumber(value);
+}
+
+function buildCompanyDetails(companyNode) {
+  const profile = {
+    role: directTextFrom(companyNode, [
+      'rol_perfil', 'roco_descripcion', 'rol_compania', 'compania_rol', 'rol_empresa',
+    ]),
+    activityScale: directTextFrom(companyNode, ['escala_actividad_perfil', 'escala_actividad']),
+    genre: directTextFrom(companyNode, ['genero_perfil', 'genero_compania']),
+    region: directTextFrom(companyNode, ['region_perfil', 'region_compania']),
+    presence: directTextFrom(companyNode, ['presencia_perfil', 'presencia_compania']),
+  };
+
+  return {
+    clave: directTextFrom(companyNode, ['clave_cia', 'clave_compania', 'compania_clave', 'clave_empresa']),
+    name: directTextFrom(companyNode, [
+      'comp_razon_social', 'compania', 'nombre_compania', 'compania_nombre', 'razon_social_compania',
+    ]),
+    rfc: directTextFrom(companyNode, ['RFC', 'rfc_compania', 'compania_rfc', 'rfc_empresa']),
+    role: profile.role,
+    profile,
+    summary: {
+      projectCount: optionalWsNumber(companyNode, ['Total_Proyectos', 'total_proyectos']),
+      totalInvestment: optionalWsNumber(companyNode, ['Suma_Inversion', 'suma_inversion']),
+      totalSurface: optionalWsNumber(companyNode, [
+        'Suma_Superficie_Construida', 'suma_superficie_construida', 'suma_superficie',
+      ]),
+      stateCount: optionalWsNumber(companyNode, ['Total_Estados', 'total_estados']),
+    },
+    website: directTextFrom(companyNode, ['pagina_web', 'sitio_web', 'web_compania', 'compania_web']),
+    address: buildAddress(companyNode),
+    phones: [
+      'sucu_telefono1', 'sucu_telefono2', 'sucu_telefono3',
+      'telefono_compania', 'telefono_1_compania', 'telefono_2_compania', 'telefono_3_compania',
+      'telefono1', 'telefono2', 'telefono3', 'telefono',
+    ]
+      .map((tagName) => directText(companyNode, tagName))
+      .filter(Boolean),
+    emails: [
+      'sucu_email', 'sucu_correo', 'email_compania', 'correo_compania',
+      'compania_email', 'compania_correo', 'correo_electronico_compania',
+      'email', 'correo', 'email1', 'correo1',
+    ]
+      .map((tagName) => directText(companyNode, tagName))
+      .filter(Boolean),
+    datasetContacts: buildContacts(companyNode),
+    linkedinContacts: buildLinkedInContacts(companyNode),
+  };
 }
 
 function parseWsDate(value = '') {
@@ -293,22 +347,20 @@ export function parseCompaniasXml(xmlText) {
   // proveedor que cambie la capitalización o use un namespace inusual.
   const exactProjectNodes = ['DATOS', 'Datos', 'datos']
     .flatMap((tagName) => Array.from(document.getElementsByTagName(tagName)));
-  const projects = exactProjectNodes.length
+  const records = exactProjectNodes.length
     ? [...new Set(exactProjectNodes)]
     : Array.from(document.getElementsByTagName('*'))
       .filter((node) => nodeTagName(node) === 'datos');
   const relationships = [];
 
-  projects.forEach((projectNode) => {
+  records.forEach((projectNode) => {
     const projectKey = normalizeCompanyProjectKey(directTextFrom(projectNode, [
       'proy_clave',
       'clave_proyecto',
       'proyecto_clave',
       'clave_obra',
     ]));
-    if (!projectKey) return;
-
-    const project = buildCompanyProject(projectNode, projectKey);
+    const project = projectKey ? buildCompanyProject(projectNode, projectKey) : null;
 
     const companiesNode = firstDirectChildFrom(projectNode, ['CIAS', 'COMPANIAS', 'COMPAÑIAS']);
     const nestedCompanyNodes = companiesNode
@@ -324,37 +376,15 @@ export function parseCompaniasXml(xmlText) {
       : hasFlatCompany ? [projectNode] : [];
 
     companyNodes.forEach((companyNode) => {
-      const clave = directTextFrom(companyNode, ['clave_cia', 'clave_compania', 'compania_clave', 'clave_empresa']);
-      const name = directTextFrom(companyNode, ['comp_razon_social', 'compania', 'nombre_compania', 'compania_nombre', 'razon_social_compania']);
-      const rfc = directTextFrom(companyNode, ['RFC', 'rfc_compania', 'compania_rfc', 'rfc_empresa']);
-      if (!clave && !name && !rfc) return;
+      const company = buildCompanyDetails(companyNode);
+      if (!company.clave && !company.name && !company.rfc) return;
 
       relationships.push({
         projectKey,
         project,
         company: {
-          clave,
-          name: name || rfc || clave,
-          rfc,
-          role: directTextFrom(companyNode, ['roco_descripcion', 'rol_compania', 'compania_rol', 'rol_empresa']),
-          website: directTextFrom(companyNode, ['pagina_web', 'sitio_web', 'web_compania', 'compania_web']),
-          address: buildAddress(companyNode),
-          phones: [
-            'sucu_telefono1', 'sucu_telefono2', 'sucu_telefono3',
-            'telefono_compania', 'telefono_1_compania', 'telefono_2_compania', 'telefono_3_compania',
-            'telefono1', 'telefono2', 'telefono3', 'telefono',
-          ]
-            .map((tagName) => directText(companyNode, tagName))
-            .filter(Boolean),
-          emails: [
-            'sucu_email', 'sucu_correo', 'email_compania', 'correo_compania',
-            'compania_email', 'compania_correo', 'correo_electronico_compania',
-            'email', 'correo', 'email1', 'correo1',
-          ]
-            .map((tagName) => directText(companyNode, tagName))
-            .filter(Boolean),
-          datasetContacts: buildContacts(companyNode),
-          linkedinContacts: buildLinkedInContacts(companyNode),
+          ...company,
+          name: company.name || company.rfc || company.clave,
         },
       });
     });

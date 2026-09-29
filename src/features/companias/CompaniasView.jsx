@@ -8,14 +8,31 @@ import {
   FiChevronRight, FiLinkedin, FiMail, FiMapPin, FiPhone, FiRefreshCw, FiSearch, FiShare2, FiX,
 } from 'react-icons/fi';
 import {
-  buildCompanyRows, formatCompactInvestment, formatNumber, getCompanyGenreColor, getCompanyProjects,
-  getCompanyRelationshipEntriesByProjectId,
+  buildCompanyRows, formatCompactInvestment, formatNumber, getCompanyGenreColor,
 } from './companyData';
-import { filterObrasByFilters } from '../../utils/filterObras';
 import { measurePerformance } from '../../utils/performanceMonitor';
 
 function normal(value = '') {
   return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function matchesSelectedValues(selected = [], candidates = []) {
+  if (!selected.length) return true;
+  const normalizedCandidates = new Set(candidates.map(normal).filter(Boolean));
+  return selected.some((value) => normalizedCandidates.has(normal(value)));
+}
+
+function filterCompanyRows(companies = [], filters = {}) {
+  return companies.filter((company) => matchesSelectedValues(filters.regiones, [
+    company.profile?.region,
+    ...company.projects.map((project) => project.region),
+  ]) && matchesSelectedValues(filters.estados, [
+    ...company.states,
+    ...company.addresses.map((address) => address.state),
+  ]) && matchesSelectedValues(filters.generos, [
+    company.profile?.genre,
+    ...company.projects.map((project) => project.genero),
+  ]) && matchesSelectedValues(filters.sectores, company.projects.map((project) => project.sector)));
 }
 
 function initials(name = '') {
@@ -41,6 +58,9 @@ function genreData(company) {
     counts.set(name, (counts.get(name) || 0) + 1);
   });
   const total = company?.projectCount || 0;
+  if (!counts.size && company?.profile?.genre && total) {
+    counts.set(company.profile.genre, total);
+  }
   return [...counts.entries()].map(([name, value]) => ({
     name, value, percent: total ? Math.round((value / total) * 100) : 0, color: getCompanyGenreColor(name),
   })).sort((a, b) => b.value - a.value).slice(0, 5);
@@ -113,21 +133,21 @@ function Metric({ label, value, detail }) {
   return <Box className="company-metric"><Text>{label}</Text><Text>{value}</Text><Text>{detail}</Text></Box>;
 }
 
-const COMPANY_PROFILE_KPIS = [
-  { label: 'Rol principal', value: 'Contratista general', icon: FiBriefcase },
-  { label: 'Escala de actividad', value: 'Muy alta', icon: FiBarChart2 },
-  { label: 'Género constructivo', value: 'Vivienda', icon: FiHome },
-  { label: 'Cobertura geográfica', value: 'Noroeste', detail: 'Región principal', icon: FiMapPin },
-  { label: 'Presencia territorial', value: 'Diversificada', detail: '5 regiones BIMSA', icon: FiShare2 },
-];
-
-function CompanyProfileKpis() {
+function CompanyProfileKpis({ company }) {
+  const profile = company?.profile || {};
+  const kpis = [
+    { label: 'Rol principal', value: profile.role, icon: FiBriefcase },
+    { label: 'Escala de actividad', value: profile.activityScale, icon: FiBarChart2 },
+    { label: 'Género constructivo', value: profile.genre, icon: FiHome },
+    { label: 'Cobertura geográfica', value: profile.region, detail: 'Región principal', icon: FiMapPin },
+    { label: 'Presencia territorial', value: profile.presence, detail: `${formatNumber(company?.stateCount)} estados reportados`, icon: FiShare2 },
+  ];
   return <Box className="company-profile-kpis" aria-label="Perfil de la compañía">
     <Text className="company-profile-kpis-title">Perfil</Text>
     <Box className="company-profile-kpis-grid">
-      {COMPANY_PROFILE_KPIS.map(({ label, value, detail, icon: Icon }) => <Flex key={label} className="company-profile-kpi" align="center" gap={2.5}>
+      {kpis.map(({ label, value, detail, icon: Icon }) => <Flex key={label} className="company-profile-kpi" align="center" gap={2.5}>
         <Flex className="company-profile-kpi-icon" align="center" justify="center"><Icon size={18} /></Flex>
-        <Box flex="1" minW={0}><Text>{label}</Text><Text>{value}</Text>{detail && <Text>{detail}</Text>}</Box>
+        <Box flex="1" minW={0}><Text>{label}</Text><Text>{value || 'Por confirmar'}</Text>{detail && <Text>{detail}</Text>}</Box>
         <FiChevronRight size={14} aria-hidden="true" />
       </Flex>)}
     </Box>
@@ -354,7 +374,7 @@ function Projects({ company, onViewFicha, onShowAll, projectFocus }) {
     const isFocused = matchesFocusedProject(project, projectFocus?.projectKey);
     const projectId = project.id || project.clave || `${project.proyecto}-${index}`;
     return <button type="button" key={`${projectId}:${isFocused ? projectFocus.id : 'default'}`} ref={isFocused ? focusRef : undefined} className={`company-project-row${isFocused ? ' is-arrival-focus' : ''}`} onClick={() => onViewFicha?.(project)} title="Ver ficha técnica"><span><strong>{project.proyecto || 'Proyecto sin nombre'}</strong><small>{project.clave || 'Clave por confirmar'}</small></span><span>{project.estado || 'Estado por confirmar'} · {project.genero || 'Sin género'}</span><span>{formatCompactInvestment(project.inversion)}</span><span>{monthOf(project)}</span></button>;
-  })}{!projects.length && <Text className="company-card-empty">Esta compañía aún no tiene obras para mostrar.</Text>}</Box></Box>;
+  })}{!projects.length && <Text className="company-card-empty">Detalle de proyectos pendiente del Web Service.</Text>}</Box></Box>;
 }
 
 function contactPhones(contact = {}) {
@@ -470,7 +490,7 @@ function Dashboard({ company, isLoadingCompanies, onViewFicha, onShowProjects, o
       </Box>
     </Flex>
     <Box className="company-metrics"><Metric label="Obras" value={formatNumber(company.projectCount)} detail="Proyectos publicados" /><Metric label="Inversión total" value={formatCompactInvestment(company.totalInvestment)} detail="Monto identificado" /><Metric label="Estados" value={formatNumber(company.stateCount)} detail="Donde tiene presencia" /><Metric label="Superficie total" value={`${formatNumber(company.totalSurface)} m²`} detail="Construidos" /></Box>
-    <CompanyProfileKpis />
+    <CompanyProfileKpis company={company} />
     <Box className="company-insights"><Genres company={company} /><States company={company} /><Activity company={company} alertEnabled={false} /></Box><Box className="company-bottom"><Projects company={company} onViewFicha={onViewFicha} onShowAll={onShowProjects} projectFocus={projectFocus} /><Contacts company={company} onShowAll={onShowContacts} isLoading={isLoadingCompanies} /></Box>
   </Box>;
 }
@@ -487,50 +507,34 @@ export default function CompaniasView({ companyRelationships = [], isLoadingComp
     generos: [],
     sectores: [],
   });
-  // El portafolio de Compañías proviene exclusivamente de ws_cl_companias.
-  // Así no se cuelan obras de Explorer ni dependemos de ws_cl_obras.
-  const companyProjects = useMemo(
+  // El catálogo consolidado de ws_cl_companias ya no incluye el detalle de
+  // proyectos. Construimos primero las compañías y usamos su perfil para los
+  // filtros mientras llega el método de detalle por clave de compañía.
+  const allCompanies = useMemo(
     () => measurePerformance(
-      'companies.projects-index',
+      'companies.build-rows',
       { relationships: companyRelationships.length },
-      () => getCompanyProjects(companyRelationships)
+      () => buildCompanyRows(companyRelationships)
     ),
     [companyRelationships]
   );
-  const filteredCompanyProjects = useMemo(
-    () => measurePerformance(
-      'companies.apply-filters',
-      { records: companyProjects.length },
-      () => filterObrasByFilters(companyProjects, companyFilters)
-    ),
-    [companyFilters, companyProjects]
-  );
-  const filteredProjectKeys = useMemo(
-    () => new Set(filteredCompanyProjects.map((project) => project.id)),
-    [filteredCompanyProjects]
-  );
-  const relationshipEntriesByProjectId = useMemo(
-    () => getCompanyRelationshipEntriesByProjectId(companyRelationships),
-    [companyRelationships],
-  );
-  const filteredRelationships = useMemo(
-    () => [...filteredProjectKeys]
-      .flatMap((projectId) => relationshipEntriesByProjectId.get(projectId) || [])
-      // Al reconstruir sólo los grupos seleccionados, recuperamos el orden
-      // original del WS para que la ficha continúe mostrando sus proyectos
-      // recientes exactamente igual que antes.
-      .sort((first, second) => first.relationshipIndex - second.relationshipIndex)
-      .map(({ relationship }) => relationship),
-    [filteredProjectKeys, relationshipEntriesByProjectId]
-  );
   const companies = useMemo(
     () => measurePerformance(
-      'companies.build-rows',
-      { relationships: filteredRelationships.length },
-      () => buildCompanyRows(filteredRelationships)
+      'companies.apply-filters',
+      { records: allCompanies.length },
+      () => filterCompanyRows(allCompanies, companyFilters)
     ),
-    [filteredRelationships]
+    [allCompanies, companyFilters]
   );
+  const companyProjects = useMemo(() => allCompanies.flatMap((company) => [
+    ...company.projects,
+    {
+      id: `company-profile:${company.key}`,
+      region: company.profile?.region,
+      estado: company.addresses?.[0]?.state,
+      genero: company.profile?.genre,
+    },
+  ]), [allCompanies]);
   const handledCompanyRequest = useRef('');
   useEffect(() => {
     if (!companyDetailRequest?.id || handledCompanyRequest.current === companyDetailRequest.id) return;

@@ -5,7 +5,7 @@ const MAP_STORE_NAME = 'map-projects';
 const DATABASE_VERSION = 3;
 const OBRAS_CACHE_VERSION = 2;
 const MAP_PROJECTS_CACHE_VERSION = 1;
-const COMPANY_RELATIONSHIPS_CACHE_VERSION = 4;
+const COMPANY_RELATIONSHIPS_CACHE_VERSION = 5;
 
 function openDatabase() {
   return new Promise((resolve, reject) => {

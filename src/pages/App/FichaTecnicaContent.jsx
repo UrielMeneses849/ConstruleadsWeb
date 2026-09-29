@@ -175,6 +175,10 @@ function Company({ company }) {
 }
 
 export default function FichaTecnicaContent({ obra, isDarkMode = false }) {
+  const explorerImageUrl = String(
+    obra.imagen_explorer || obra.imagenExplorer || obra.impo_image_url || ''
+  ).trim();
+  const isExplorerProject = obra.origen === 'explorer' || Boolean(explorerImageUrl);
   const additional = [
     ['Descripción', obra.descripcion], ['Acabados', obra.acabados],
     ['Observaciones', obra.observaciones], ['Descripción adicional', obra.descripcionextra],
@@ -245,12 +249,38 @@ export default function FichaTecnicaContent({ obra, isDarkMode = false }) {
         </Grid>
       </Box>
 
-      <Box border="1px solid var(--ft-border)" borderRadius="24px" p={{ base: 4, md: 6 }} mt={2}>
-        <Text fontSize="22px" mb={1}>Compañías</Text>
-        {obra.cias_normalizadas?.length
-          ? obra.cias_normalizadas.map((company, index) => <Company key={`${company.nombre}-${index}`} company={company} />)
-          : <Text color="var(--ft-text-muted)" fontSize="13px" mt={4}>Sin compañías registradas</Text>}
-      </Box>
+      {isExplorerProject ? (
+        <Box border="1px solid var(--ft-border)" borderRadius="24px" p={{ base: 4, md: 6 }} mt={2}>
+          <Text fontSize="22px" mb={4}>Imagen Satelital</Text>
+          {explorerImageUrl ? (
+            <Box
+              borderRadius={{ base: '14px', md: '20px' }}
+              overflow="hidden"
+              bg="var(--ft-surface-muted)"
+              border="1px solid var(--ft-border)"
+            >
+              <Image
+                src={explorerImageUrl}
+                alt={`Imagen del proyecto ${obra.proy_nombre || obra.proy_clave || 'Explorer'}`}
+                w="100%"
+                maxH={{ base: '360px', md: '560px' }}
+                objectFit="contain"
+                display="block"
+                borderRadius={{ base: '14px', md: '20px' }}
+              />
+            </Box>
+          ) : (
+            <Text color="var(--ft-text-muted)" fontSize="13px">Sin imagen disponible.</Text>
+          )}
+        </Box>
+      ) : (
+        <Box border="1px solid var(--ft-border)" borderRadius="24px" p={{ base: 4, md: 6 }} mt={2}>
+          <Text fontSize="22px" mb={1}>Compañías</Text>
+          {obra.cias_normalizadas?.length
+            ? obra.cias_normalizadas.map((company, index) => <Company key={`${company.nombre}-${index}`} company={company} />)
+            : <Text color="var(--ft-text-muted)" fontSize="13px" mt={4}>Sin compañías registradas</Text>}
+        </Box>
+      )}
 
       {additional.length > 0 && (
         <Box border="1px solid var(--ft-border)" borderRadius="24px" p={{ base: 4, md: 6 }} mt={2}>

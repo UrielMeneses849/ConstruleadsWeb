@@ -362,6 +362,7 @@ export async function solicitarFichaDatos({ userId, sessionId, obraKey, origin, 
     superficie: ['proy_superficie_construida', 'Sup_Construida'], caracteristicas: ['caracteristicas'],
     actualizacion: ['actualizacion'], concurso: ['concurso'],
     porcentaje_avance: ['PorcentajeAvance', 'Porcentaje_Avance', 'Avance_Estimado', 'Avance'],
+    imagen_explorer: ['impo_image_url', 'Impo_Image_Url', 'Imagen_URL', 'Image_URL'],
     urlFicha: ['URL_Ficha', 'Url_Ficha', 'url_ficha', 'Ficha_URL', 'PDF', 'Url_PDF'],
   };
   const obra = Object.fromEntries(
@@ -381,6 +382,7 @@ export async function solicitarFichaDatos({ userId, sessionId, obraKey, origin, 
       email: text(contact, 'cont_email'),
     })),
   }));
+  obra.origen = getObraSource(origin);
 
   return obra;
 }
