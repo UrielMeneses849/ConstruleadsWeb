@@ -2,6 +2,8 @@ const EMPTY = 'Sin información';
 export const LICITACION_MISSING_FALLO_VALUE = '__sin_fallo_emitido__';
 export const LICITACION_MISSING_FALLO_LABEL = 'Sin fallo emitido';
 export const LICITACION_UNASSIGNED_LABEL = 'Sin asignación';
+const DISPLAY_LOWERCASE_CONNECTORS = new Set(['a', 'al', 'con', 'de', 'del', 'e', 'el', 'en', 'la', 'las', 'los', 'o', 'para', 'por', 'sin', 'y']);
+const DISPLAY_ACRONYMS = new Set(['cfe', 'conagua', 'dif', 'fira', 'imss', 'ipn', 'issste', 'mia', 'pemex', 'rfc', 'sct', 'sedena', 'semar', 'sict', 'unam']);
 const licitacionCurrencyFormatter = new Intl.NumberFormat('es-MX', {
   style: 'currency', currency: 'MXN', maximumFractionDigits: 0,
 });
@@ -52,6 +54,25 @@ export function normalizeSearchText(value) {
     .trim();
 }
 
+export function formatLicitacionDisplayText(value, { preserveCompanySuffix = false } = {}) {
+  const text = String(value || '').trim();
+  if (!text || text === LICITACION_UNASSIGNED_LABEL) return text;
+
+  let wordIndex = 0;
+  const formatted = text.replace(/[\p{L}]+/gu, (word) => {
+    const lower = word.toLocaleLowerCase('es-MX');
+    const isFirst = wordIndex === 0;
+    wordIndex += 1;
+    if (DISPLAY_ACRONYMS.has(lower)) return lower.toLocaleUpperCase('es-MX');
+    if (!isFirst && DISPLAY_LOWERCASE_CONNECTORS.has(lower)) return lower;
+    return `${lower.charAt(0).toLocaleUpperCase('es-MX')}${lower.slice(1)}`;
+  });
+
+  return preserveCompanySuffix
+    ? formatted.replace(/\bS(?:\.?\s*)A\.?\s+de\s+C(?:\.?\s*)V\b\.?/giu, 'SA DE CV')
+    : formatted;
+}
+
 function normalizeFieldName(value) {
   return normalizeSearchText(value).replace(/[^a-z0-9]/g, '');
 }
@@ -76,7 +97,10 @@ export function parseLicitacionDate(value) {
 export function parseLicitacionAmount(value) {
   const text = cleanValue(value, '');
   if (!text) return null;
-  const parsed = Number(text.replace(/[^0-9.-]/g, ''));
+  // El WS también entrega montos en notación científica, por ejemplo
+  // 2.451373124000000e+007. Conservamos e/E y el signo del exponente.
+  const compact = text.replace(/mxn/gi, '').replace(/[$,\s]/g, '');
+  const parsed = Number(compact);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
@@ -132,6 +156,7 @@ export function normalizeLicitacion(node) {
     descripcion: read('descripcion'),
     fuente_de_la_descripcion: read('fuente_de_la_descripcion'),
     tipo_de_procedimiento: read('tipo_de_procedimiento'),
+    tipo_de_procedimiento_detalle: readOptional('tipo_de_procedimiento_detalle'),
     caracter_del_procedimiento: read('caracter_del_procedimiento'),
     articulo_de_excepcion: read('articulo_de_excepcion'),
     descripcion_de_la_excepcion: read('descripcion_de_la_excepcion'),
@@ -139,12 +164,14 @@ export function normalizeLicitacion(node) {
     estado: formatLicitacionState(readOptional('estado', 'entidad_federativa', 'entidad')),
     region: read('region', 'región'),
     estatus: read('estatus'),
+    subestatus: readOptional('subestatus', 'sub_estatus', 'subestatus_licitacion'),
     tipo_de_contratacion: readOptional('tipo_de_contratacion'),
     desarrollo: readOptional('desarrollo'),
     activo: readOptional('activo'),
     sector: readOptional('sector'),
     fecha_de_publicacion: readOptional('fecha_de_publicacion'),
     fecha_de_apertura: readOptional('fecha_de_apertura'),
+    fecha_y_hora_junta_de_aclaraciones: readOptional('fecha_y_hora_junta_de_aclaraciones'),
     fecha_de_fallo: readOptional('fecha_de_fallo'),
     monto_del_contrato_MXN: amount,
     proveedor_adjudicado: formatLicitacionProvider(readOptional('proveedor_adjudicado')),

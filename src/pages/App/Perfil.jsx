@@ -5,17 +5,22 @@ import {
 } from '@chakra-ui/react';
 import {
   FiActivity, FiAlertTriangle, FiBell, FiCalendar, FiCheck, FiCheckCircle,
-  FiChevronRight, FiClock, FiCpu, FiCreditCard, FiDownload, FiEdit2,
+  FiClock, FiCpu, FiCreditCard, FiDownload, FiEdit2,
   FiFileText, FiGlobe, FiKey, FiLayers, FiLock, FiLogOut, FiMapPin, FiMonitor,
   FiPlus, FiRefreshCw, FiSearch, FiSettings, FiShield, FiSliders,
   FiTrendingUp, FiUser, FiUsers, FiX, FiZap,
 } from 'react-icons/fi';
 import ConstruleadsNavbar from './ConstruleadsNavbar';
 import { iniciarDescargaReporte } from '../../api/reportes';
+import { PROFILE_FILTER_LABELS, PROFILE_FILTER_OPTIONS } from '../../data/profileFilters';
 import { getDownloadHistory } from '../../utils/downloadHistory';
 import {
+  cambiarEstadoUsuario,
+  guardarPerfilUsuario,
+  guardarUsuarioAdministrador,
+  obtenerDisponibilidadLicencias,
+  obtenerPerfilUsuario,
   obtenerUsuariosAdministrador,
-  validarUsuarioAdministrador,
 } from '../../api/perfil';
 import { RADAR_PREFERENCE_DEFAULTS, persistRadarPreferences } from '../../utils/radarNotifications';
 
@@ -28,16 +33,9 @@ const PROFILE_GROUPS = {
   etapas: ['Pre-plan', 'Proyecto', 'Plan', 'Construcción'],
   desarrollos: ['Ampliación', 'Demolición', 'Adecuación', 'Remodelación'],
 };
-const GROUP_LABELS = {
-  zonas: 'Zonas',
-  tiposObra: 'Tipos de obra',
-  sectores: 'Sectores',
-  etapas: 'Etapas',
-  desarrollos: 'Desarrollos',
-};
-const emptyAccess = () => Object.fromEntries(Object.keys(PROFILE_GROUPS).map((key) => [key, []]));
+const emptyAccess = () => Object.fromEntries(Object.keys(PROFILE_FILTER_OPTIONS).map((key) => [key, []]));
 const emptyForm = () => ({
-  name: '', email: '', phone: '', company: '', role: 'Consultor', status: 'Activo', access: emptyAccess(),
+  firstName: '', paternalName: '', maternalName: '', email: '', phone: '', group: '',
 });
 const initials = (name = '') => name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'US';
 const PREFERENCE_DEFAULTS = RADAR_PREFERENCE_DEFAULTS;
@@ -52,6 +50,20 @@ const EMPTY_CRITERIA = Object.freeze({
   stages: [],
   minimumInvestment: '',
 });
+
+function getAccessType(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return ['1', 'administrador', 'admin'].includes(normalized) ? 'Administrador' : 'Publico';
+}
+
+function splitDisplayName(value) {
+  const parts = String(value || '').trim().split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts[0] || '',
+    paternalName: parts[1] || '',
+    maternalName: parts.slice(2).join(' '),
+  };
+}
 
 function normalizeCriteria(criteria = {}) {
   return {
@@ -256,18 +268,6 @@ function EmptyAudit({ icon: Icon, children }) {
   );
 }
 
-function accessToXml(access = {}) {
-  const escapeXml = (value) => String(value)
-    .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;').replaceAll("'", '&apos;');
-  const nodes = Object.entries(access)
-    .filter(([, values]) => Array.isArray(values) && values.length)
-    .map(([group, values]) => (
-      `<${group}>${values.map((value) => `<valor>${escapeXml(value)}</valor>`).join('')}</${group}>`
-    ));
-  return `<perfil>${nodes.join('')}</perfil>`;
-}
-
 function loadLocal(key, fallback) {
   try {
     const parsed = JSON.parse(localStorage.getItem(key) || 'null');
@@ -296,44 +296,108 @@ function Modal({ children, onClose, wide = false }) {
 }
 
 function AccessEditor({ access, onChange }) {
+  const [activeGroup, setActiveGroup] = useState('zonas');
+  const [search, setSearch] = useState('');
   const toggle = (group, value) => {
     const values = access[group] || [];
     onChange({ ...access, [group]: values.includes(value) ? values.filter((item) => item !== value) : [...values, value] });
   };
+  const normalize = (value) => String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  const selected = access[activeGroup] || [];
+  const query = normalize(search);
+  const options = PROFILE_FILTER_OPTIONS[activeGroup].filter((option) => (
+    !query || normalize(`${option.label} ${option.group || ''}`).includes(query)
+  ));
+  const groupedOptions = options.reduce((groups, option) => {
+    const group = option.group || 'Opciones';
+    return { ...groups, [group]: [...(groups[group] || []), option] };
+  }, {});
+  const selectVisible = () => onChange({
+    ...access,
+    [activeGroup]: [...new Set([...selected, ...options.map((option) => option.value)])],
+  });
+  const clearGroup = () => onChange({ ...access, [activeGroup]: [] });
+
   return (
-    <SimpleGrid columns={{ base: 1, md: 2, xl: 5 }} gap={5}>
-      {Object.entries(PROFILE_GROUPS).map(([group, options]) => (
-        <Box key={group}>
-          <Flex justify="space-between" align="center" mb={3}>
-            <Text fontWeight="700">{GROUP_LABELS[group]}</Text>
-            <Text fontSize="11px" color="var(--pf-text-muted)">{(access[group] || []).length}/{options.length}</Text>
-          </Flex>
-          <Stack gap={2}>
-            {options.map((option) => {
-              const active = (access[group] || []).includes(option);
-              return (
-                <Flex key={option} as="button" type="button" onClick={() => toggle(group, option)}
-                  align="center" gap={2.5} p={2.5} borderRadius="10px"
-                  bg={active ? 'var(--pf-accent-soft)' : 'var(--pf-surface-muted)'} color={active ? ACCENT : NAVY}
-                  border={`1px solid ${active ? 'var(--pf-accent-border)' : 'var(--pf-border)'}`} textAlign="left">
-                  <Flex w="19px" h="19px" borderRadius="5px" border={`1.5px solid ${active ? ACCENT : 'var(--pf-text-muted)'}`}
-                    bg={active ? ACCENT : 'var(--pf-surface)'} color="white" align="center" justify="center" flexShrink="0">
-                    {active && <FiCheck size={13} />}
+    <Box>
+      <SimpleGrid columns={{ base: 2, md: 5 }} gap={2}>
+        {Object.keys(PROFILE_FILTER_OPTIONS).map((group) => {
+          const active = group === activeGroup;
+          const count = (access[group] || []).length;
+          return (
+            <Box as="button" type="button" key={group} onClick={() => { setActiveGroup(group); setSearch(''); }}
+              p={3} textAlign="left" borderRadius="12px"
+              bg={active ? 'var(--pf-accent-soft)' : 'var(--pf-surface-muted)'}
+              color={active ? ACCENT : NAVY}
+              border={`1px solid ${active ? 'var(--pf-accent-border)' : 'var(--pf-border)'}`}>
+              <Text fontSize="12px" fontWeight="700">{PROFILE_FILTER_LABELS[group]}</Text>
+              <Text fontSize="10px" mt={.5} color={active ? ACCENT : 'var(--pf-text-muted)'}>
+                {count} de {PROFILE_FILTER_OPTIONS[group].length} seleccionadas
+              </Text>
+            </Box>
+          );
+        })}
+      </SimpleGrid>
+
+      <Flex mt={5} gap={3} align={{ base: 'stretch', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
+        <Flex flex="1" bg="var(--pf-surface-muted)" border="1px solid var(--pf-border)" borderRadius="11px" align="center" px={3}>
+          <FiSearch color="var(--pf-text-muted)" />
+          <Input value={search} onChange={(event) => setSearch(event.target.value)}
+            placeholder={`Buscar en ${PROFILE_FILTER_LABELS[activeGroup].toLowerCase()}`}
+            border="0" _focus={{ boxShadow: 'none' }} fontSize="12px" />
+        </Flex>
+        <HStack gap={2}>
+          <Button size="sm" variant="outline" borderColor="var(--pf-border-strong)" onClick={selectVisible}
+            disabled={!options.length}>Seleccionar {search ? 'resultados' : 'todos'}</Button>
+          <Button size="sm" variant="ghost" color="var(--pf-danger-text)" onClick={clearGroup}
+            disabled={!selected.length}>Limpiar</Button>
+        </HStack>
+      </Flex>
+
+      <Box mt={4} maxH="47vh" overflowY="auto" pr={2} className="cl-profile-scroll">
+        {Object.entries(groupedOptions).map(([section, sectionOptions]) => (
+          <Box key={section} mb={5}>
+            {(Object.keys(groupedOptions).length > 1 || section !== 'Opciones') && (
+              <Text fontSize="11px" fontWeight="800" color="var(--pf-text-muted)" textTransform="uppercase"
+                letterSpacing=".08em" mb={2}>{section}</Text>
+            )}
+            <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap={2}>
+              {sectionOptions.map((option) => {
+                const isSelected = selected.includes(option.value);
+                return (
+                  <Flex key={option.value} as="button" type="button" onClick={() => toggle(activeGroup, option.value)}
+                    align="center" gap={2.5} p={3} borderRadius="10px"
+                    bg={isSelected ? 'var(--pf-accent-soft)' : 'var(--pf-surface-muted)'}
+                    color={isSelected ? ACCENT : NAVY}
+                    border={`1px solid ${isSelected ? 'var(--pf-accent-border)' : 'var(--pf-border)'}`} textAlign="left">
+                    <Flex w="20px" h="20px" borderRadius="6px" border={`1.5px solid ${isSelected ? ACCENT : 'var(--pf-text-muted)'}`}
+                      bg={isSelected ? ACCENT : 'var(--pf-surface)'} color="white" align="center" justify="center" flexShrink="0">
+                      {isSelected && <FiCheck size={13} />}
+                    </Flex>
+                    <Text fontSize="12px" fontWeight={isSelected ? '600' : '500'}>{option.label}</Text>
                   </Flex>
-                  <Text fontSize="13px" fontWeight={active ? '600' : '500'}>{option}</Text>
-                </Flex>
-              );
-            })}
-          </Stack>
-        </Box>
-      ))}
-    </SimpleGrid>
+                );
+              })}
+            </SimpleGrid>
+          </Box>
+        ))}
+        {!options.length && (
+          <Flex minH="150px" align="center" justify="center" color="var(--pf-text-muted)">
+            <Text fontSize="12px">No hay opciones que coincidan con la búsqueda.</Text>
+          </Flex>
+        )}
+      </Box>
+    </Box>
   );
 }
 
 function UserModal({ initial, onClose, onSave }) {
-  const [form, setForm] = useState(initial ? { ...initial, access: initial.access || emptyAccess() } : emptyForm());
-  const [step, setStep] = useState(1);
+  const [form, setForm] = useState(initial ? { ...emptyForm(), ...initial } : emptyForm());
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
   const field = (label, key, placeholder, type = 'text') => (
     <Box>
       <Text fontSize="12px" fontWeight="700" mb={2}>{label}</Text>
@@ -341,56 +405,109 @@ function UserModal({ initial, onClose, onSave }) {
         h="48px" bg="var(--pf-surface)" borderColor="var(--pf-border-strong)" borderRadius="11px" _focus={{ borderColor: ACCENT, boxShadow: '0 0 0 1px #D95B27' }} />
     </Box>
   );
-  const canContinue = form.name.trim() && form.email.trim() && form.company.trim();
+  const canSave = form.firstName.trim() && form.paternalName.trim() && form.email.trim() && form.group.trim();
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      setError('');
+      await onSave(form);
+    } catch (saveError) {
+      setError(saveError?.message || 'No fue posible guardar el usuario.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
   return (
-    <Modal onClose={onClose} wide={step === 2}>
+    <Modal onClose={onClose}>
       <Flex p={{ base: 5, md: 7 }} borderBottom="1px solid var(--pf-border)" align="start" justify="space-between">
         <Box>
-          <Text color={ACCENT} fontWeight="700" fontSize="12px" textTransform="uppercase" letterSpacing=".12em">
-            Paso {step} de 2
-          </Text>
+          <Text color={ACCENT} fontWeight="700" fontSize="12px" textTransform="uppercase" letterSpacing=".12em">Administración de usuarios</Text>
           <Heading fontSize={{ base: '22px', md: '27px' }} mt={1}>
-            {step === 1 ? (initial ? 'Editar usuario' : 'Nuevo usuario') : 'Configurar visibilidad'}
+            {initial ? 'Editar usuario' : 'Nuevo usuario'}
           </Heading>
-          <Text color="var(--pf-text-muted)" mt={1} fontSize="13px">
-            {step === 1 ? 'Datos de acceso y perfil de la cuenta.' : 'Solo la información marcada se incluirá en la respuesta XML de este usuario.'}
-          </Text>
+          <Text color="var(--pf-text-muted)" mt={1} fontSize="13px">Datos de contacto y grupo de la cuenta.</Text>
         </Box>
         <Button aria-label="Cerrar" variant="ghost" onClick={onClose} color={NAVY} _hover={{ bg: 'var(--pf-surface-muted)' }}><FiX size={23} /></Button>
       </Flex>
       <Box p={{ base: 5, md: 7 }}>
-        {step === 1 ? (
-          <SimpleGrid columns={{ base: 1, md: 2 }} gap={5}>
-            {field('Nombre completo *', 'name', 'Nombre y apellidos')}
-            {field('Correo electrónico *', 'email', 'nombre@empresa.com', 'email')}
-            {field('Empresa *', 'company', 'Nombre de la empresa')}
-            {field('Teléfono', 'phone', '+52 55 0000 0000', 'tel')}
-            <Box>
-              <Text fontSize="12px" fontWeight="700" mb={2}>Rol</Text>
-              <Box as="select" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}
-                w="100%" h="48px" border="1px solid var(--pf-border-strong)" borderRadius="11px" px={3} bg="var(--pf-surface)">
-                <option>Consultor</option><option>Administrador</option><option>Solo lectura</option>
-              </Box>
-            </Box>
-            <Box>
-              <Text fontSize="12px" fontWeight="700" mb={2}>Estatus</Text>
-              <Box as="select" value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}
-                w="100%" h="48px" border="1px solid var(--pf-border-strong)" borderRadius="11px" px={3} bg="var(--pf-surface)">
-                <option>Activo</option><option>Suspendido</option>
-              </Box>
-            </Box>
-          </SimpleGrid>
-        ) : <AccessEditor access={form.access} onChange={(access) => setForm({ ...form, access })} />}
+        <SimpleGrid columns={{ base: 1, md: 2 }} gap={5}>
+          {field('Nombre *', 'firstName', 'Nombre')}
+          {field('Apellido paterno *', 'paternalName', 'Apellido paterno')}
+          {field('Apellido materno', 'maternalName', 'Apellido materno')}
+          {field('Correo electrónico *', 'email', 'nombre@empresa.com', 'email')}
+          {field('Teléfono', 'phone', '+52 55 0000 0000', 'tel')}
+          {field('Grupo *', 'group', 'NORTE, CENTRO…')}
+        </SimpleGrid>
+        {error && <Text mt={4} color="var(--pf-danger-text)" fontSize="12px">{error}</Text>}
       </Box>
       <Flex px={{ base: 5, md: 7 }} pb={{ base: 5, md: 7 }} gap={3} justify="flex-end">
-        <Button variant="outline" borderColor="var(--pf-border-strong)" color={NAVY} onClick={step === 1 ? onClose : () => setStep(1)}
-          _hover={{ bg: 'var(--pf-surface-muted)' }}>
-          {step === 1 ? 'Cancelar' : 'Volver'}
+        <Button variant="outline" borderColor="var(--pf-border-strong)" color={NAVY} onClick={onClose}
+          _hover={{ bg: 'var(--pf-surface-muted)' }}>Cancelar</Button>
+        <Button bg={ACCENT} color="white" _hover={{ bg: '#B9471E' }} disabled={!canSave || isSaving}
+          onClick={handleSave} loading={isSaving} loadingText="Guardando">
+          <FiCheck /> {initial ? 'Guardar cambios' : 'Crear usuario'}
         </Button>
-        <Button bg={ACCENT} color="white" _hover={{ bg: '#B9471E' }} disabled={!canContinue}
-          onClick={() => step === 1 ? setStep(2) : onSave(form)}>
-          {step === 1 ? 'Continuar' : 'Guardar usuario'} <Box ml={2}><FiChevronRight /></Box>
-        </Button>
+      </Flex>
+    </Modal>
+  );
+}
+
+function UserProfileModal({ user, onClose, onSave }) {
+  const [access, setAccess] = useState(emptyAccess);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const controller = new AbortController();
+    obtenerPerfilUsuario({ userId: user.userId, signal: controller.signal })
+      .then(setAccess)
+      .catch((loadError) => {
+        if (loadError?.name !== 'AbortError') setError(loadError?.message || 'No fue posible cargar el perfil actual.');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+    return () => controller.abort();
+  }, [user.userId]);
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      setError('');
+      await onSave(access);
+    } catch (saveError) {
+      setError(saveError?.message || 'No fue posible guardar el perfil.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <Modal onClose={onClose} wide>
+      <Flex p={{ base: 5, md: 7 }} borderBottom="1px solid var(--pf-border)" align="start" justify="space-between">
+        <Box>
+          <Text color={ACCENT} fontWeight="700" fontSize="12px" textTransform="uppercase" letterSpacing=".12em">Perfil de acceso</Text>
+          <Heading fontSize={{ base: '22px', md: '27px' }} mt={1}>{user.name}</Heading>
+          <Text color="var(--pf-text-muted)" mt={1} fontSize="13px">
+            Selecciona la información que podrá consultar este usuario.
+          </Text>
+        </Box>
+        <Button aria-label="Cerrar" variant="ghost" onClick={onClose} color={NAVY}><FiX size={23} /></Button>
+      </Flex>
+      <Box p={{ base: 5, md: 7 }}>
+        {isLoading ? (
+          <Flex minH="220px" align="center" justify="center" direction="column" gap={3}><Spinner color={ACCENT} /><Text fontSize="12px">Cargando perfil actual…</Text></Flex>
+        ) : <AccessEditor access={access} onChange={setAccess} />}
+        {error && <Text mt={4} color="var(--pf-danger-text)" fontSize="12px">{error}</Text>}
+      </Box>
+      <Flex px={{ base: 5, md: 7 }} pb={{ base: 5, md: 7 }} gap={3} justify="flex-end">
+        <Text mr="auto" alignSelf="center" color="var(--pf-text-muted)" fontSize="11px" display={{ base: 'none', md: 'block' }}>
+          Las claves del Web Service se asignan automáticamente.
+        </Text>
+        <Button variant="outline" borderColor="var(--pf-border-strong)" onClick={onClose}>Cancelar</Button>
+        <Button bg={ACCENT} color="white" disabled={isLoading || isSaving} loading={isSaving} loadingText="Guardando"
+          onClick={handleSave}><FiCheck /> Guardar perfil</Button>
       </Flex>
     </Modal>
   );
@@ -403,9 +520,16 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
   const [localDarkMode, setLocalDarkMode] = useState(() => sessionStorage.getItem('cl_color_mode') === 'dark');
   const isDarkMode = inheritedDarkMode ?? localDarkMode;
   const sessionUser = useMemo(() => loadLocal('construleadsUser', {}), []);
-  const [isAdmin, setIsAdmin] = useState(null);
-  const [adminError, setAdminError] = useState('');
-  const [active, setActive] = useState(() => location.state?.activeTab || 'cuenta');
+  const accessType = getAccessType(sessionUser.tipoUsuario || sessionUser.tipo_usuario);
+  const isAdmin = accessType === 'Administrador';
+  const [profileIdentity, setProfileIdentity] = useState(() => ({
+    name: sessionUser.nombreUsuario || '',
+    email: sessionUser.email || sessionUser.correo || '',
+  }));
+  const [licenseInfo, setLicenseInfo] = useState({ loading: isAdmin, canCreate: false, message: '' });
+  const [active, setActive] = useState(() => (
+    location.state?.activeTab === 'usuarios' && !isAdmin ? 'cuenta' : location.state?.activeTab || 'cuenta'
+  ));
   const [users, setUsers] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [usersError, setUsersError] = useState('');
@@ -423,6 +547,9 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
   const [brief, setBrief] = useState('');
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState(undefined);
+  const [profilingUser, setProfilingUser] = useState(null);
+  const [changingStatusId, setChangingStatusId] = useState('');
+  const [actionError, setActionError] = useState('');
   const profileTheme = isDarkMode
     ? {
         '--pf-page-bg': '#111111',
@@ -491,24 +618,27 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
     localStorage.setItem(lastAccessStorageKey, now);
   }, [lastAccessStorageKey]);
   useEffect(() => {
+    if (!isAdmin) return undefined;
+
     const controller = new AbortController();
+    obtenerDisponibilidadLicencias({ signal: controller.signal })
+      .then((result) => setLicenseInfo({
+        loading: false,
+        canCreate: result.canCreate,
+        message: result.message,
+      }))
+      .catch((error) => {
+        if (error?.name !== 'AbortError') {
+          setLicenseInfo({
+            loading: false,
+            canCreate: false,
+            message: 'No fue posible validar si hay licencias disponibles.',
+          });
+        }
+      });
 
-    async function loadAdminAccess() {
-      try {
-        const result = await validarUsuarioAdministrador({ signal: controller.signal });
-        setIsAdmin(result.isAdmin);
-        if (!result.isAdmin) setActive('cuenta');
-      } catch (error) {
-        if (error?.name === 'AbortError') return;
-        setIsAdmin(false);
-        setAdminError('No pudimos validar los permisos administrativos en este momento.');
-        setActive('cuenta');
-      }
-    }
-
-    void loadAdminAccess();
     return () => controller.abort();
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     if (!isAdmin) return undefined;
@@ -533,7 +663,7 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
   }, [isAdmin]);
   if (!authenticated) return <Navigate to="/" replace />;
 
-  const name = sessionUser.nombreUsuario || 'Adriana Osorio';
+  const name = profileIdentity.name || sessionUser.nombreUsuario || 'Usuario';
   const company = sessionUser.empresa
     || sessionUser.Empresa
     || sessionUser.nombreEmpresa
@@ -541,6 +671,15 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
     || sessionUser.compania
     || sessionUser.Compania
     || 'Empresa no disponible';
+  const currentUserRecord = users.find((item) => String(item.userId) === String(sessionUser.idUsuario));
+  const selfEditData = currentUserRecord || {
+    id: sessionUser.idUsuario,
+    userId: sessionUser.idUsuario,
+    ...splitDisplayName(name),
+    email: profileIdentity.email || sessionUser.email || sessionUser.correo || '',
+    phone: sessionUser.telefono || '',
+    group: sessionUser.grupo || '',
+  };
   const subscription = {
     plan: sessionUser.plan || sessionUser.planContratado || '',
     startedAt: sessionUser.fechaInicioSuscripcion || sessionUser.fechaInicio || '',
@@ -551,7 +690,7 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
   };
   const hasSubscriptionServiceData = Boolean(subscription.plan || subscription.startedAt || subscription.endsAt);
   const filteredUsers = users.filter((item) =>
-    `${item.userId} ${item.name} ${item.email} ${item.phone} ${item.company}`
+    `${item.userId} ${item.name} ${item.email} ${item.phone} ${item.group}`
       .toLowerCase().includes(query.toLowerCase()));
   const tabs = [
     { id: 'cuenta', label: 'Mi perfil', icon: FiUser },
@@ -570,11 +709,49 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
     localStorage.removeItem('construleadsUser');
     navigate('/', { replace: true });
   };
-  const saveUser = (form) => {
-    const serializedForm = { ...form, accessXml: accessToXml(form.access) };
-    if (editing?.id) setUsers((current) => current.map((item) => item.id === editing.id ? { ...item, ...serializedForm } : item));
-    else setUsers((current) => [{ ...serializedForm, id: Date.now(), lastAccess: 'Invitación pendiente' }, ...current]);
+  const refreshUsers = async () => {
+    const nextUsers = await obtenerUsuariosAdministrador();
+    setUsers(nextUsers);
+    return nextUsers;
+  };
+  const saveUser = async (form) => {
+    const isEditing = Boolean(editing?.userId);
+    await guardarUsuarioAdministrador({
+      userId: editing?.userId || '',
+      operation: isEditing ? 2 : 1,
+      ...form,
+    });
+    await refreshUsers();
+    if (editing?.isSelf) {
+      const nextName = [form.firstName, form.paternalName, form.maternalName].filter(Boolean).join(' ');
+      setProfileIdentity({ name: nextName, email: form.email });
+      localStorage.setItem('construleadsUser', JSON.stringify({
+        ...sessionUser,
+        nombreUsuario: nextName,
+        correo: form.email,
+      }));
+    }
     setEditing(undefined);
+  };
+  const toggleUserStatus = async (user) => {
+    try {
+      setChangingStatusId(user.userId);
+      setActionError('');
+      await cambiarEstadoUsuario({ userId: user.userId });
+      setUsers((current) => current.map((item) => item.userId === user.userId ? {
+        ...item,
+        status: item.status === 'Activo' ? 'Suspendido' : 'Activo',
+        statusCode: item.statusCode === '1' ? '0' : '1',
+      } : item));
+    } catch (error) {
+      setActionError(error?.message || 'No fue posible cambiar el estado del usuario.');
+    } finally {
+      setChangingStatusId('');
+    }
+  };
+  const saveUserProfile = async (access) => {
+    await guardarPerfilUsuario({ userId: profilingUser.userId, access });
+    setProfilingUser(null);
   };
   const addActivity = (title, description, icon = 'activity') => {
     const entry = {
@@ -722,7 +899,6 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
                 );
               })}
             </Stack>
-            {adminError && <Text mt={5} fontSize="10px" color="var(--pf-danger-text)">{adminError}</Text>}
             <Box mt={6} p={4} border="1px solid var(--pf-border)" bg="var(--pf-control-gradient)" borderRadius="14px">
               <FiShield color={ACCENT} />
               <Text fontSize="11px" fontWeight="700" mt={2}>Control de datos</Text>
@@ -742,12 +918,23 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
                     <Heading fontSize={{ base: '24px', md: '30px' }} mt={1}>Usuarios y accesos</Heading>
                     <Text color="var(--pf-text-muted)" fontSize="13px" mt={1}>Consulta las cuentas asociadas a tu administración.</Text>
                   </Box>
-                  <Button bg={ACCENT} color="white" _hover={{ bg: '#B9471E' }} onClick={() => setEditing(null)}><FiPlus /> Nuevo usuario</Button>
+                  {licenseInfo.canCreate && (
+                    <Button bg={ACCENT} color="white" _hover={{ bg: '#B9471E' }} onClick={() => setEditing(null)}>
+                      <FiPlus /> Nuevo usuario
+                    </Button>
+                  )}
                 </Flex>
+                {!licenseInfo.loading && !licenseInfo.canCreate && (
+                  <Flex mt={5} p={4} gap={3} align="center" bg="var(--pf-accent-soft)" border="1px solid var(--pf-accent-border)" borderRadius="13px">
+                    <FiAlertTriangle color={ACCENT} />
+                    <Text fontSize="12px">{licenseInfo.message || 'No hay licencias disponibles para dar de alta un usuario nuevo.'}</Text>
+                  </Flex>
+                )}
                 <Flex mt={7} bg="var(--pf-surface-muted)" border="1px solid var(--pf-border)" borderRadius="12px" align="center" px={4} maxW="440px">
                   <FiSearch color="var(--pf-text-muted)" /><Input value={query} onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Buscar por ID, usuario, correo o empresa" border="0" _focus={{ boxShadow: 'none' }} fontSize="12px" />
+                    placeholder="Buscar por ID, usuario, correo o grupo" border="0" _focus={{ boxShadow: 'none' }} fontSize="12px" />
                 </Flex>
+                {actionError && <Text mt={3} color="var(--pf-danger-text)" fontSize="12px">{actionError}</Text>}
                 <Stack mt={5} gap={2}>
                   {isLoadingUsers && (
                     <Flex minH="220px" align="center" justify="center" direction="column" gap={3} color="var(--pf-text-muted)">
@@ -765,7 +952,7 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
                   {!isLoadingUsers && !usersError && filteredUsers.map((item) => (
                     <Box key={item.id} p={4} border="1px solid var(--pf-border)" borderRadius="15px" bg="var(--pf-surface-subtle)"
                       display="grid"
-                      gridTemplateColumns={{ base: '1fr', xl: 'minmax(250px, 1.15fr) 90px minmax(150px, .7fr) minmax(140px, .7fr) 82px 36px' }}
+                      gridTemplateColumns={{ base: '1fr', xl: 'minmax(230px, 1.15fr) 90px minmax(120px, .6fr) minmax(130px, .65fr) 82px minmax(250px, auto)' }}
                       columnGap={{ base: 3, lg: 4 }} rowGap={3} alignItems="center"
                       _hover={{ borderColor: 'var(--pf-accent-border)', boxShadow: 'var(--pf-shadow)', transform: 'translateY(-1px)' }}
                       transition="all .2s ease">
@@ -782,8 +969,8 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
                         <Text fontSize="12px" fontWeight="700">{item.userId || '—'}</Text>
                       </Box>
                       <Box pl={{ base: '56px', xl: 0 }}>
-                        <Text fontSize="9px" color="var(--pf-text-muted)" fontWeight="700" letterSpacing=".06em">EMPRESA</Text>
-                        <Text fontSize="12px" fontWeight="700" truncate>{item.company}</Text>
+                        <Text fontSize="9px" color="var(--pf-text-muted)" fontWeight="700" letterSpacing=".06em">GRUPO</Text>
+                        <Text fontSize="12px" fontWeight="700" truncate>{item.group || 'Sin grupo'}</Text>
                       </Box>
                       <Box pl={{ base: '56px', xl: 0 }}>
                         <Text fontSize="9px" color="var(--pf-text-muted)" fontWeight="700" letterSpacing=".06em">TELÉFONO</Text>
@@ -792,8 +979,21 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
                       <Text fontSize="10px" px={2.5} py={1} borderRadius="full" color={item.status === 'Activo' ? 'var(--pf-success-text)' : 'var(--pf-danger-text)'}
                         bg={item.status === 'Activo' ? 'var(--pf-success-soft)' : 'var(--pf-danger-soft)'} justifySelf={{ base: 'start', lg: 'center' }}
                         ml={{ base: '56px', xl: 0 }}>{item.status}</Text>
-                      <Button size="sm" variant="ghost" justifySelf={{ base: 'end', lg: 'center' }}
-                        aria-label={`Editar ${item.name}`} onClick={() => setEditing(item)}><FiSettings /></Button>
+                      <HStack justifySelf={{ base: 'stretch', xl: 'end' }} ml={{ base: '56px', xl: 0 }} gap={1.5} wrap="wrap">
+                        <Button size="xs" variant="outline" borderColor="var(--pf-border-strong)"
+                          aria-label={`Editar ${item.name}`} onClick={() => setEditing(item)}><FiEdit2 /> Editar</Button>
+                        <Button size="xs" variant="outline" borderColor="var(--pf-border-strong)"
+                          aria-label={`Perfilar ${item.name}`} onClick={() => setProfilingUser(item)} disabled={!item.userId}>
+                          <FiSliders /> Perfilar
+                        </Button>
+                        <Button size="xs" variant="outline" borderColor="var(--pf-border-strong)"
+                          color={item.status === 'Activo' ? 'var(--pf-danger-text)' : 'var(--pf-success-text)'}
+                          aria-label={`${item.status === 'Activo' ? 'Suspender' : 'Activar'} ${item.name}`}
+                          onClick={() => toggleUserStatus(item)} loading={changingStatusId === item.userId}>
+                          {item.status === 'Activo' ? <FiLock /> : <FiCheckCircle />}
+                          {item.status === 'Activo' ? 'Suspender' : 'Activar'}
+                        </Button>
+                      </HStack>
                     </Box>
                   ))}
                   {!isLoadingUsers && !usersError && !filteredUsers.length && (
@@ -829,14 +1029,15 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
                     <Text color="var(--pf-text-muted)" fontSize="12px" mt={1.5}>{company}</Text>
                   </Box>
                   <Button ml="auto" variant="outline" bg="var(--pf-surface)" borderColor="var(--pf-accent-border)" color={ACCENT}
-                    _hover={{ bg: 'var(--pf-accent-soft)', borderColor: ACCENT }} display={{ base: 'none', md: 'flex' }} position="relative">
+                    _hover={{ bg: 'var(--pf-accent-soft)', borderColor: ACCENT }} display={{ base: 'none', md: 'flex' }} position="relative"
+                    onClick={() => setEditing({ ...selfEditData, isSelf: true })}>
                     <FiEdit2 /> Editar
                   </Button>
                 </Flex>
                 <SimpleGrid columns={{ base: 1, md: 3 }} gap={4} mt={5}>
                   {[
-                    ['Correo electrónico', sessionUser.email || sessionUser.correo || 'usuario@empresa.com'],
-                    ['Tipo de acceso', isAdmin === null ? 'Validando…' : isAdmin ? 'Administrador' : 'Consultor'],
+                    ['Correo electrónico', profileIdentity.email || sessionUser.email || sessionUser.correo || 'usuario@empresa.com'],
+                    ['Tipo de acceso', accessType],
                     ['Estado de cuenta', 'Activo'],
                   ].map(([label, value]) => (
                     <Box key={label} border="1px solid var(--pf-border)" borderRadius="15px" p={5} bg="var(--pf-surface-subtle)"
@@ -1029,6 +1230,9 @@ export default function Perfil({ embedded = false, isDarkMode: inheritedDarkMode
         </Flex>
       </Flex>
       {editing !== undefined && <UserModal initial={editing} onClose={() => setEditing(undefined)} onSave={saveUser} />}
+      {profilingUser && (
+        <UserProfileModal user={profilingUser} onClose={() => setProfilingUser(null)} onSave={saveUserProfile} />
+      )}
       {criteriaEditor === 'projects' && (
         <CriteriaModal title="Nuevas obras" icon={FiBell} initialCriteria={preferences.projectCriteria}
           onClose={() => setCriteriaEditor(null)}

@@ -1,6 +1,7 @@
 const DATABASE_NAME = 'construleads-licitaciones-cache';
 const STORE_NAME = 'licitaciones';
 const DATABASE_VERSION = 1;
+const DATA_VERSION = 2;
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
@@ -30,7 +31,9 @@ export async function readCachedLicitaciones(userId) {
     });
     database.close();
 
-    return Array.isArray(cached?.licitaciones) ? cached.licitaciones : null;
+    return cached?.dataVersion === DATA_VERSION && Array.isArray(cached?.licitaciones)
+      ? cached.licitaciones
+      : null;
   } catch {
     return null;
   }
@@ -50,7 +53,7 @@ export async function writeCachedLicitaciones(userId, licitaciones) {
     await new Promise((resolve, reject) => {
       const transaction = database.transaction(STORE_NAME, 'readwrite');
       transaction.objectStore(STORE_NAME).put(
-        { savedAt: Date.now(), licitaciones },
+        { dataVersion: DATA_VERSION, savedAt: Date.now(), licitaciones },
         String(userId)
       );
       transaction.oncomplete = () => resolve();

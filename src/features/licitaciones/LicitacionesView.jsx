@@ -25,8 +25,15 @@ import {
 
 const PAGE_SIZE = 50;
 const initialSidebarFilters = {
-  dateField: 'fecha_de_publicacion', periodIndex: -1, states: [], orders: [],
-  procedures: [], statuses: [], sources: [], amountMin: null, amountMax: null, amountMissing: false,
+  periodIndex: -1,
+  statuses: [],
+  substatuses: [],
+  procedures: [],
+  sectors: [],
+  activeStatuses: [],
+  developments: [],
+  orders: [],
+  states: [],
 };
 
 function normalizeLoadedLicitaciones(items = []) {
@@ -78,7 +85,15 @@ function getAmountRange(tableFilters = {}) {
 }
 
 function matchesTableFilters(item, tableFilters = {}, amountRange, dateRanges) {
-  const textKeys = ['clave', 'expediente', 'descripcion', 'institucion_convocante', 'proveedor_adjudicado'];
+  const textKeys = [
+    'clave',
+    'codigo_del_expediente',
+    'numero_de_procedimiento',
+    'descripcion',
+    'institucion_convocante',
+    'tipo_de_contratacion',
+    'proveedor_adjudicado',
+  ];
   if (textKeys.some((key) => {
     const filter = tableFilters[key];
     if (Array.isArray(filter)) return filter.length > 0 && !selectedIncludes(filter, item[key]);
@@ -119,23 +134,37 @@ function matchesTableFilters(item, tableFilters = {}, amountRange, dateRanges) {
 
 function createSidebarFilterLookup(filters) {
   const periodIndex = filters.periodIndex;
-  const days = periodIndex >= 0 ? [0, 1, 7, 30, 90, 180][periodIndex] : null;
-  const periodStart = Number.isFinite(days) ? new Date() : null;
-  if (periodStart) {
-    periodStart.setHours(0, 0, 0, 0);
-    periodStart.setDate(periodStart.getDate() - days);
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+  let periodStart = null;
+  let periodEnd = null;
+
+  if (periodIndex >= 0 && periodIndex <= 4) {
+    periodStart = new Date(todayStart);
+    if (periodIndex === 0) periodStart.setDate(periodStart.getDate());
+    if (periodIndex === 1) periodStart.setDate(periodStart.getDate() - 6);
+    if (periodIndex === 2) periodStart.setMonth(periodStart.getMonth() - 1);
+    if (periodIndex === 3) periodStart.setMonth(periodStart.getMonth() - 3);
+    if (periodIndex === 4) periodStart.setMonth(periodStart.getMonth() - 6);
+    periodEnd = todayEnd;
+  } else if (periodIndex === 5) {
+    periodEnd = new Date(todayStart);
+    periodEnd.setMonth(periodEnd.getMonth() - 6);
+    periodEnd.setMilliseconds(-1);
   }
-  const periodEnd = periodStart ? new Date() : null;
-  if (periodEnd) periodEnd.setHours(23, 59, 59, 999);
 
   const selected = (values) => new Set((values || []).map(normalizeSearchText));
   return {
-    states: selected(filters.states),
-    orders: selected(filters.orders),
-    procedures: selected(filters.procedures),
     statuses: selected(filters.statuses),
-    sources: selected(filters.sources),
-    dateField: filters.dateField,
+    substatuses: selected(filters.substatuses),
+    procedures: selected(filters.procedures),
+    sectors: selected(filters.sectors),
+    activeStatuses: selected(filters.activeStatuses),
+    developments: selected(filters.developments),
+    orders: selected(filters.orders),
+    states: selected(filters.states),
     periodStart: periodStart?.getTime() ?? null,
     periodEnd: periodEnd?.getTime() ?? null,
   };
@@ -385,18 +414,19 @@ export default function LicitacionesView({ user }) {
   );
   const matchesSidebarFilters = useCallback((item, { ignoreStates = false } = {}) => {
     if (onlyFollowed) return favorites.has(item.clave);
-    if (!ignoreStates && !matchesLookup(sidebarFilterLookup.states, item.estado)) return false;
-    if (!matchesLookup(sidebarFilterLookup.orders, item.orden_de_gobierno)) return false;
-    if (!matchesLookup(sidebarFilterLookup.procedures, item.tipo_de_procedimiento)) return false;
     if (!matchesLookup(sidebarFilterLookup.statuses, item.estatus)) return false;
-    if (!matchesLookup(sidebarFilterLookup.sources, item.fuente_del_registro)) return false;
-    if (sidebarFilterLookup.periodStart !== null) {
-      const timestamp = sidebarFilterLookup.dateField === 'fecha_de_publicacion'
-        ? item.__fechaPublicacionTimestamp
-        : sidebarFilterLookup.dateField === 'fecha_de_fallo'
-          ? item.__fechaFalloTimestamp
-          : parseLicitacionDate(item[sidebarFilterLookup.dateField])?.getTime();
-      if (!Number.isFinite(timestamp) || timestamp < sidebarFilterLookup.periodStart || timestamp > sidebarFilterLookup.periodEnd) return false;
+    if (!matchesLookup(sidebarFilterLookup.substatuses, item.subestatus)) return false;
+    if (!matchesLookup(sidebarFilterLookup.procedures, item.tipo_de_procedimiento)) return false;
+    if (!matchesLookup(sidebarFilterLookup.sectors, item.sector)) return false;
+    if (!matchesLookup(sidebarFilterLookup.activeStatuses, item.activo)) return false;
+    if (!matchesLookup(sidebarFilterLookup.developments, item.desarrollo)) return false;
+    if (!matchesLookup(sidebarFilterLookup.orders, item.orden_de_gobierno)) return false;
+    if (!ignoreStates && !matchesLookup(sidebarFilterLookup.states, item.estado)) return false;
+    if (sidebarFilterLookup.periodStart !== null || sidebarFilterLookup.periodEnd !== null) {
+      const timestamp = item.__fechaPublicacionTimestamp;
+      if (!Number.isFinite(timestamp)) return false;
+      if (sidebarFilterLookup.periodStart !== null && timestamp < sidebarFilterLookup.periodStart) return false;
+      if (sidebarFilterLookup.periodEnd !== null && timestamp > sidebarFilterLookup.periodEnd) return false;
     }
     return true;
   }, [favorites, onlyFollowed, sidebarFilterLookup]);
@@ -410,6 +440,8 @@ export default function LicitacionesView({ user }) {
       .map((clave) => ({
         id: `unavailable:${clave}`,
         clave,
+        codigo_del_expediente: 'Sin información',
+        numero_de_procedimiento: 'Sin información',
         expediente: 'Folio no disponible',
         descripcion: 'Esta licitación seguida ya no forma parte de la información entregada por la fuente.',
         institucion_convocante: 'Sin información',
@@ -441,39 +473,7 @@ export default function LicitacionesView({ user }) {
     [dataWithUnavailableFollowed, matchesSidebarFilters],
   );
 
-  const sidebarAmountBounds = useMemo(() => {
-    let min = Infinity;
-    let max = -Infinity;
-    sidebarContext.forEach((item) => {
-      const amount = item.monto_del_contrato_MXN;
-      if (!Number.isFinite(amount)) return;
-      min = Math.min(min, amount);
-      max = Math.max(max, amount);
-    });
-    return Number.isFinite(min) && Number.isFinite(max) ? { min, max } : null;
-  }, [sidebarContext]);
-
-  const sidebarAmountRange = useMemo(() => {
-    if (!sidebarAmountBounds) return { min: null, max: null, active: false, includeMissing: Boolean(filters.amountMissing) };
-    const { min: lowerBound, max: upperBound } = sidebarAmountBounds;
-    const active = filters.amountMin !== null || filters.amountMax !== null;
-    const min = Math.min(Math.max(Number(filters.amountMin ?? lowerBound), lowerBound), upperBound);
-    const max = Math.max(min, Math.min(Number(filters.amountMax ?? upperBound), upperBound));
-    return { min, max, active, includeMissing: Boolean(filters.amountMissing) };
-  }, [filters.amountMax, filters.amountMin, filters.amountMissing, sidebarAmountBounds]);
-
-  const matchesSidebarAmount = useCallback((item, range) => {
-    if (!range.active && !range.includeMissing) return true;
-    const isMissing = !Number.isFinite(item.monto_del_contrato_MXN);
-    const isWithinRange = range.active && !isMissing &&
-      item.monto_del_contrato_MXN >= range.min &&
-      item.monto_del_contrato_MXN <= range.max;
-    return isWithinRange || (range.includeMissing && isMissing);
-  }, []);
-
-  const sidebarFiltered = useMemo(() => {
-    return sidebarContext.filter((item) => matchesSidebarAmount(item, sidebarAmountRange));
-  }, [matchesSidebarAmount, sidebarAmountRange, sidebarContext]);
+  const sidebarFiltered = sidebarContext;
 
   const amountRange = useMemo(
     () => getAmountRange(debouncedTableFilters),
@@ -494,9 +494,8 @@ export default function LicitacionesView({ user }) {
     delete tableFiltersWithoutState.estado;
     return data
       .filter((item) => matchesSidebarFilters(item, { ignoreStates: true }))
-      .filter((item) => matchesSidebarAmount(item, sidebarAmountRange))
       .filter((item) => matchesTableFilters(item, tableFiltersWithoutState, amountRange, tableDateRanges));
-  }, [amountRange, data, debouncedTableFilters, matchesSidebarAmount, matchesSidebarFilters, sidebarAmountRange, tableDateRanges]);
+  }, [amountRange, data, debouncedTableFilters, matchesSidebarFilters, tableDateRanges]);
   const filtered = useMemo(
     () => measurePerformance(
       'licitaciones.apply-filters',
@@ -531,14 +530,14 @@ export default function LicitacionesView({ user }) {
     const verified = filtered.filter((item) => normalizeSearchText(item.fuente_del_registro).includes('fallo')).length;
     return { records: filtered.length, amount, institutions, verified, verifiedPercent: filtered.length ? Math.round((verified / filtered.length) * 100) : 0, followed: favorites.size };
   }, [favorites.size, filtered]);
-  const dateLabel = ({ fecha_de_publicacion: 'Publicación', fecha_de_apertura: 'Apertura', fecha_de_fallo: 'Fallo' })[filters.dateField];
+  const dateLabel = 'Publicación';
 
   if (loading) return <Flex h="100%" align="center" justify="center" direction="column" gap={3}><Spinner color="#D95B27" thickness="3px" /><Text color="var(--cl-text-muted)">Cargando licitaciones...</Text></Flex>;
   if (error) return <Flex h="100%" align="center" justify="center" direction="column" gap={3}><Text fontWeight="700" color="var(--cl-text-strong)">{error}</Text><Button onClick={retry}><FiRefreshCw /> Reintentar</Button></Flex>;
 
   return <Flex h="100%" minH="0" gap={3}>
     <LicitacionesSidebar data={data} filters={filters} setFilters={updateSidebarFilters} onClear={clearAllFilters}
-      availableStates={availableStates} amountBounds={sidebarAmountBounds} amountRange={sidebarAmountRange} />
+      availableStates={availableStates} />
     <Flex flex="1" minW={0} minH={0} direction="column">
       <Flex justify="space-between" align="center" mb={3} gap={4} wrap="wrap">
         <Box><Heading fontSize="22px" color="var(--cl-text-strong)">Licitaciones</Heading><Text fontSize="11px" color="var(--cl-text-muted)">{filtered.length.toLocaleString('es-MX')} registros · {metrics.verified.toLocaleString('es-MX')} contratos verificados</Text></Box>

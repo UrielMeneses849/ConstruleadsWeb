@@ -59,11 +59,11 @@ const getProgress = (value) => {
   return Math.max(0, Math.min(100, Number(match[0])));
 };
 
-function ProgressSummary({ value }) {
+function ProgressSummary({ value, isExplorerProject = false }) {
   const progress = getProgress(value);
   return (
     <Box>
-      <SummaryRow label="Avance de obra" emphasis>
+      <SummaryRow label={isExplorerProject ? 'Avance de obra estimado' : 'Avance de obra'} emphasis>
         {progress === null ? 'Desconocido' : `${progress.toLocaleString('es-MX')} %`}
       </SummaryRow>
       <Box mt={2} h="7px" overflow="hidden" bg="var(--ft-border)" borderRadius="full" aria-hidden="true">
@@ -101,13 +101,17 @@ function CenteredTagCard({ label, children }) {
   );
 }
 
-function DateCard({ startDate, endDate }) {
+function DateCard({ startDate, endDate, isExplorerProject = false }) {
   return (
     <Box bg="var(--ft-surface-muted)" borderRadius="12px" p={4} minW="0">
       <Grid templateColumns="minmax(130px, 1fr) auto" gap="8px 16px" alignItems="center">
-        <Text color="var(--ft-text-muted)" fontSize="12px" whiteSpace="nowrap">Fecha inicio probable</Text>
+        <Text color="var(--ft-text-muted)" fontSize="12px" whiteSpace="nowrap">
+          {isExplorerProject ? 'Fecha estimada de Inicio' : 'Fecha inicio probable'}
+        </Text>
         <Text fontSize="13px" fontWeight="500" textAlign="right">{formatProjectDate(startDate)}</Text>
-        <Text color="var(--ft-text-muted)" fontSize="12px" whiteSpace="nowrap">Fecha término probable</Text>
+        <Text color="var(--ft-text-muted)" fontSize="12px" whiteSpace="nowrap">
+          {isExplorerProject ? 'Fecha estimada de Termino' : 'Fecha término probable'}
+        </Text>
         <Text fontSize="13px" fontWeight="500" textAlign="right">{formatProjectDate(endDate)}</Text>
       </Grid>
     </Box>
@@ -220,13 +224,24 @@ export default function FichaTecnicaContent({ obra, isDarkMode = false }) {
               gap={3}
               mt={3}
             >
-              <DateCard startDate={obra.proy_fecha_inicio} endDate={obra.proy_fecha_fin} />
+              <DateCard
+                startDate={obra.proy_fecha_inicio}
+                endDate={obra.proy_fecha_fin}
+                isExplorerProject={isExplorerProject}
+              />
               <CenteredTagCard label="Género">{obra.genero}</CenteredTagCard>
               <CenteredTagCard label="Subgénero">{obra.subgenero}</CenteredTagCard>
             </Grid>
-            <Box mt={3}><DetailCard label="Ubicación">
-              {formatProjectLocation(obra)}
-            </DetailCard></Box>
+            {isExplorerProject ? (
+              <SimpleGrid columns={{ base: 1, md: 2 }} gap={3} mt={3}>
+                <DetailCard label="Estado">{valueOrUnknown(obra.esta_descripcion)}</DetailCard>
+                <DetailCard label="Municipio">{valueOrUnknown(obra.muni_descripcion)}</DetailCard>
+              </SimpleGrid>
+            ) : (
+              <Box mt={3}><DetailCard label="Ubicación">
+                {formatProjectLocation(obra)}
+              </DetailCard></Box>
+            )}
           </Box>
           <Box
             bg="var(--ft-surface-muted)"
@@ -237,11 +252,16 @@ export default function FichaTecnicaContent({ obra, isDarkMode = false }) {
             justifyContent="space-between"
             gap={4}
           >
-            <SummaryRow label="Inversión" emphasis>MXN ${formatNumber(obra.proy_inversion)}</SummaryRow>
-            <SummaryRow label="Superficie construida">
+            <SummaryRow label={isExplorerProject ? 'Inversión estimada' : 'Inversión'} emphasis>
+              MXN ${formatNumber(obra.proy_inversion)}
+            </SummaryRow>
+            <SummaryRow label={isExplorerProject ? 'Superficie de terreno estimada' : 'Superficie construida'}>
               {Number(obra.superficie) ? `${formatNumber(obra.superficie)} m²` : 'Desconocido'}
             </SummaryRow>
-            <ProgressSummary value={obra.porcentaje_avance ?? obra.PorcentajeAvance ?? obra.porcentajeAvance} />
+            <ProgressSummary
+              value={obra.porcentaje_avance ?? obra.PorcentajeAvance ?? obra.porcentajeAvance}
+              isExplorerProject={isExplorerProject}
+            />
             <SummaryRow label="Sector">{valueOrUnknown(obra.sector)}</SummaryRow>
             <SummaryRow label="Tipo de obra">{valueOrUnknown(obra.tipo_obra)}</SummaryRow>
             <SummaryRow label="Tipo de desarrollo">{valueOrUnknown(obra.desa_descripcion)}</SummaryRow>

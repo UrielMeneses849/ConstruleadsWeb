@@ -4,6 +4,8 @@ import { startPerformanceSpan, traceWsRequest } from '../utils/performanceMonito
 const companiesCache = new Map();
 const companiesRequests = new Map();
 const companiesSubscribers = new Map();
+const companyProjectsCache = new Map();
+const companyProjectsRequests = new Map();
 
 function cleanText(value = '') {
   return String(value).trim();
@@ -282,6 +284,9 @@ function buildCompanyProject(projectNode, projectKey) {
   const fechaPublicacionDate = parseWsDate(fechaPublicacion);
   const fechaInicioDate = parseWsDate(fechaInicio);
   const fechaTerminoDate = parseWsDate(fechaTermino);
+  const imageUrl = value(['impo_image_url', 'imagen_explorer', 'imagen_url', 'image_url']);
+  const explicitOrigin = normalizeTagName(value(['origen', 'fuente', 'source']));
+  const origin = explicitOrigin === 'explorer' || imageUrl ? 'explorer' : 'construleads';
 
   // ws_cl_companias ya entrega el proyecto que relaciona con cada compañía.
   // Lo normalizamos al mismo contrato que consume la interfaz sin consultar
@@ -289,10 +294,13 @@ function buildCompanyProject(projectNode, projectKey) {
   return {
     id: projectKey,
     clave,
-    origen: 'construleads',
+    claveCompania: value(['clave_compania', 'clave_cia', 'compania_clave']),
+    origen: origin,
     proyecto: value(['proy_descripcioncorta', 'proy_nombre', 'proyecto', 'nombre_proyecto', 'proy_descripcion']),
+    localizacion: value(['localizacion', 'proy_localizacion', 'ubicacion', 'direccion_proyecto']),
     region: value(['regi_descripcion', 'region', 'proy_region']),
     estado: value(['esta_descripcion', 'proy_esta_descripcion', 'estado_proyecto', 'estado']),
+    municipio: value(['muni_descripcion', 'proy_muni_descripcion', 'municipio_proyecto', 'municipio']),
     genero: value(['gene_descripcion', 'genero', 'proy_genero']),
     subgenero: value(['suge_descripcion', 'subgenero', 'proy_subgenero']),
     tipoObra: value(['tiob_descripcion', 'tipo_obra', 'tipoobra', 'proy_tipo_obra']),
@@ -304,6 +312,9 @@ function buildCompanyProject(projectNode, projectKey) {
     superficie: parseWsNumber(value([
       'proy_superficie_construida', 'proy_superficie', 'sup_construida', 'superficie',
     ])),
+    porcentajeAvance: value(['porcentaje_avance', 'porcentajeavance', 'avance_estimado', 'avance']),
+    imagenExplorer: imageUrl,
+    impo_image_url: imageUrl,
     fechaPublicacion,
     fechaInicio,
     fechaTermino,
@@ -391,6 +402,40 @@ export function parseCompaniasXml(xmlText) {
   });
 
   return relationships;
+}
+
+export function parseCompanyProjectsXml(xmlText) {
+  const payload = unwrapAsmxPayload(xmlText);
+  const document = parseXmlDocument(payload);
+  const responseRoot = document.documentElement;
+
+  if (nodeTagName(responseRoot) === 'row' && responseRoot?.getAttribute('estatus') === '0') {
+    throw new Error(
+      cleanText(responseRoot.getAttribute('mensaje'))
+      || 'El servicio no pudo entregar los proyectos de la compañía.'
+    );
+  }
+
+  const candidateNames = new Set(['datos', 'obras', 'obra', 'proyecto']);
+  const candidates = Array.from(document.getElementsByTagName('*')).filter((node) => {
+    if (!candidateNames.has(nodeTagName(node))) return false;
+    return Boolean(directTextFrom(node, [
+      'proy_clave', 'clave_proyecto', 'proyecto_clave', 'clave_obra',
+      'proy_descripcioncorta', 'proy_nombre', 'proyecto', 'nombre_proyecto',
+    ]));
+  });
+  const projects = new Map();
+
+  candidates.forEach((projectNode, index) => {
+    const projectKey = normalizeCompanyProjectKey(directTextFrom(projectNode, [
+      'proy_clave', 'clave_proyecto', 'proyecto_clave', 'clave_obra',
+    ]) || `company-project-${index}`);
+    const project = buildCompanyProject(projectNode, projectKey);
+    if (!project.clave && !project.proyecto) return;
+    projects.set(projectKey, project);
+  });
+
+  return [...projects.values()];
 }
 
 function getSessionCredentials() {
@@ -549,4 +594,182 @@ async function requestCompanias({ credentials, cacheKey, timeoutMs, caller, reas
   } finally {
     window.clearTimeout(requestTimeout);
   }
+}
+
+export async function obtenerProyectosCompania(
+  claveCompania,
+  { timeoutMs = 90000, caller = 'companies-view', reason = 'company-selected' } = {}
+) {
+  const normalizedCompanyKey = cleanText(claveCompania);
+  if (!normalizedCompanyKey) {
+    throw new Error('La compañía seleccionada no tiene una clave válida.');
+  }
+
+  const credentials = getSessionCredentials();
+  const cacheKey = `${credentials.sId_usuario}:${normalizedCompanyKey}`;
+  if (companyProjectsCache.has(cacheKey)) {
+    traceWsRequest('ws_cl_proyectos_companias', 'cache-hit', { caller, reason });
+    return companyProjectsCache.get(cacheKey);
+  }
+  if (companyProjectsRequests.has(cacheKey)) {
+    traceWsRequest('ws_cl_proyectos_companias', 'in-flight-reused', { caller, reason });
+    return companyProjectsRequests.get(cacheKey);
+  }
+
+  const request = (async () => {
+    const requestController = new AbortController();
+    const requestTimeout = window.setTimeout(() => requestController.abort(), timeoutMs);
+    const loadSpan = startPerformanceSpan('company-projects.request-and-parse');
+
+    try {
+      traceWsRequest('ws_cl_proyectos_companias', 'request', { caller, reason, cacheState: 'MISS' });
+      const response = await fetch(`${CONSTRULEADS_WS_BASE_URL}/ws_cl_proyectos_companias`, {
+        method: 'POST',
+        body: new URLSearchParams({
+          sId_usuario: credentials.sId_usuario,
+          sClave_cia: normalizedCompanyKey,
+          sTk: credentials.sTk,
+        }),
+        signal: requestController.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`No fue posible obtener los proyectos de la compañía (HTTP ${response.status}).`);
+      }
+
+      const projects = parseCompanyProjectsXml(await response.text());
+      companyProjectsCache.set(cacheKey, projects);
+      loadSpan.end({ projects: projects.length });
+      return projects;
+    } catch (error) {
+      loadSpan.end({ error: true, aborted: requestController.signal.aborted });
+      if (requestController.signal.aborted) {
+        throw new Error('Los proyectos de la compañía tardaron demasiado en responder.', { cause: error });
+      }
+      throw error;
+    } finally {
+      window.clearTimeout(requestTimeout);
+    }
+  })().finally(() => companyProjectsRequests.delete(cacheKey));
+
+  companyProjectsRequests.set(cacheKey, request);
+  return request;
+}
+
+function getCompanyProjectsCacheKey(claveCompania) {
+  const normalizedCompanyKey = cleanText(claveCompania);
+  if (!normalizedCompanyKey) return '';
+  try {
+    const credentials = getSessionCredentials();
+    return `${credentials.sId_usuario}:${normalizedCompanyKey}`;
+  } catch {
+    return '';
+  }
+}
+
+export function getCachedCompanyProjects(claveCompania) {
+  const cacheKey = getCompanyProjectsCacheKey(claveCompania);
+  return cacheKey && companyProjectsCache.has(cacheKey)
+    ? companyProjectsCache.get(cacheKey)
+    : undefined;
+}
+
+export function precalentarProyectosCompanias(
+  clavesCompania = [],
+  { startDelayMs = 1800, intervalMs = 700 } = {}
+) {
+  const queue = [...new Set(clavesCompania.map(cleanText).filter(Boolean))];
+  let cancelled = false;
+  let running = false;
+  let timerId = null;
+  let idleId = null;
+
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  const dataRestricted = Boolean(
+    connection?.saveData
+    || String(connection?.effectiveType || '').toLowerCase().includes('2g')
+  );
+
+  const clearScheduledWork = () => {
+    if (timerId !== null) window.clearTimeout(timerId);
+    if (idleId !== null && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleId);
+    timerId = null;
+    idleId = null;
+  };
+
+  const nextUncachedKey = () => {
+    while (queue.length) {
+      const key = queue.shift();
+      if (getCachedCompanyProjects(key) === undefined) return key;
+    }
+    return '';
+  };
+
+  const canRun = () => (
+    !cancelled
+    && !dataRestricted
+    && navigator.onLine !== false
+    && document.visibilityState === 'visible'
+  );
+
+  const schedule = (delayMs = intervalMs) => {
+    if (cancelled || dataRestricted || !queue.length) return;
+    clearScheduledWork();
+    timerId = window.setTimeout(() => {
+      timerId = null;
+      if (!canRun()) {
+        return;
+      }
+
+      const execute = () => {
+        idleId = null;
+        if (!canRun() || running) {
+          return;
+        }
+        const companyKey = nextUncachedKey();
+        if (!companyKey) return;
+        running = true;
+        obtenerProyectosCompania(companyKey, {
+          timeoutMs: 60000,
+          caller: 'companies-background-prefetch',
+          reason: 'idle-warmup',
+        })
+          .catch(() => undefined)
+          .finally(() => {
+            running = false;
+            schedule(intervalMs);
+          });
+      };
+
+      if ('requestIdleCallback' in window) {
+        idleId = window.requestIdleCallback(execute, { timeout: 2200 });
+      } else {
+        execute();
+      }
+    }, delayMs);
+  };
+
+  const wake = () => {
+    if (!running && canRun()) schedule(120);
+  };
+  document.addEventListener('visibilitychange', wake);
+  window.addEventListener('online', wake);
+  schedule(startDelayMs);
+
+  return {
+    prioritize(claveCompania) {
+      const companyKey = cleanText(claveCompania);
+      if (!companyKey || getCachedCompanyProjects(companyKey) !== undefined) return;
+      const currentIndex = queue.indexOf(companyKey);
+      if (currentIndex >= 0) queue.splice(currentIndex, 1);
+      queue.unshift(companyKey);
+      if (!running) schedule(100);
+    },
+    cancel() {
+      cancelled = true;
+      clearScheduledWork();
+      document.removeEventListener('visibilitychange', wake);
+      window.removeEventListener('online', wake);
+    },
+  };
 }
